@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "20-Java后端/01-Java核心/01-集合框架-List-Map-Set源码.md",
+                "file": "20-Java后端/01-Java核心/_index.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "01-集合框架-List-Map-Set源码"
+              "title": "_index"
             }
           }
         ]
@@ -170,8 +170,14 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "7dce3dc9ce43da5f",
+  "active": "ff264d4974751a7e",
   "lastOpenFiles": [
+    "20-Java后端/01-Java核心/04-HashMap原理与扩容.md",
+    "20-Java后端/01-Java核心/03-集合框架-List-Map-Set源码.md",
+    "20-Java后端/01-Java核心/02-异常处理最佳实践.md",
+    "20-Java后端/01-Java核心/01-泛型与类型擦除.md",
+    "20-Java后端/01-Java核心/07-反射与动态代理.md",
+    "20-Java后端/01-Java核心/05-Lambda与Stream.md",
     "20-Java后端/01-Java核心/_index.md",
     "20-Java后端/00-总览/学习仪表盘.md",
     "20-Java后端/00-总览/99-本章总结与复习.md",
@@ -202,12 +208,6 @@
     "10-AI应用开发/01-LLM基础与Prompt/08-System-Prompt设计.md",
     "10-AI应用开发/01-LLM基础与Prompt/07-Prompt工程基础.md",
     "10-AI应用开发/01-LLM基础与Prompt/05-主流模型选型对比.md",
-    "10-AI应用开发/00-总览/AI应用开发学习路径.md",
-    "20-Java后端/02-JVM/99-本章总结与复习.md",
-    "20-Java后端/10-知识串联与专题/99-本章总结与复习.md",
-    "20-Java后端/10-知识串联与专题/08-线上故障排查全链路.md",
-    "20-Java后端/10-知识串联与专题/07-微服务治理与可观测性全链路.md",
-    "20-Java后端/10-知识串联与专题/06-线程池-CompletableFuture-MQ异步链路.md",
     "未命名.canvas",
     "未命名 1.canvas"
   ]
