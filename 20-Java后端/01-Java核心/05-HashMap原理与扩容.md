@@ -18,7 +18,7 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **本章第 4 课，集合深挖**。前置：[[03-集合框架-List-Map-Set源码]]（HashSet 基于 HashMap、equals/hashCode 契约）。本课把哈希表这一个数据结构讲透。
+- **本章第 5 课，集合深挖**。前置：[[04-集合框架-List-Map-Set源码]]（HashSet 基于 HashMap、equals/hashCode 契约）。本课把哈希表这一个数据结构讲透。
 - **延伸阅读（本课不展开）**：红黑树旋转/染色细节在 [[30-算法与数据结构/01-数据结构/07-平衡树-AVL-红黑树|算法章节]]；并发版本的 `ConcurrentHashMap` 在 [[20-Java后端/03-并发编程/08-并发容器-ConcurrentHashMap|03-并发编程章节]]，本课只讲单线程语义。
 
 ## 📌 这是什么
@@ -189,7 +189,7 @@ for (int i = 0; i < 9; i++) map.put(new BadKey(i), i);
 
 ## 🔗 关联笔记
 
-- 本课内：上一课 [[03-集合框架-List-Map-Set源码]]；应用见 [[05-Lambda与Stream]]
+- 本课内：上一课 [[04-集合框架-List-Map-Set源码]]；应用见 [[06-Lambda与Stream]]
 - 延伸：[[30-算法与数据结构/01-数据结构/07-平衡树-AVL-红黑树|红黑树原理]]；[[20-Java后端/03-并发编程/08-并发容器-ConcurrentHashMap|ConcurrentHashMap]]
 
 ## 📚 参考资料

@@ -18,8 +18,8 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **本章第 3 课，数据组织**。前置：[[01-泛型与类型擦除]]（集合 API 的类型安全就来自泛型）、[[02-异常处理最佳实践]]（迭代中的 `ConcurrentModificationException` 属于运行期异常）。
-- 下一课 [[04-HashMap原理与扩容]] 专门深挖 HashMap；本课把 `HashSet` 底层是 HashMap、`TreeMap` 是红黑树这些关系讲清楚，下一课直接接续。
+- **本章第 4 课，数据组织**。前置：[[01-泛型与类型擦除]]（集合 API 的类型安全就来自泛型）、[[02-异常处理最佳实践]]（迭代中的 `ConcurrentModificationException` 属于运行期异常）。
+- 下一课 [[05-HashMap原理与扩容]] 专门深挖 HashMap；本课把 `HashSet` 底层是 HashMap、`TreeMap` 是红黑树这些关系讲清楚，下一课直接接续。
 - **延伸阅读（本课不展开）**：红黑树的旋转/染色原理在 [[30-算法与数据结构/01-数据结构/07-平衡树-AVL-红黑树|算法章节]]；并发容器（`ConcurrentHashMap`、`CopyOnWriteArrayList`）在 [[20-Java后端/03-并发编程/08-并发容器-ConcurrentHashMap|03-并发编程章节]]，本课只讲单线程语义。
 
 ## 📌 这是什么
@@ -80,7 +80,7 @@ flowchart LR
 ### HashSet 为什么能去重
 
 `HashSet.add(e)` 实际调用 `HashMap.put(e, PRESENT)`——元素作为 key，value 是固定占位对象。去重语义完全由 key 的 `equals/hashCode` 决定：
-1. `hashCode()` 定位桶（哈希函数见 [[04-HashMap原理与扩容]]）；
+1. `hashCode()` 定位桶（哈希函数见 [[05-HashMap原理与扩容]]）；
 2. `equals()` 判断桶内是否已有相等元素。
 
 ### equals/hashCode 契约（所有集合正确性的地基）
@@ -88,7 +88,7 @@ flowchart LR
 - **相等对象 hashCode 必须相等**：`a.equals(b) == true` ⇒ `a.hashCode() == b.hashCode()`。违反它，相等的对象会散到不同桶，get/contains 找不到。
 - **hashCode 相等不代表相等**：不同对象可能同桶（哈希冲突），由 equals 再判断。
 - **参与计算的字段必须不可变**：对象放进 HashSet/HashMap 后若修改了参与 hashCode 的字段，桶位错乱，再也找不到——这是最常见的"诡异 bug"。
-- 现代写法：`Objects.hash(field1, field2)` 或 record（见 [[08-Java新特性-Record-密封类-虚拟线程]]）。
+- 现代写法：`Objects.hash(field1, field2)` 或 record（见 [[10-Java新特性-Record与密封类]]）。
 
 ### fail-fast 迭代器
 
@@ -195,7 +195,7 @@ System.out.println(s.contains(new BadKey())); // false：hashCode 不同，桶�
 
 ## 🔗 关联笔记
 
-- 本课内：上一课 [[02-异常处理最佳实践]]；深挖见 [[04-HashMap原理与扩容]]；应用见 [[05-Lambda与Stream]]
+- 本课内：上一课 [[02-异常处理最佳实践]]；深挖见 [[05-HashMap原理与扩容]]；应用见 [[06-Lambda与Stream]]
 - 延伸：[[30-算法与数据结构/01-数据结构/07-平衡树-AVL-红黑树|红黑树原理]]（算法章节）；[[20-Java后端/03-并发编程/08-并发容器-ConcurrentHashMap|并发容器]]（并发章节）
 
 ## 📚 参考资料
