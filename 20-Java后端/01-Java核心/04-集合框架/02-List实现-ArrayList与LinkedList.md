@@ -18,8 +18,8 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **本章第 5 课，集合实现篇（一）**。前置：[[04-集合框架-核心机制与选型]]（接口层次、modCount/fail-fast、契约）。
-- 后续：[[06-Set实现-HashSet与TreeSet]] · [[07-HashMap原理与扩容]] · [[08-Map实现-LinkedHashMap与TreeMap]] · [[09-Queue实现-ArrayDeque与PriorityQueue]]。
+- **本章第 5 课（集合域第 2 篇），集合实现篇（一）**。前置：[[01-核心机制与选型]]（接口层次、modCount/fail-fast、契约）。
+- 后续：[[03-Set实现-HashSet与TreeSet]] · [[04-HashMap原理与扩容]] · [[05-Map实现-LinkedHashMap与TreeMap]] · [[06-Queue实现-ArrayDeque与PriorityQueue]]。
 - **延伸阅读**：数组扩容与 `System.arraycopy` 的性能细节属于 JVM/系统层面，本课只讲集合视角。
 
 ## 📌 这是什么
@@ -199,7 +199,7 @@ sub.size();   // ConcurrentModificationException
 
 ## 🔗 关联笔记
 
-- 本课内：总纲 [[04-集合框架-核心机制与选型]]；后续 [[06-Set实现-HashSet与TreeSet]] · [[07-HashMap原理与扩容]] · [[08-Map实现-LinkedHashMap与TreeMap]] · [[09-Queue实现-ArrayDeque与PriorityQueue]]
+- 本课内：总纲 [[01-核心机制与选型]]；后续 [[03-Set实现-HashSet与TreeSet]] · [[04-HashMap原理与扩容]] · [[05-Map实现-LinkedHashMap与TreeMap]] · [[06-Queue实现-ArrayDeque与PriorityQueue]]
 - 延伸：[[20-Java后端/03-并发编程/08-并发容器-ConcurrentHashMap|并发容器]]（CopyOnWriteArrayList）
 
 ## 📚 参考资料

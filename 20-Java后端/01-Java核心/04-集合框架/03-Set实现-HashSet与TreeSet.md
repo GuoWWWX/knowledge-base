@@ -18,8 +18,8 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **本章第 6 课，集合实现篇（二）**。前置：[[04-集合框架-核心机制与选型]]（equals/hashCode 契约、选型表）、[[07-HashMap原理与扩容]]（建议先看 07 再回来，能彻底理解 HashSet；也可并行读）。
-- 本课是"去重与排序"两个需求的完整答案；Map 变体见 [[08-Map实现-LinkedHashMap与TreeMap]]。
+- **本章第 6 课（集合域第 3 篇），集合实现篇（二）**。前置：[[01-核心机制与选型]]（equals/hashCode 契约、选型表）、[[04-HashMap原理与扩容]]（建议先看 04-HashMap 篇再回来，能彻底理解 HashSet；也可并行读）。
+- 本课是"去重与排序"两个需求的完整答案；Map 变体见 [[05-Map实现-LinkedHashMap与TreeMap]]。
 - **延伸阅读**：红黑树旋转/染色细节在 [[30-算法与数据结构/01-数据结构/07-平衡树-AVL-红黑树|算法章节]]；Comparable/Comparator 与排序算法在算法章节。
 
 ## 📌 这是什么
@@ -114,7 +114,7 @@ public class LinkedHashSet<E> extends HashSet<E> {
 }
 ```
 
-**逐点看懂**：LinkedHashSet = HashSet + LinkedHashMap 底层 → 多了"插入顺序链表"（原理见 [[08-Map实现-LinkedHashMap与TreeMap]]）。**去重逻辑不变，只是遍历顺序变成插入序**。
+**逐点看懂**：LinkedHashSet = HashSet + LinkedHashMap 底层 → 多了"插入顺序链表"（原理见 [[05-Map实现-LinkedHashMap与TreeMap]]）。**去重逻辑不变，只是遍历顺序变成插入序**。
 
 ### TreeSet：委托 TreeMap，有序的来源
 
@@ -231,7 +231,7 @@ System.out.println(new ArrayList<>(new LinkedHashSet<>(dup)));  // [b, a, c]
 
 ## 🔗 关联笔记
 
-- 本课内：总纲 [[04-集合框架-核心机制与选型]]；前置 [[07-HashMap原理与扩容]]（HashSet 的底层）；Map 变体 [[08-Map实现-LinkedHashMap与TreeMap]]
+- 本课内：总纲 [[01-核心机制与选型]]；前置 [[04-HashMap原理与扩容]]（HashSet 的底层）；Map 变体 [[05-Map实现-LinkedHashMap与TreeMap]]
 - 延伸：[[30-算法与数据结构/01-数据结构/07-平衡树-AVL-红黑树|红黑树原理]]
 
 ## 📚 参考资料
