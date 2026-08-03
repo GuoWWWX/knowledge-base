@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > LangChain.js 是 TypeScript 生态里的 LLM 编排库，用来在 Node/Next.js 项目中组织 Prompt、模型、Retriever、Tool 和 Agent。
+
+## 🎯 本节定位
+
+- **本章第 11 课**：前置 [[06-TS速查-Java视角]]、[[09-Vercel-AI-SDK核心]]，本篇是 Python 侧 [[05-LangChain-Python读代码笔记]] 的 TS 版。
+- **延伸**：[[12-Mastra简介]]。
 
 ## 📌 这是什么
 

@@ -10,7 +10,6 @@ updated: 2026-08-03
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
-
 # Queue实现-ArrayDeque与PriorityQueue
 
 > [!abstract] 一句话总结
@@ -49,7 +48,7 @@ stack.peek();                  // 看栈顶："b"
 stack.pop();                   // 出栈："b"
 
 // ===== PriorityQueue：按优先级出队 =====
-Queue<Integer> pq = new PriorityQueue<>();                          // 小顶堆：最小先出
+Queue<Integer> pq = new PriorityQueue<>();                       // 小顶堆：最小先出
 Queue<Integer> pq2 = new PriorityQueue<>(Comparator.reverseOrder());  // 大顶堆：最大先出
 pq.offer(5); pq.offer(1); pq.offer(3);
 pq.poll();                     // 1（小顶堆）

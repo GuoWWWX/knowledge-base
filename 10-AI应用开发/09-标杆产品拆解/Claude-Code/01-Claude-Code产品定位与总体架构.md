@@ -87,6 +87,13 @@ Claude Code 说明一个成功 Agent 产品不一定要从复杂 UI 开始。只
 
 > Claude Code 的成功点在于 terminal-native 和 workflow-native。它不是只回答代码问题，而是站在代码库里读取上下文、修改文件、调用命令，并通过 memory、MCP、hooks、subagents、skills 等机制把 Agent 纳入工程流程。
 
+## 关联
+
+- [[02-Claude-Code一次任务执行全链路]]：看一次任务如何完整跑完。
+- [[../01-标杆产品对比-Codex-vs-Claude-Code]]：与 Codex 的定位差异。
+- [[../../05-Agent-MCP-Skills/09-MCP协议详解]]：MCP 协议前置知识。
+- [[../../05-Agent-MCP-Skills/13-Skills详解]]：Skills 机制前置知识。
+
 ## 📚 参考资料
 
 - [Anthropic Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)

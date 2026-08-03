@@ -2,7 +2,7 @@
 title: AI编程助手-Cursor-Claude-Code-Codex实战
 tags: [领域/AI应用, 类型/知识, 主题/AI编程, 主题/Agent]
 created: 2026-07-05
-updated: 2026-07-05
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -11,6 +11,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > 2026 年 AI 应用开发岗位不仅看你会不会写代码，也看你能不能用 AI 编程助手把需求拆解、实现、测试和文档沉淀做成稳定流程。
+
+## 🎯 本节定位
+
+- **本章第 14 课，收尾实战篇**：不依赖 Python/TS 语法，讲如何用 AI 编程助手完成“理解需求→最小修改→测试验证→总结交付”的闭环。
+- **延伸**：09 章 [[10-AI应用开发/09-标杆产品拆解/_index|标杆产品拆解]] 会拆解 Codex / Claude Code 的产品设计。
 
 ## 为什么要学
 
@@ -31,7 +36,7 @@ AI IDE 和编程 Agent 已经从“补全代码”变成“读仓库、改文件
 3. 让它实现一个小闭环，不要一次改太大。
 4. 让它跑测试、构建、lint。
 5. 要求输出改了什么、如何验证、残余风险。
-6. 把反复出现的规则沉淀到 [[16-AGENTS规范详解]] 或技能文档。
+6. 把反复出现的规则沉淀到 [[10-AI应用开发/05-Agent-MCP-Skills/16-AGENTS规范详解]] 或技能文档。
 
 ## 好提示词模板
 
@@ -69,5 +74,5 @@ AI IDE 和编程 Agent 已经从“补全代码”变成“读仓库、改文件
 - [Cursor Docs](https://docs.cursor.com/)
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code/overview)
 - [OpenAI Codex](https://developers.openai.com/codex/)
-- [[16-AGENTS规范详解]]
+- [[10-AI应用开发/05-Agent-MCP-Skills/16-AGENTS规范详解]]
 

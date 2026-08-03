@@ -6,8 +6,9 @@ tags:
   - 主题/MCP
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 规划中
+mastery: ⭐☆☆☆☆
 repo: 未绑定
 ---
 
@@ -15,6 +16,11 @@ repo: 未绑定
 
 > [!info] 项目简介
 > 用 Java / Spring AI 实现一组 MCP Server 工具，让 Claude Desktop、Cursor 或自研 Agent 能调用业务能力。
+
+## 🎯 本节定位
+
+- **本章第 6 个项目，MCP Server 实战**。前置：阶段五 [[../05-Agent-MCP-Skills/09-MCP协议详解]] 与 [[../05-Agent-MCP-Skills/10-MCP-Server开发-Java实战]]。
+- **延伸**：07 业务 Agent 的 Tool Gateway 可直接接入本项目的 MCP 工具。
 
 ## 📌 项目背景
 
@@ -59,10 +65,10 @@ flowchart TD
 
 ## 🧠 难点与关键技术点
 
-- [[09-MCP协议详解]]
-- [[10-MCP-Server开发-Java实战]]
-- [[16-AGENTS规范详解]]
-- [[13-Skills详解]]
+- [[../05-Agent-MCP-Skills/09-MCP协议详解]]
+- [[../05-Agent-MCP-Skills/10-MCP-Server开发-Java实战]]
+- [[../05-Agent-MCP-Skills/16-AGENTS规范详解]]
+- [[../05-Agent-MCP-Skills/13-Skills详解]]
 - 工具参数 schema、错误返回和权限边界要明确，否则客户端很难稳定调用。
 - 本地调试要用 Inspector 先验证协议，再接入真实客户端。
 - 文件、数据库和业务 API 工具都需要限制访问范围。
@@ -83,6 +89,7 @@ flowchart TD
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[05-项目-通用ReAct-Agent]]
 - [[07-项目-业务Agent系统]]
+- [[_index|本区项目索引]]
 
 ## 📚 参考资料
 

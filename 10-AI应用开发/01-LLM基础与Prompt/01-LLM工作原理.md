@@ -16,6 +16,11 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > LLM 是基于 Transformer 的概率生成模型：把输入切成 Token，读入上下文，预测下一个 Token，并通过预训练、指令微调和对齐让这种预测表现为问答、推理、写作和代码能力。
 
+## 🎯 本节定位
+
+- **本章第 1 课，LLM 基础的地基**。Token、上下文窗口、采样参数是后续篇章的前置概念，分别展开于 [[02-Token与Tokenizer]]、[[03-上下文窗口]]、[[04-模型参数-Temperature与TopP]]；Prompt 侧的入门见 [[07-Prompt工程基础]]。
+- 本课提到的 RAG、工具调用、Agent 编排属于后续章节（03-知识库技术-RAG、05-Agent-MCP-Skills），本课只作为背景提及。
+
 ## 📌 这是什么
 
 LLM（Large Language Model，大语言模型）不是数据库，也不是规则引擎。它的核心动作是：根据当前上下文，计算“下一个 Token 可能是什么”的概率分布，然后逐个生成 Token，直到遇到停止条件。

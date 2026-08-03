@@ -16,6 +16,11 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > pgvector 是 PostgreSQL 的向量扩展，让业务数据、权限字段、文档 metadata 和向量检索放在同一个数据库里。
 
+## 🎯 本节定位
+
+- **本章第 14 课，向量数据库（二）：PostgreSQL 扩展**。前置 [[06-向量检索与TopK]]（检索参数）；本篇讲 pgvector 的表结构与查询写法。
+- **延伸阅读（本课不展开）**：与 Milvus 的对比见 [[13-Milvus入门]]，最终选型见 [[15-向量库选型对比]]，混合检索实现见 [[08-混合检索-Hybrid-Search]]。
+
 ## 📌 这是什么
 
 对 Java 后端来说，pgvector 的优势是工程简单：不用额外维护一套向量数据库，直接在 PostgreSQL 里存 chunk、metadata 和 embedding。

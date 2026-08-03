@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Node 是 TypeScript AI 全栈项目的运行时，`pnpm` 是常用包管理器；先跑通它们，才能读 Next.js、Vercel AI SDK、LangChain.js 和 Mastra 项目。
+
+## 🎯 本节定位
+
+- **本章第 7 课**：前置 [[06-TS速查-Java视角]]，本篇解决 Node / pnpm 环境与项目命令。
+- **延伸**：[[08-Next.js-AppRouter基础]]。
 
 ## 📌 这是什么
 

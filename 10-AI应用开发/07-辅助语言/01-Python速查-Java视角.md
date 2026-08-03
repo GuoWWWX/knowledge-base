@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > 不是转 Python，而是能看懂 GitHub 上的 Python AI 项目，能用 uv 跑通 FastAPI / LangChain / RAG 示例。
+
+## 🎯 本节定位
+
+- **本章第 1 课，Python 子区起点**：建立 Java → Python 的语法与心智对照，后面 [[02-uv包管理与环境]]（环境）、[[04-FastAPI起服务]]（服务）都建立在本课基础上。
+- **前置**：Java 基础与阶段三 RAG 概念；**延伸**：[[05-LangChain-Python读代码笔记]]。
 
 ## 🎯 学习目标
 
@@ -181,7 +186,7 @@ uv run ruff check .
 - [[03-asyncio异步基础]]
 - [[04-FastAPI起服务]]
 - [[05-LangChain-Python读代码笔记]]
-- [[03-知识库技术-RAG/_index]]
+- [[10-AI应用开发/03-知识库技术-RAG/_index]]
 
 ## 📚 参考资料
 

@@ -1,11 +1,12 @@
 ---
 title: Function Calling 工具调用
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Tool Calling 让模型从“只会说”变成“能调用你提供的函数”，是 Agent、MCP、业务自动化的基础原语。
+
+## 🎯 本节定位
+
+- **本章第 6 课，Agent 基础原语**。前置：[[02-ChatClient与ChatModel]] 的组合调用；本节讲 `@Tool` 工具调用，是后续 [[10-AI应用开发/05-Agent-MCP-Skills/_index|Agent · MCP · Skills]] 章节的基础。
+- **延伸**：工具调用与 Advisor 的组合见 [[07-Advisor拦截器]]；MCP 协议见 [[10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解]]。
 
 ## 📌 这是什么
 
@@ -136,8 +142,10 @@ flowchart LR
 
 - [[02-ChatClient与ChatModel]]
 - [[07-Advisor拦截器]]
-- [[05-Agent-MCP-Skills/09-MCP协议详解]]
+- [[10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解]]
+- [[_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
+

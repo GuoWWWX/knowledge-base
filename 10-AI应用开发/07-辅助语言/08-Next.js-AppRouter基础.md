@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Next.js App Router 把页面、布局和后端接口放在 `app/` 目录下；AI Chat Demo 常用它承载页面和 `/api/chat` 流式接口。
+
+## 🎯 本节定位
+
+- **本章第 8 课**：前置 [[07-Node-pnpm-环境配置]]，本篇讲 Next.js App Router 的页面与接口结构。
+- **延伸**：[[09-Vercel-AI-SDK核心]]、[[10-Vercel-AI-SDK-useChat流式UI]]。
 
 ## 📌 这是什么
 

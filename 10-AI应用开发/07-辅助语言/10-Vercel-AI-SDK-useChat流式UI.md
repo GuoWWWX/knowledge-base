@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > `useChat` 是 Vercel AI SDK 的 React Hook，用来管理聊天消息、输入框、提交状态和流式更新；它适合快速做一个可用的 AI Chat 前端。
+
+## 🎯 本节定位
+
+- **本章第 10 课**：前置 [[09-Vercel-AI-SDK核心]]，本篇把服务端流式接到 React 前端。
+- **延伸**：[[11-LangChain.js简介]] 讲更重的编排方案。
 
 ## 📌 这是什么
 

@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Vercel AI SDK 是 TypeScript 生态里做模型调用和流式输出的常用库，核心是 `generateText`、`streamText`、provider 和工具调用。
+
+## 🎯 本节定位
+
+- **本章第 9 课**：前置 [[08-Next.js-AppRouter基础]]，本篇讲 Vercel AI SDK 的核心 API（generateText / streamText / tool）。
+- **延伸**：[[10-Vercel-AI-SDK-useChat流式UI]] 做前端 UI。
 
 ## 📌 这是什么
 

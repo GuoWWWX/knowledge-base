@@ -63,7 +63,9 @@ Codex 和 Claude Code 都是“编程 Agent”里非常成功的产品，但它�
 
 ## 🧾 本章复习
 
-- [[99-本章总结与复习]]
+- [[99-本章总结与复习]]（本章整体回顾）
+- [[Codex/99-Codex总结与复习]]（Codex 部分回顾）
+- [[Claude-Code/99-Claude-Code总结与复习]]（Claude Code 部分回顾）
 
 ## 拆解方法
 

@@ -147,7 +147,7 @@ description: 当用户要写周报时，从 Jira 和 Git 收集本周工作，�
 ☑ 提"帮我写周报"，观察是否自动加载该 Skill
 ```
 
-> 完整实战见：[[07-项目-业务Agent系统]]
+> 完整实战见：[[10-AI应用开发/08-项目实战/07-项目-业务Agent系统]]
 
 ---
 
@@ -192,7 +192,7 @@ description: 当用户要写周报时，从 Jira 和 Git 收集本周工作，�
 - [[09-MCP协议详解]] —— Skills 可调用 MCP 工具
 - [[16-AGENTS规范详解]] —— 另一个 Markdown 标准
 - [[17-Agent-MCP-Skills组合实战]] —— 三者如何协同
-- [[03-知识库技术-RAG/_index]] —— LLM Wiki 与 Skills 的关系
+- [[10-AI应用开发/03-知识库技术-RAG/_index]] —— LLM Wiki 与 Skills 的关系
 - [[_index]]
 
 ## 📚 参考资料

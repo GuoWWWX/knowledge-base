@@ -1,11 +1,12 @@
 ---
 title: Advisor 拦截器
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Advisor 是 Spring AI 的对话增强链：在模型调用前后插入记忆、RAG、日志、Guardrail 等横切能力。
+
+## 🎯 本节定位
+
+- **本章第 7 课，链路增强**。前置：[[02-ChatClient与ChatModel]] 的调用链；本节把记忆、RAG、安全、日志统一成可组合的 Advisor 链。
+- **延伸**：记忆与向量检索的具体实现在 [[08-ChatMemory记忆]]、[[09-VectorStore向量存储]]。
 
 ## 📌 这是什么
 
@@ -130,6 +136,7 @@ String answer = chatClient.prompt()
 - [[08-ChatMemory记忆]]
 - [[09-VectorStore向量存储]]
 - [[06-Function-Calling工具调用]]
+- [[_index]]
 
 ## 📚 参考资料
 

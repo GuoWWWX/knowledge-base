@@ -16,6 +16,10 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > System Prompt 是一次对话中最高层级的行为说明，用来设定角色、边界、工具使用原则、安全规则和输出规范，但不能当作唯一安全边界。
 
+## 🎯 本节定位
+
+- **本章第 8 课，承接 [[07-Prompt工程基础]]**。System Prompt 的安全边界问题见 [[12-防御性提示与防注入]]；“冻结 System Prompt”还是缓存命中的前提，见 [[17-Prompt-Caching提示缓存]]。
+
 ## 📌 这是什么
 
 在 Chat API 中，消息通常分为 system、user、assistant、tool 等角色。System Prompt 位于最高层，用来告诉模型“你是谁、你要遵守什么规则、如何处理冲突、如何输出”。

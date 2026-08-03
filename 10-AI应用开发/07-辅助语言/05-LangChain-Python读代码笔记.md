@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > 读 LangChain Python 代码时，重点不是背 API，而是看懂模型、Prompt、Retriever、Tool 和 Chain/Graph 如何串成一个 AI 应用流程。
+
+## 🎯 本节定位
+
+- **本章第 5 课，Python 子区收尾**：前置 [[04-FastAPI起服务]]，本篇解决“拿到 LangChain Python 项目怎么读”，对照已学的 Spring AI / LangChain4j（02 章）。
+- **延伸**：TypeScript 侧对应 [[11-LangChain.js简介]]。
 
 ## 📌 这是什么
 
@@ -116,7 +121,7 @@ print(result.content)
 - [[01-Python速查-Java视角]]
 - [[02-uv包管理与环境]]
 - [[04-FastAPI起服务]]
-- [[03-知识库技术-RAG/_index]]
+- [[10-AI应用开发/03-知识库技术-RAG/_index]]
 
 ## 📚 参考资料
 

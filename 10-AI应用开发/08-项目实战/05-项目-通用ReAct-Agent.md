@@ -6,8 +6,9 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 规划中
+mastery: ⭐☆☆☆☆
 repo: 未绑定
 ---
 
@@ -15,6 +16,11 @@ repo: 未绑定
 
 > [!info] 项目简介
 > 用 Spring AI 原语实现 ReAct 循环，让模型能思考、调用工具、观察结果并继续执行，直到给出最终答案。
+
+## 🎯 本节定位
+
+- **本章第 5 个项目，Agent 执行循环**。前置：02 工具机器人 + 阶段五 [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]。
+- **延伸**：06 MCP 项目提供标准化工具接入，07 业务 Agent 项目在 ReAct 循环上增加状态机、审批与审计。
 
 ## 📌 项目背景
 
@@ -61,10 +67,10 @@ flowchart TD
 
 ## 🧠 难点与关键技术点
 
-- [[01-Agent设计模式详解]]
-- [[09-MCP协议详解]]
-- [[06-Function-Calling工具调用]]
-- [[18-Agent可观测]]
+- [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]
+- [[../05-Agent-MCP-Skills/09-MCP协议详解]]
+- [[../02-框架-SpringAI与LangChain4j/06-Function-Calling工具调用]]
+- [[../05-Agent-MCP-Skills/18-Agent可观测]]
 - 循环终止条件必须明确，否则容易无限调用工具。
 - 工具参数需要结构化校验，不能把模型输出直接交给业务接口。
 - 执行轨迹要区分内部调试信息和用户可见答案。
@@ -85,6 +91,7 @@ flowchart TD
 - [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]
 - [[06-项目-MCP-Server工具集]]
 - [[07-项目-业务Agent系统]]
+- [[_index|本区项目索引]]
 
 ## 📚 参考资料
 

@@ -107,6 +107,9 @@ curl -X POST "$DIFY_BASE_URL/v1/chat-messages" \
 ## 🔗 关联笔记
 
 - [[_index]]
+- [[03-Coze扣子]]
+- [[04-RAGFlow]]
+- [[05-平台选型对比]]
 - [[10-AI应用开发/00-总览/学习仪表盘]]
 
 ## 📚 参考资料

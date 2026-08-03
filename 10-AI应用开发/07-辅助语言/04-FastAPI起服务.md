@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > FastAPI 是 Python 里最常见的 AI 后端接口框架，用它可以把模型调用、RAG 检索、Embedding 入库封装成 HTTP API。
+
+## 🎯 本节定位
+
+- **本章第 4 课**：前置 [[01-Python速查-Java视角]]、[[02-uv包管理与环境]]，本篇把 Python AI 能力封装成 HTTP 服务（对应 Java 的 Spring Boot）。
+- **延伸**：[[05-LangChain-Python读代码笔记]] 讲如何读基于它的项目。
 
 ## 📌 这是什么
 
@@ -116,7 +121,7 @@ app/
 > - Q: FastAPI 相比 Flask 的优势是什么？
 >   - A: 类型注解、Pydantic 校验、自动 OpenAPI 文档和异步支持更适合接口型 AI 服务。
 > - Q: FastAPI 怎么和 Java 主系统协作？
->   - A: Java 保持主业务和权限，FastAPI 承载 Python AI 能力，通过 HTTP/gRPC 调用。
+>   - A: Java 保持主业务和权限，FastAPI 承载 Python AI 能力，通过 HTTP 或 gRPC（另一种远程调用协议）互通。
 > - Q: 线上 Chat 接口要补哪些工程能力？
 >   - A: 超时、限流、鉴权、日志 trace、请求体大小限制、模型错误映射和健康检查。
 

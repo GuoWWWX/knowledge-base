@@ -1,11 +1,12 @@
 ---
 title: PromptTemplate
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > `PromptTemplate` 用来把提示词从“字符串拼接”升级成“可复用、可传参、可测试”的模板。
+
+## 🎯 本节定位
+
+- **本章第 3 课，输入组织**。前置：[[02-ChatClient与ChatModel]] 的调用方式；上一章 [[10-AI应用开发/01-LLM基础与Prompt/07-Prompt工程基础|Prompt 工程基础]] 讲“怎么写提示词”，本节讲“怎么在代码里模板化”。
+- **延伸**：把 RAG 检索结果注入模板见 [[09-VectorStore向量存储]]。
 
 ## 📌 这是什么
 
@@ -113,7 +119,9 @@ Context：检索结果、历史摘要、工具返回
 - [[02-ChatClient与ChatModel]]
 - [[09-VectorStore向量存储]]
 - [[07-Advisor拦截器]]
+- [[_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Prompts](https://docs.spring.io/spring-ai/reference/api/prompt.html)
+

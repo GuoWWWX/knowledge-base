@@ -239,7 +239,7 @@ flowchart TD
 ☑ 结合 Spring StateMachine     = 复杂流程
 ```
 
-> 完整项目见：[[07-项目-业务Agent系统]]
+> 完整项目见：[[10-AI应用开发/08-项目实战/07-项目-业务Agent系统]]
 
 ---
 

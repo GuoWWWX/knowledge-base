@@ -1,11 +1,12 @@
 ---
 title: VectorStore 向量存储
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > VectorStore 是 RAG 的检索底座：把文档变成向量存起来，再按语义相似度找回和问题最相关的内容。
+
+## 🎯 本节定位
+
+- **本章第 9 课，RAG 检索底座**。前置：[[03-PromptTemplate]]、[[07-Advisor拦截器]]；本节讲 `VectorStore` 的写入、相似度检索与注入 Prompt。
+- **延伸**：完整 RAG 工程（文档解析、切分、Embedding、召回、评估）在下一章 [[10-AI应用开发/03-知识库技术-RAG/_index|知识库技术 RAG]]。
 
 ## 📌 这是什么
 
@@ -133,9 +139,11 @@ String answer = chatClient.prompt()
 
 - [[03-PromptTemplate]]
 - [[07-Advisor拦截器]]
-- [[03-知识库技术-RAG/_index]]
+- [[10-AI应用开发/03-知识库技术-RAG/_index]]
+- [[_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html)
 - [Spring AI ETL Pipeline](https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html)
+

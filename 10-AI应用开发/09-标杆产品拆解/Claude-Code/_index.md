@@ -20,6 +20,13 @@ mastery: ⭐☆☆☆☆
 - [[04-Claude-Code工具系统-MCP-Hooks-Subagents-Skills]]
 - [[99-Claude-Code总结与复习]]
 
+## 学习顺序
+
+1. 先读 [[01-Claude-Code产品定位与总体架构]]，建立产品心智。
+2. 再读 [[02-Claude-Code一次任务执行全链路]]，理解一次任务的完整链路。
+3. 然后按需深入 [[03-Claude-Code上下文工程-CLAUDE-md-Memory]] 与 [[04-Claude-Code工具系统-MCP-Hooks-Subagents-Skills]]。
+4. 最后用 [[99-Claude-Code总结与复习]] 自测，并对照 [[../02-编程Agent通用架构图]] 回看六层架构。
+
 ## 拆解重点
 
 | 主题 | 学什么 |

@@ -1,11 +1,12 @@
 ---
 title: ChatMemory 记忆
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > ChatMemory 负责让模型“看见必要的历史对话”，但它不是无限记忆，而是受 Token、隐私和会话边界约束的上下文管理。
+
+## 🎯 本节定位
+
+- **本章第 8 课，多轮记忆**。前置：[[07-Advisor拦截器]]（记忆通过 Advisor 自动注入）；本节讲 `ChatMemory` 的会话边界与记忆类型。
+- **延伸**：更系统的记忆方案（滑动窗口、摘要、语义检索、分层）在 [[10-AI应用开发/04-多轮对话与上下文工程/_index|04-多轮对话与上下文工程]] 章节。
 
 ## 📌 这是什么
 
@@ -130,7 +136,9 @@ chat:{userId}:{sessionId}
 - [[07-Advisor拦截器]]
 - [[09-VectorStore向量存储]]
 - [[02-ChatClient与ChatModel]]
+- [[_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html)
+

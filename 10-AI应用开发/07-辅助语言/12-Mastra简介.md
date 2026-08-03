@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Mastra 是 TypeScript 生态里的 Agent 和 Workflow 框架，适合把模型、工具、记忆和多步骤流程组织成可运行的 AI 应用。
+
+## 🎯 本节定位
+
+- **本章第 12 课**：前置 [[11-LangChain.js简介]]，本篇建立 Mastra 的 Agent / Workflow 心智。
+- **延伸**：[[13-TS与Java-AI生态对照]] 做整体选型。
 
 ## 📌 这是什么
 

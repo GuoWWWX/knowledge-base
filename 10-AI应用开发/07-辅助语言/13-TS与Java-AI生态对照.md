@@ -4,9 +4,9 @@ tags:
   - 领域/AI应用
   - 类型/知识
   - 主题/TypeScript
-  - 阶段/07
+  - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Java 适合承载稳定业务系统和企业后端，TypeScript 适合快速做 AI 全栈原型、流式 UI 和前后端同仓协作；两者在 AI 项目里经常互补。
+
+## 🎯 本节定位
+
+- **本章第 13 课**：前置前几篇 TS 基础，本篇做 Java / TypeScript / Python 在 AI 项目中的分工对照。
+- **延伸**：[[14-AI编程助手-Cursor-Claude-Code-Codex实战]]。
 
 ## 📌 这是什么
 

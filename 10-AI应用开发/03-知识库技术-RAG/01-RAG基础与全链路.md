@@ -16,6 +16,11 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > RAG 是“先检索证据，再让模型基于证据回答”的架构，用来让 LLM 使用私有知识、降低幻觉并提供引用溯源。
 
+## 🎯 本节定位
+
+- **本章第 1 课，全链路总纲**。前置：LLM 基础与 Prompt（[[10-AI应用开发/01-LLM基础与Prompt/_index|01-LLM基础与Prompt]]）、框架章节（[[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index|02-框架]]）已铺垫模型与框架概念；本篇先建立“离线摄取 / 在线问答”的整体视图。
+- **延伸阅读（本课不展开）**：切分见 [[04-文本切分策略]]、Embedding 见 [[05-Embedding模型选型]]、检索见 [[06-向量检索与TopK]]、重排见 [[07-Rerank重排序]]、评估见 [[12-RAG评估-Ragas]]；替代方案见 16~20 课。
+
 ## 📌 这是什么
 
 RAG（Retrieval-Augmented Generation，检索增强生成）把知识库和 LLM 组合起来：

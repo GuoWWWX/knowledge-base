@@ -1,11 +1,12 @@
 ---
 title: ChatClient 与 ChatModel
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > `ChatModel` 是底层模型调用抽象，`ChatClient` 是面向业务开发的流式 Fluent API；日常优先用 `ChatClient`，需要底层控制时再碰 `ChatModel`。
+
+## 🎯 本节定位
+
+- **本章第 2 课，调用层地基**。前置：[[01-Spring-AI项目搭建]] 的最小项目；本节建立 `ChatClient` / `ChatModel` 两层心智，后续的工具、Advisor、记忆都挂在 `ChatClient` 上。
+- **延伸**：Prompt 组织见 [[03-PromptTemplate]]；链路增强见 [[07-Advisor拦截器]]。
 
 ## 📌 这是什么
 
@@ -122,6 +128,7 @@ String content = response.getResult().getOutput().getText();
 - [[01-Spring-AI项目搭建]]
 - [[03-PromptTemplate]]
 - [[07-Advisor拦截器]]
+- [[_index]]
 
 ## 📚 参考资料
 

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > 目标是看懂 Next.js、Vercel AI SDK、LangChain.js、Mastra 这类 AI 全栈项目，并能跑通一个流式 Chat Demo。
+
+## 🎯 本节定位
+
+- **本章第 6 课，TypeScript 子区起点**：与第 1 课对称，建立 Java → TypeScript 的语法与心智对照。
+- **延伸**：[[07-Node-pnpm-环境配置]]（环境）、[[08-Next.js-AppRouter基础]]（全栈结构）。
 
 ## 🎯 学习目标
 

@@ -12,6 +12,9 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > OpenAI Agents SDK 把 Agent 的工具调用、多 Agent 交接、护栏和 trace 做成一套轻量工程框架，代表了 2026 年主流 Agent SDK 的设计方向。
 
+> [!info] 本节定位
+> 本章第 8 课，与 [[06-Multi-Agent-Supervisor实现]]、[[07-LangGraph生产级Agent编排]] 互补：前两篇讲多 Agent 分工与状态编排，本篇以 OpenAI Agents SDK 为例看 **Handoff 交接 + Guardrail 护栏 + Tracing** 的产品化设计，并给出 Java 侧的落地对照。
+
 ## 为什么要学
 
 应用开发岗位越来越少问“怎么调一次模型”，更多问“怎么让 Agent 稳定执行任务”。Agents SDK 里的四个词要背熟：
@@ -80,6 +83,14 @@ Spring AI 更适合作为 Java 侧模型调用和工具调用基础设施；Agen
 - [ ] 能说出输入护栏、输出护栏、工具护栏各自拦什么。
 - [ ] 能画出 Java 版 Agent SDK 分层。
 - [ ] 能说明为什么 trace 是 Agent 上生产的必要条件。
+
+## 🔗 关联笔记
+
+- [[06-Multi-Agent-Supervisor实现]] —— 多 Agent 分工的另一种实现
+- [[07-LangGraph生产级Agent编排]] —— 生产级状态编排与检查点
+- [[20-Agent安全与防注入]] —— Guardrail 思想的工程化落地
+- [[_index]]
+- [[10-AI应用开发/00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 

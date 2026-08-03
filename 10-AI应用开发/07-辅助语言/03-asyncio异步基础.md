@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > `asyncio` 是 Python 的单线程协作式并发模型，适合并发等待网络 I/O；AI 应用里常用于并发调用模型、Embedding、检索服务和外部工具。
+
+## 🎯 本节定位
+
+- **本章第 3 课**：把 [[01-Python速查-Java视角]] 里的 async/await 讲透，建立事件循环心智。
+- **延伸**：[[04-FastAPI起服务]] 的 async 路由、[[05-LangChain-Python读代码笔记]] 的并发调用都依赖它。
 
 ## 📌 这是什么
 

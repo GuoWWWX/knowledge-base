@@ -1,11 +1,12 @@
 ---
 title: LangChain4j 核心概念
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/LangChain4j
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,6 +15,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > LangChain4j 是 Java 版 LLM 应用开发框架，核心是把模型、记忆、工具、RAG 和 AI Service 组织成可组合的 Java 抽象。
+
+## 🎯 本节定位
+
+- **本章第 10 课，LangChain4j 对照**。前置：前 9 课建立的 Spring AI 心智；本节以对照视角看 LangChain4j 的核心抽象（`ChatLanguageModel`、`AiServices` 等）。
+- **延伸**：选型结论在下一课 [[11-SpringAI与LangChain4j对比]]。
 
 ## 📌 这是什么
 
@@ -144,6 +150,7 @@ Document
 - [[11-SpringAI与LangChain4j对比]]
 - [[02-ChatClient与ChatModel]]
 - [[09-VectorStore向量存储]]
+- [[_index]]
 
 ## 📚 参考资料
 

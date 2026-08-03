@@ -12,6 +12,9 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > LangGraph 的价值不是“又一个 Agent 框架”，而是把 Agent 从一次性脚本变成可恢复、可观测、可人工介入的状态机。
 
+> [!info] 本节定位
+> 本章第 7 课。[[03-ReAct-Spring-AI实现]]、[[04-Plan-and-Execute-实现]]、[[06-Multi-Agent-Supervisor实现]] 讲的是单 Agent 与多 Agent 的**模式**；本篇补生产级**编排**：状态、检查点、人工介入与可观测。延伸见 [[08-OpenAI-Agents-SDK与Handoffs-Guardrails]] 与 [[18-Agent可观测]]。
+
 ## 为什么 2026 要补
 
 近期招聘里 “LangChain / LangGraph / Agent Workflow” 出现频率明显上升。原因是企业不再只要能聊天的 Demo，而是要能跑业务流程的 Agent：中途失败能恢复，关键节点能审批，线上 trace 能回放，状态能长期保存。
@@ -77,6 +80,8 @@ flowchart TD
 - [[04-Plan-and-Execute-实现]] 讲先计划再执行。
 - [[06-Multi-Agent-Supervisor实现]] 讲多 Agent 角色分工。
 - 本文补的是生产级编排：状态、恢复、人工介入、可观测。
+- 本章索引：[[_index]]
+- 上级：[[10-AI应用开发/00-总览/学习仪表盘]]
 
 ## 面试讲法
 

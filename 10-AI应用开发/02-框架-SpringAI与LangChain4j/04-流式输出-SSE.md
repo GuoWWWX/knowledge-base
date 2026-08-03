@@ -1,11 +1,12 @@
 ---
 title: 流式输出 SSE
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,9 +16,14 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > 流式输出把“等完整答案”改成“边生成边返回”，SSE 是 Java Web 场景里最简单稳定的文本流传输方式。
 
+## 🎯 本节定位
+
+- **本章第 4 课，输出体验**。前置：[[02-ChatClient与ChatModel]] 的同步调用；本节把它升级为流式输出，会用到 Spring WebFlux 的 `Flux` 响应式流类型（只需基本用法，不必先系统学响应式编程）。
+- **延伸**：流式响应的工程注意点见本节“工程注意点”；前端消费方式见“EventSource”示例。
+
 ## 📌 这是什么
 
-大模型生成长答案时，如果等全部生成完再返回，用户会觉得卡。Spring AI 的 `ChatClient.stream()` 可以返回响应流，Spring WebFlux 可以把它包装成 `text/event-stream`。
+大模型生成长答案时，如果等全部生成完再返回，用户会觉得卡。Spring AI 的 `ChatClient.stream()` 可以返回响应流，Spring WebFlux 可以把它包装成 `text/event-stream`。这里用到的 WebFlux 是 Spring 的响应式 Web 框架，`Flux<String>` 是它的响应式流类型（可理解为“可订阅的异步序列”），本节只使用其最基础用法，无需先系统学完响应式编程。
 
 ```mermaid
 sequenceDiagram
@@ -131,6 +137,7 @@ AI 聊天的“模型往前端吐字”优先选 SSE；如果需要用户中途�
 
 - [[02-ChatClient与ChatModel]]
 - [[01-Spring-AI项目搭建]]
+- [[_index]]
 
 ## 📚 参考资料
 

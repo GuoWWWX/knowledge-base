@@ -62,7 +62,7 @@ flowchart TD
 - 解释测试失败。
 - 判断是否完成。
 
-这里可以是单 Agent，也可以是 supervisor + subagents。
+这里可以是单 Agent，也可以是 supervisor + subagents（见 [[../05-Agent-MCP-Skills/06-Multi-Agent-Supervisor实现]]）。
 
 ## 4. 工具执行层
 

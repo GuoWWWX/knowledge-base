@@ -5,8 +5,9 @@ tags:
   - 类型/项目
   - 主题/LLM-Wiki
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 规划中
+mastery: ⭐☆☆☆☆
 repo: 未绑定
 ---
 
@@ -14,6 +15,11 @@ repo: 未绑定
 
 > [!info] 项目简介
 > 用 AI 辅助维护 Obsidian 知识库，实现笔记索引、双链建议、重复内容发现和学习复盘生成。
+
+## 🎯 本节定位
+
+- **加分项目：AI 辅助维护本知识库**。前置：阶段三 [[../03-知识库技术-RAG/17-LLM-Wiki知识库范式]] 与 [[../03-知识库技术-RAG/05-Embedding模型选型]]。
+- **延伸**：双链/标签推荐可参考阶段五 [[../05-Agent-MCP-Skills/16-AGENTS规范详解]] 的规范式指令写法，产出建议而非覆盖原文。
 
 ## 📌 项目背景
 
@@ -59,10 +65,10 @@ flowchart TD
 
 ## 🧠 难点与关键技术点
 
-- [[17-LLM-Wiki知识库范式]]
-- [[05-Embedding模型选型]]
-- [[07-Prompt工程基础]]
-- [[16-AGENTS规范详解]]
+- [[../03-知识库技术-RAG/17-LLM-Wiki知识库范式]]
+- [[../03-知识库技术-RAG/05-Embedding模型选型]]
+- [[../01-LLM基础与Prompt/07-Prompt工程基础]]
+- [[../05-Agent-MCP-Skills/16-AGENTS规范详解]]
 - Markdown frontmatter、双链和相对路径解析要尽量保留原始语义。
 - LLM 生成的双链建议只能作为候选，需要给出理由和置信度。
 - 对本地 vault 的写入要默认保守，避免误改用户笔记。
@@ -82,6 +88,7 @@ flowchart TD
 
 - [[../03-知识库技术-RAG/_index]]
 - [[09-项目-CAG-vs-RAG对比实验]]
+- [[_index|本区项目索引]]
 
 ## 📚 参考资料
 

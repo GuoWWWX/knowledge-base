@@ -6,8 +6,9 @@ tags:
   - 主题/FunctionCalling
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 规划中
+mastery: ⭐☆☆☆☆
 repo: 未绑定
 ---
 
@@ -15,6 +16,11 @@ repo: 未绑定
 
 > [!info] 项目简介
 > 用 Spring AI 工具调用能力实现一个能查天气、计算、查数据库和调用业务接口的工具机器人。
+
+## 🎯 本节定位
+
+- **本章第 2 个项目，工具调用**。前置：01 智能问答机器人 + 阶段二 [[../02-框架-SpringAI与LangChain4j/06-Function-Calling工具调用]]。
+- **延伸**：本项目目标之一是总结 Function Calling、MCP、Agent 的边界；MCP 与 Agent 的深入实现在阶段五（05 区）与 05、06 项目，本处只做概念对比。
 
 ## 📌 项目背景
 
@@ -61,10 +67,10 @@ flowchart TD
 
 ## 🧠 难点与关键技术点
 
-- [[06-Function-Calling工具调用]]
-- [[02-ChatClient与ChatModel]]
-- [[09-MCP协议详解]]
-- [[01-Agent设计模式详解]]
+- [[../02-框架-SpringAI与LangChain4j/06-Function-Calling工具调用]]
+- [[../02-框架-SpringAI与LangChain4j/02-ChatClient与ChatModel]]
+- [[../05-Agent-MCP-Skills/09-MCP协议详解]]
+- [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]
 - 工具 schema 要清晰描述参数类型、约束和失败返回。
 - 模型可能选择错工具或缺参数，需要有追问和拒绝策略。
 - 业务工具不能直接暴露高风险操作，至少要有白名单和权限边界。
@@ -84,6 +90,7 @@ flowchart TD
 
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[05-项目-通用ReAct-Agent]]
+- [[_index|本区项目索引]]
 
 ## 📚 参考资料
 

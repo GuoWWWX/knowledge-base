@@ -96,6 +96,13 @@ Codex 不可能内置所有团队工具，所以提供两类扩展：
 
 > 我理解 Codex 的架构核心是“任务线程 + 上下文装配 + 工具执行 + 安全治理 + 工程交付”。它不是简单代码生成器，而是把模型接入 CLI、IDE、桌面 app、云端和 Git 工作流，让 Agent 能持续完成真实开发任务。
 
+## 关联
+
+- [[02-Codex一次任务执行全链路]]：看一次任务如何完整跑完。
+- [[../01-标杆产品对比-Codex-vs-Claude-Code]]：与 Claude Code 的定位差异。
+- [[../../05-Agent-MCP-Skills/16-AGENTS规范详解]]：AGENTS.md 前置知识。
+- [[../../05-Agent-MCP-Skills/09-MCP协议详解]]：MCP 协议前置知识。
+
 ## 📚 参考资料
 
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)

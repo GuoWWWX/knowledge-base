@@ -1,12 +1,13 @@
 ---
 title: Spring AI 与 LangChain4j 对比
 tags:
+  - 领域/AI应用
   - 类型/知识
   - 主题/SpringAI
   - 主题/LangChain4j
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -15,6 +16,11 @@ mastery: ⭐☆☆☆☆
 
 > [!abstract] 一句话总结
 > Spring Boot 企业项目优先 Spring AI；普通 Java、接口式 AI 服务、框架中立场景可以考虑 LangChain4j。先选一个做项目，比长期纠结框架更重要。
+
+## 🎯 本节定位
+
+- **本章第 11 课，收尾与选型**。前置：[[10-LangChain4j核心概念]]；本节给出 Spring AI 与 LangChain4j 的对比结论与选型建议。
+- **延伸**：下一章进入 [[10-AI应用开发/03-知识库技术-RAG/_index|知识库技术 RAG]]，在 `VectorStore` 与 Advisor 基础上深入 RAG 工程。
 
 ## 📌 核心定位
 
@@ -142,8 +148,10 @@ Spring AI 更像“调用链 Builder”；LangChain4j 更像“声明一个 AI �
 - [[10-LangChain4j核心概念]]
 - [[02-ChatClient与ChatModel]]
 - [[09-VectorStore向量存储]]
+- [[_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/)
 - [LangChain4j Documentation](https://docs.langchain4j.dev/)
+
