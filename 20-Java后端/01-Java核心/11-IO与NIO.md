@@ -18,7 +18,7 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **本章第 7 课，数据移动**。前置：[[02-异常处理最佳实践]]（所有 IO 的关闭与异常处理都靠 try-with-resources + suppressed）、[[06-Lambda与Stream]]（流的函数式思维对比）。
+- **本章第 11 课，数据移动**。前置：[[02-异常处理最佳实践]]（所有 IO 的关闭与异常处理都靠 try-with-resources + suppressed）、[[10-Lambda与Stream]]（流的函数式思维对比）。
 - **延伸阅读（本课不展开）**：Netty 的 Reactor 模型、Kafka/RocketMQ 网络层基于 NIO 的完整实现属于中间件/框架章节；epoll 等操作系统机制只在本课做概念级说明。
 
 ## 📌 这是什么
@@ -196,7 +196,7 @@ for (int i = 0; i < 100000; i++) {
 
 ## 🔗 关联笔记
 
-- 本课内：上一课 [[06-Lambda与Stream]]；下一课 [[08-反射与动态代理]]
+- 本课内：上一课 [[10-Lambda与Stream]]；下一课 [[12-反射与动态代理]]
 - 延伸：[[20-Java后端/02-JVM/08-常用工具-jstat-jmap-jstack-Arthas|JVM 排查工具]]（jstack 定位 IO 阻塞）；Netty 网络层属于中间件章节
 
 ## 📚 参考资料

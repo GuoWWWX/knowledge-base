@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "20-Java后端/01-Java核心/04-集合框架-List-Map-Set源码.md",
+                "file": "20-Java后端/01-Java核心/03-String与字符串常量池.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "04-集合框架-List-Map-Set源码"
+              "title": "03-String与字符串常量池"
             }
           }
         ]
@@ -170,8 +170,20 @@
       "command-palette:打开命令面板": false
     }
   },
-  "active": "7dce3dc9ce43da5f",
+  "active": "ff264d4974751a7e",
   "lastOpenFiles": [
+    "20-Java后端/01-Java核心/09-Queue实现-ArrayDeque与PriorityQueue.md",
+    "20-Java后端/01-Java核心/08-Map实现-LinkedHashMap与TreeMap.md",
+    "20-Java后端/01-Java核心/06-Set实现-HashSet与TreeSet.md",
+    "20-Java后端/01-Java核心/05-List实现-ArrayList与LinkedList.md",
+    "20-Java后端/01-Java核心/04-集合框架-核心机制与选型.md",
+    "20-Java后端/01-Java核心/07-HashMap原理与扩容.md",
+    "20-Java后端/01-Java核心/10-Lambda与Stream.md",
+    "20-Java后端/01-Java核心/11-IO与NIO.md",
+    "20-Java后端/01-Java核心/12-反射与动态代理.md",
+    "20-Java后端/01-Java核心/13-注解与注解处理器.md",
+    "20-Java后端/01-Java核心/14-Java新特性-Record与密封类.md",
+    "20-Java后端/01-Java核心/15-虚拟线程.md",
     "20-Java后端/01-Java核心/03-String与字符串常量池.md",
     "20-Java后端/01-Java核心/02-异常处理最佳实践.md",
     "20-Java后端/01-Java核心/01-泛型与类型擦除.md",
@@ -186,28 +198,16 @@
     "20-Java后端/01-Java核心/07-IO与NIO.md",
     "20-Java后端/01-Java核心/08-反射与动态代理.md",
     "20-Java后端/01-Java核心/04-HashMap原理与扩容.md",
-    "20-Java后端/01-Java核心/03-集合框架-List-Map-Set源码.md",
-    "20-Java后端/01-Java核心/07-反射与动态代理.md",
-    "20-Java后端/01-Java核心/05-Lambda与Stream.md",
-    "20-Java后端/01-Java核心/_index.md",
-    "20-Java后端/00-总览/学习仪表盘.md",
     "tmp/pdfs/kyland-sicom6024fd-web-manual-cn.pdf",
     "tmp/pdfs/kyland-sicom-3024p-web-manual-cn.pdf",
     "tmp/pdfs/kyland-kien7009-web-manual-en.pdf",
-    "README.md",
     "未命名.base",
     "未命名 1.base",
-    "40-求职准备/_index.md",
-    "10-AI应用开发/01-LLM基础与Prompt/06-微调-LoRA-QLoRA-LLaMA-Factory入门.md",
-    "10-AI应用开发/01-LLM基础与Prompt/_index.md",
-    "10-AI应用开发/01-LLM基础与Prompt/15-上下文压缩策略.md",
     "10-AI应用开发/01-LLM基础与Prompt/17-Prompt-Caching提示缓存.md.tmp.46656.2ab8ad97a56c",
     "tmp/checklinks.py",
     "99-模板/面试题模板.md.tmp.6200.344f3088d3b2",
     "10-AI应用开发/01-LLM基础与Prompt/16-推理模型与思考控制.md.tmp.6200.968af082aabc",
-    "10-AI应用开发/01-LLM基础与Prompt/16-推理模型与思考控制.md",
     "10-AI应用开发/01-LLM基础与Prompt/16-推理模型与思考控制.md.tmp.6200.83d0a91c7eeb",
-    "10-AI应用开发/01-LLM基础与Prompt/17-Prompt-Caching提示缓存.md",
     "未命名.canvas",
     "未命名 1.canvas"
   ]

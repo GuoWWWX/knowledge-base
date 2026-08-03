@@ -18,8 +18,8 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **本章第 10 课，现代建模**。前置：[[01-泛型与类型擦除]]（record 组件可为泛型）、[[03-String与字符串常量池]]（String 不可变与 record 不可变的对比）、[[04-集合框架-List-Map-Set源码]]（record 天然是不可变 key）、[[08-反射与动态代理]]（`isRecord/isSealed/getRecordComponents` 反射 API）、[[09-注解与注解处理器]]。
-- **延伸阅读（本课只讲动机不展开语法）**：sealed + 模式匹配的 switch 穷尽检查属于语言新特性；虚拟线程是独立的并发主题，见下一课 [[11-虚拟线程]]。
+- **本章第 14 课，现代建模**。前置：[[01-泛型与类型擦除]]（record 组件可为泛型）、[[03-String与字符串常量池]]（String 不可变与 record 不可变的对比）、[[04-集合框架-核心机制与选型]]（record 天然是不可变 key）、[[12-反射与动态代理]]（`isRecord/isSealed/getRecordComponents` 反射 API）、[[13-注解与注解处理器]]。
+- **延伸阅读（本课只讲动机不展开语法）**：sealed + 模式匹配的 switch 穷尽检查属于语言新特性；虚拟线程是独立的并发主题，见下一课 [[15-虚拟线程]]。
 
 ## 📌 这是什么
 
@@ -78,7 +78,7 @@ String msg = switch (result) {          // 编译器知道只有两种
 
 关键语义与限制：
 - **不能有实例字段**（组件除外）、**不能有 native 方法**、不能继承其他类（已继承 Record）；可以有静态字段/静态方法、可以实现接口。
-- **equals 的规则**：同一 record 类、组件逐一相等才相等——值语义，适合做集合元素和 map key（衔接 [[04-集合框架-List-Map-Set源码]] 的契约）。
+- **equals 的规则**：同一 record 类、组件逐一相等才相等——值语义，适合做集合元素和 map key（衔接 [[04-集合框架-核心机制与选型]] 的契约）。
 - **compact constructor** 写法：`record OrderLine(String sku, List<String> tags) { OrderLine { if (sku.isBlank()) throw new IllegalArgumentException(); tags = List.copyOf(tags); } }`——校验 + **防御性拷贝**都在这。
 - **浅不可变**：`line.tags().add(...)` 依然能改 list 内容；要深不可变得自己拷贝。
 
@@ -206,8 +206,8 @@ new OrderLine("", List.of());   // IllegalArgumentException: sku 不能为空
 
 ## 🔗 关联笔记
 
-- 本课内：上一课 [[09-注解与注解处理器]]；应用见 [[04-集合框架-List-Map-Set源码]]（record 做 key）、[[05-HashMap原理与扩容]]
-- 下一课：[[11-虚拟线程]]（现代 Java 的并发新特性）
+- 本课内：上一课 [[13-注解与注解处理器]]；应用见 [[04-集合框架-核心机制与选型]]（record 做 key）、[[07-HashMap原理与扩容]]
+- 下一课：[[15-虚拟线程]]（现代 Java 的并发新特性）
 - 延伸：sealed + 模式匹配完整语法属语言新特性；[[20-Java后端/03-并发编程/_index|并发编程章节]]
 
 ## 📚 参考资料
