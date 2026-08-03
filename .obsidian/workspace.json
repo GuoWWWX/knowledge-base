@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "20-Java后端/01-Java核心/02-异常处理最佳实践.md",
+                "file": "20-Java后端/01-Java核心/03-String与字符串常量池.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "02-异常处理最佳实践"
+              "title": "03-String与字符串常量池"
             }
           }
         ]
@@ -172,6 +172,7 @@
   },
   "active": "7dce3dc9ce43da5f",
   "lastOpenFiles": [
+    "20-Java后端/01-Java核心/02-异常处理最佳实践.md",
     "20-Java后端/01-Java核心/01-泛型与类型擦除.md",
     "20-Java后端/01-Java核心/03-String与字符串常量池.md",
     "20-Java后端/01-Java核心/10-Lambda与Stream.md",
@@ -184,7 +185,6 @@
     "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md",
     "20-Java后端/01-Java核心/04-集合框架/01-核心机制与选型.md",
     "20-Java后端/01-Java核心/04-集合框架",
-    "20-Java后端/01-Java核心/02-异常处理最佳实践.md",
     "20-Java后端/01-Java核心/04-集合框架-核心机制与选型.md",
     "20-Java后端/01-Java核心/05-List实现-ArrayList与LinkedList.md",
     "20-Java后端/01-Java核心/06-Set实现-HashSet与TreeSet.md",

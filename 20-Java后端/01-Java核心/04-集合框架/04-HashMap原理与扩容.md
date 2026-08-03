@@ -49,7 +49,7 @@ mastery: ⭐⭐⭐☆☆
 ```mermaid
 flowchart TD
     A[put key/value] --> B[hash 扰动 h^h>>>16]
-    B --> C[定位桶 index = (n-1) & hash]
+    B --> C["定位桶 index = (n-1) & hash"]
     C --> D{桶是否为空}
     D -- 是 --> E[新建 Node]
     D -- 否 --> F[遍历链表或红黑树]

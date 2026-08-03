@@ -54,12 +54,12 @@ mastery: ⭐⭐⭐☆☆
 
 ```mermaid
 flowchart TD
-    A["代码: String s = \"abc\""] --> B{常量池有 \"abc\"?}
+    A["代码: String s = #quot;abc#quot;"] --> B{常量池有 #quot;abc#quot;?}
     B -- 是 --> C[直接复用池中实例]
-    B -- 否 --> D[池中创建 \"abc\"]
+    B -- 否 --> D[池中创建 #quot;abc#quot;]
     C --> E["s == 池中引用"]
     D --> E
-    F["代码: new String(\"abc\")"] --> G[堆上新建对象<br/>内容拷贝自池中字面量]
+    F["代码: new String(#quot;abc#quot;)"] --> G[堆上新建对象<br/>内容拷贝自池中字面量]
     G --> H["== 与池中引用不同<br/>equals 相同"]
     I["循环拼接 +"] --> J[每次 new StringBuilder + 复制]
     I --> K["正确: StringBuilder.append<br/>O(n) 一次完成"]
