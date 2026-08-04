@@ -10,11 +10,15 @@ updated: 2026-08-03
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
-
 # 🌊 流式输出 SSE
 
 > [!abstract] 一句话总结
 > 流式输出把“等完整答案”改成“边生成边返回”，SSE 是 Java Web 场景里最简单稳定的文本流传输方式。
+
+> [!info] 两个"SSE"别混（2025 传闻澄清）
+> - **本课的 SSE**：Web 标准 `text/event-stream`，后端用 HTTP 流把模型输出推给前端（Chat UI 打字机效果）——**没被取代**，是 AI 流式响应的标配（ChatGPT/Claude 网页、OpenAI 兼容接口流式响应都是它）。
+> - **MCP 协议里的 SSE 传输**：MCP Client↔Server 的传输通道，2025-06-18 规范已移除，由 **Streamable HTTP / HTTP**（2025-11-25 规范化）取代——那是协议层的事，与本课无关（见 05-Agent-MCP-Skills/09-MCP协议详解）。
+> - 面试一句话："MCP 的 SSE 传输被 Streamable HTTP 取代了；Web 前端的 SSE 仍是流式输出的标准格式。"
 
 ## 🎯 本节定位
 

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/03-PromptTemplate.md",
+                "file": "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/04-流式输出-SSE.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "03-PromptTemplate"
+              "title": "04-流式输出-SSE"
             }
           }
         ]
@@ -172,6 +172,7 @@
   },
   "active": "7dce3dc9ce43da5f",
   "lastOpenFiles": [
+    "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/03-PromptTemplate.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/02-ChatClient与ChatModel.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/01-Spring-AI项目搭建.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/06-多模型接入与配置.md",
@@ -191,7 +192,6 @@
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/05-多模型接入与切换.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/04-流式输出-SSE.md",
-    "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/03-PromptTemplate.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/05-多模型接入与切换.md",
     "10-AI应用开发/02-框架-SpringAI与LangChain4j/08-ChatMemory记忆.md",
