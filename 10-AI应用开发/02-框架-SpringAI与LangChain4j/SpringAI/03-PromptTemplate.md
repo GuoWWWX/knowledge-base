@@ -118,6 +118,59 @@ Context：检索结果、历史摘要、工具返回
 
 ---
 
+## 🚀 进阶用法（不止变量替换）
+
+### 1. ChatClient 内联模板（日常最高频）
+
+```java
+String answer = chatClient.prompt()
+        .system(s -> s.text("你是 {company} 的客服，语气 {tone}")
+                .param("company", c).param("tone", t))
+        .user(u -> u.text("用户问题：{question}").param("question", q))
+        .call()
+        .content();
+// 每条消息各自有模板和参数，互不干扰
+```
+
+### 2. SpEL 表达式：占位符能取对象字段
+
+```java
+record User(String name, String city) {}
+
+Prompt prompt = new PromptTemplate("用户 {user.name} 来自 {user.city}")
+        .create(Map.of("user", new User("小明", "上海")));
+// {user.name} 自动拆箱取字段——业务对象直接传，不用提前拆成 Map
+```
+
+### 3. 多消息模板：渲染出"消息序列"而非一段文本
+
+```java
+Prompt prompt = new PromptTemplate(multiMessageTemplate).create(vars);
+prompt.getInstructions();   // List<Message>：system + user 带角色
+// 结构化 prompt（开场白 + 任务 + 示例）整体模板化
+```
+
+### 4. 动态选择模板（模板 = 路由产物）
+
+```java
+String key = user.isVip() ? "vip-greeting" : "normal-greeting";
+String template = templateService.get(key);          // DB/配置中心
+Prompt prompt = new PromptTemplate(template).create(vars);
+// 模板 + 配置中心 = prompt 的 A/B 测试与运营迭代
+```
+
+### 5. 其他实用姿势
+
+- **模板组合**：先渲染子模板，结果再当变量注入父模板。
+- **结构化输出提示**：把输出 JSON 的 schema 说明放模板里，配合结构化输出。
+- **RAG/记忆注入**：检索片段、对话历史作为变量注入（最常见的业务场景）。
+- **模板单测**：`template.render()` 单独渲染检查，不调模型。
+
+> [!warning] 诚实边界
+> Spring AI 模板**不是模板引擎**（不像 Jinja2/FreeMarker）：**没有 if/for/过滤器**。复杂条件、循环、格式化在代码里算好再传变量，模板保持简单。
+
+---
+
 ## ✅ 学习检查点
 
 - [ ] 能用变量渲染一个 Prompt
