@@ -48,6 +48,23 @@ Prompt 是给模型的输入，Template 是可填变量的 Prompt。Spring AI �
 > 另外两点工程价值：模板可放 `resources/prompts/*.st` 与代码分离（改话术不重新编译）；模板加载时能提前发现占位符缺失/多余（String.format 运行时才炸）。
 > **String.format 何时够用**：一次性、不维护的简单拼接（日志、调试）；"prompt 是产品内容"的场景一律用 PromptTemplate——它换来的不是"能占位"，而是"prompt 工程化"。
 
+> [!info] 模板放哪？一个谱系，不是单选题
+> | 存放方式 | 场景 | 特点 |
+> | ---- | ---- | ---- |
+> | 代码内字符串 | 原型、一次性 | 最快，改代码 |
+> | `.st` 资源文件 | 中小项目、模板稳定 | 打包进 jar，**发布 = 改版**，不灵活 |
+> | **数据库 / 配置中心** | **正经生产项目** | 运营可改、A/B 测试、多租户不同话术、热更新无需发版 |
+>
+> **关键区分**：`PromptTemplate` 是**渲染引擎**（模板字符串 → `Prompt` 对象），与模板**存哪无关**。生产从 DB/配置中心读出模板后，照样要用它渲染：
+>
+> ```java
+> String templateText = templateService.get("customer_service", tenantId, version); // 从 DB 取
+> Prompt prompt = new PromptTemplate(templateText)                                // 还是 PromptTemplate
+>         .create(Map.of("company", c, "user", u, "question", q));
+> ```
+>
+> 存 DB 的注意点：按 `场景 key + 租户 + 版本 + 内容` 存，模板是"配置"也要版本管理；读取走缓存；**兜底**——DB 未配置时回退内置默认模板，别让配置缺失变成线上事故。
+
 ---
 
 ## 🧩 基础用法
