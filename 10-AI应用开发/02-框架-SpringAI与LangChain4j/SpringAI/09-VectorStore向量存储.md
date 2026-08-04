@@ -143,10 +143,11 @@ String answer = chatClient.prompt()
 - [[03-PromptTemplate]]
 - [[07-Advisor拦截器]]
 - [[10-AI应用开发/03-知识库技术-RAG/_index]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html)
 - [Spring AI ETL Pipeline](https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html)
+
 

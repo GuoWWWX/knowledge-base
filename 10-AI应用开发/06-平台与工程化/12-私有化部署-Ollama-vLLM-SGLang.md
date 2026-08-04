@@ -20,7 +20,7 @@ mastery: ⭐☆☆☆☆
 ## 🎯 本节定位
 
 - **私有推理服务选型课**：承接 [[10-LiteLLM与One-API]] 与 [[11-AI网关生产架构-限流-计费-审计]] 的网关视角，落到模型服务本身的部署、压测与验收。
-- **前置知识**：模型选型参考 [[10-AI应用开发/01-LLM基础与Prompt/05-主流模型选型对比]]，多供应商接入与切换见 [[10-AI应用开发/02-框架-SpringAI与LangChain4j/05-多模型接入与切换]]。
+- **前置知识**：模型选型参考 [[10-AI应用开发/01-LLM基础与Prompt/05-主流模型选型对比]]，多供应商接入与切换见 [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/05-多模型接入与切换]]。
 
 ## 为什么 2026 岗位会问
 
@@ -88,7 +88,7 @@ vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Jav
 
 - [[_index]]
 - [[10-LiteLLM与One-API]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/05-多模型接入与切换]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/05-多模型接入与切换]]
 - [[10-AI应用开发/01-LLM基础与Prompt/05-主流模型选型对比]]
 
 ## 📚 参考资料
@@ -97,4 +97,5 @@ vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Jav
 - [vLLM Documentation](https://docs.vllm.ai/)
 - [SGLang Documentation](https://docs.sglang.ai/)
 - [Spring AI OpenAI Chat](https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html)
+
 

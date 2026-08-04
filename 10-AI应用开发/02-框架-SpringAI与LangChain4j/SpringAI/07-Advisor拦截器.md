@@ -139,8 +139,9 @@ String answer = chatClient.prompt()
 - [[08-ChatMemory记忆]]
 - [[09-VectorStore向量存储]]
 - [[06-Function-Calling工具调用]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Advisors API](https://docs.spring.io/spring-ai/reference/api/advisors.html)
+

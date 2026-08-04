@@ -214,4 +214,5 @@ mastery: ⭐⭐⭐☆☆
 - [[../10-AI应用开发/01-LLM基础与Prompt/02-Token与Tokenizer]]
 - [[../10-AI应用开发/01-LLM基础与Prompt/03-上下文窗口]]
 - [[../10-AI应用开发/01-LLM基础与Prompt/11-结构化输出]]
-- [[../10-AI应用开发/02-框架-SpringAI与LangChain4j/06-Function-Calling工具调用]]
+- [[../10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用]]
+

@@ -128,9 +128,10 @@ String content = response.getResult().getOutput().getText();
 - [[01-Spring-AI项目搭建]]
 - [[03-PromptTemplate]]
 - [[07-Advisor拦截器]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Chat Client API](https://docs.spring.io/spring-ai/reference/api/chatclient.html)
 - [Spring AI Chat Model API](https://docs.spring.io/spring-ai/reference/api/chatmodel.html)
+

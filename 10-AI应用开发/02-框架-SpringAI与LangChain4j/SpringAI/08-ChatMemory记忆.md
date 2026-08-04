@@ -150,9 +150,10 @@ chat:{userId}:{sessionId}
 - [[07-Advisor拦截器]]
 - [[09-VectorStore向量存储]]
 - [[02-ChatClient与ChatModel]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html)
+
 

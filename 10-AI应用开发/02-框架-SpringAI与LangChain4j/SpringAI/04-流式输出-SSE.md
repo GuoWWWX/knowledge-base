@@ -137,9 +137,10 @@ AI 聊天的“模型往前端吐字”优先选 SSE；如果需要用户中途�
 
 - [[02-ChatClient与ChatModel]]
 - [[01-Spring-AI项目搭建]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Chat Client Streaming](https://docs.spring.io/spring-ai/reference/api/chatclient.html)
 - [Spring Framework WebFlux](https://docs.spring.io/spring-framework/reference/web/webflux.html)
+

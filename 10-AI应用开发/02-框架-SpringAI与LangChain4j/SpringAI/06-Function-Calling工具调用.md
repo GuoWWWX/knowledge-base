@@ -143,9 +143,10 @@ flowchart LR
 - [[02-ChatClient与ChatModel]]
 - [[07-Advisor拦截器]]
 - [[10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
+
 

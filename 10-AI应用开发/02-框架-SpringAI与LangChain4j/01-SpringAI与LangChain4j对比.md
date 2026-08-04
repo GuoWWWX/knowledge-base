@@ -19,7 +19,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 11 课，收尾与选型**。前置：[[10-LangChain4j核心概念]]；本节给出 Spring AI 与 LangChain4j 的对比结论与选型建议。
+- **本章第 11 课，收尾与选型**。前置：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]]；本节给出 Spring AI 与 LangChain4j 的对比结论与选型建议。
 - **延伸**：下一章进入 [[10-AI应用开发/03-知识库技术-RAG/_index|知识库技术 RAG]]，在 `VectorStore` 与 Advisor 基础上深入 RAG 工程。
 
 ## 📌 核心定位
@@ -145,13 +145,14 @@ Spring AI 更像“调用链 Builder”；LangChain4j 更像“声明一个 AI �
 
 ## 🔗 关联阅读
 
-- [[10-LangChain4j核心概念]]
-- [[02-ChatClient与ChatModel]]
-- [[09-VectorStore向量存储]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/02-ChatClient与ChatModel]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/09-VectorStore向量存储]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/)
 - [LangChain4j Documentation](https://docs.langchain4j.dev/)
+
 

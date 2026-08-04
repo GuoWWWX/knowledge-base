@@ -119,9 +119,10 @@ Context：检索结果、历史摘要、工具返回
 - [[02-ChatClient与ChatModel]]
 - [[09-VectorStore向量存储]]
 - [[07-Advisor拦截器]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Prompts](https://docs.spring.io/spring-ai/reference/api/prompt.html)
+
 

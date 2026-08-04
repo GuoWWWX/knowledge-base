@@ -5,7 +5,7 @@ tags:
   - 类型/索引
   - 阶段/02
 created: 2026-05-31
-updated: 2026-08-03
+updated: 2026-08-04
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -13,53 +13,26 @@ mastery: ⭐☆☆☆☆
 # ☕ 02 · 框架（Spring AI / LangChain4j）
 
 > [!info] 本区说明
-> 对应学习路径 **阶段二**。存放 Java AI 框架的核心抽象、用法、源码理解相关笔记。Spring AI 为主，LangChain4j 为辅。
+> 对应学习路径 **阶段二**。本区是 Java AI 框架的总览区：两个框架各有独立子目录深入介绍，本区负责选型对比与总览导航。Spring AI 为主，LangChain4j 为辅。
 
 > [!info] 框架版本现状（2026-08）
 > - **Spring AI 2.0.0 GA**（2026-06）：基于 Boot 4.x、MCP SDK 2.0；Options 全面 builder 化；记忆类 Advisor 需显式 conversationId；SAP HANA/Infinispan 向量库移除；可观测性增强。维护线：1.1.8、1.0.9。
 > - **LangChain4j 1.18.1**（2026-07）：1.x 持续迭代。
-> - 本目录示例以概念与稳定 API 为主，具体版本以官方 BOM 为准（见 [[01-Spring-AI项目搭建]]）。
+> - 各篇示例以概念与稳定 API 为主，具体版本以官方 BOM 为准（见 [[SpringAI/01-Spring-AI项目搭建]]）。
 
-## 📚 知识笔记清单
+## 📚 目录结构
 
-> [!success] 建议学习顺序
-> 1. [[01-Spring-AI项目搭建]] —— 先跑通 Spring Boot + 模型调用
-> 2. [[02-ChatClient与ChatModel]] —— 建立 Spring AI 核心抽象
-> 3. [[03-PromptTemplate]]、[[04-流式输出-SSE]] —— 掌握输入组织和输出体验
-> 4. [[05-多模型接入与切换]] —— 掌握模型路由、切换和降级
-> 5. [[06-Function-Calling工具调用]]、[[07-Advisor拦截器]]、[[08-ChatMemory记忆]]、[[09-VectorStore向量存储]] —— 进入 Agent / RAG 原语
-> 6. [[10-LangChain4j核心概念]]、[[11-SpringAI与LangChain4j对比]] —— 对照学习，避免框架内耗
-
-| 文档 | 主题 | 状态 |
+| 入口 | 内容 | 什么时候读 |
 | ---- | ---- | ---- |
-| [[01-Spring-AI项目搭建]] | Spring Boot + Spring AI 起步 | ✅ 已写 |
-| [[02-ChatClient与ChatModel]] | 调用入口与底层模型抽象 | ✅ 已写 |
-| [[03-PromptTemplate]] | 模板化提示词 | ✅ 已写 |
-| [[04-流式输出-SSE]] | 流式响应与前端体验 | ✅ 已写 |
-| [[05-多模型接入与切换]] | 多 Provider / 多模型路由 | ✅ 已写 |
-| [[06-Function-Calling工具调用]] | Tool Calling / Agent 基础 | ✅ 已写 |
-| [[07-Advisor拦截器]] | 对话链路增强 | ✅ 已写 |
-| [[08-ChatMemory记忆]] | 多轮会话上下文 | ✅ 已写 |
-| [[09-VectorStore向量存储]] | 向量检索与 RAG | ✅ 已写 |
-| [[10-LangChain4j核心概念]] | LangChain4j 抽象体系 | ✅ 已写 |
-| [[11-SpringAI与LangChain4j对比]] | 框架选型 | ✅ 已写 |
+| [[SpringAI/_index\|Spring AI 子区]] | Spring AI 9 篇：搭建、ChatClient、模板、流式、多模型、工具、Advisor、记忆、向量库 | **主线**，按编号读 |
+| [[LangChain4j/_index\|LangChain4j 子区]] | LangChain4j 4 篇：核心概念、AiServices、记忆与 RAG、生态集成 | **对照**，学完 Spring AI 后读 |
+| [[01-SpringAI与LangChain4j对比\|两框架对比与选型]] | 抽象对照表、选型结论 | 两个子区都看完后读 |
 
----
+## 🧭 学习路线
 
-### Spring AI 核心
-- [x] [[01-Spring-AI项目搭建]]
-- [x] [[02-ChatClient与ChatModel]]
-- [x] [[03-PromptTemplate]]
-- [x] [[04-流式输出-SSE]]
-- [x] [[05-多模型接入与切换]]
-- [x] [[06-Function-Calling工具调用]]
-- [x] [[07-Advisor拦截器]]
-- [x] [[08-ChatMemory记忆]]
-- [x] [[09-VectorStore向量存储]]
-
-### LangChain4j（对照学习）
-- [x] [[10-LangChain4j核心概念]]
-- [x] [[11-SpringAI与LangChain4j对比]]
+1. **主线：Spring AI 子区**（[[SpringAI/01-Spring-AI项目搭建]] → [[SpringAI/09-VectorStore向量存储]]）——先跑通工程，再逐个掌握核心原语。
+2. **对照：LangChain4j 子区**（[[LangChain4j/01-LangChain4j核心概念]] → [[LangChain4j/04-与Spring生态集成]]）——用 Spring AI 的心智对照理解，避免框架内耗。
+3. **收尾：选型对比**（[[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比]]）——按团队技术栈和场景做决策。
 
 ## 🧾 本章复习
 
@@ -69,4 +42,5 @@ mastery: ⭐☆☆☆☆
 
 - 学习路径对应章节：[[10-AI应用开发/00-总览/AI应用开发学习路径#第五章 分阶段学习计划]]（阶段二）
 - 上级：[[10-AI应用开发/00-总览/学习仪表盘]]
+
 

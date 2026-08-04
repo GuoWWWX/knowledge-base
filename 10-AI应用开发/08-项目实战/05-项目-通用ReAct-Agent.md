@@ -69,7 +69,7 @@ flowchart TD
 
 - [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]
-- [[../02-框架-SpringAI与LangChain4j/06-Function-Calling工具调用]]
+- [[../02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用]]
 - [[../05-Agent-MCP-Skills/18-Agent可观测]]
 - 循环终止条件必须明确，否则容易无限调用工具。
 - 工具参数需要结构化校验，不能把模型输出直接交给业务接口。
@@ -98,3 +98,4 @@ flowchart TD
 - [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
 - [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/)
 - [Langfuse Documentation](https://langfuse.com/docs)
+

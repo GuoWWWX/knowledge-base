@@ -161,10 +161,11 @@ curl "http://localhost:8080/chat?message=用一句话解释Spring AI"
 - [[02-ChatClient与ChatModel]]
 - [[05-多模型接入与切换]]
 - [[06-Function-Calling工具调用]]
-- [[_index]]
+- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
 
 ## 📚 参考资料
 
 - [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/)
 - [Spring AI Chat Client API](https://docs.spring.io/spring-ai/reference/api/chatclient.html)
+
 
