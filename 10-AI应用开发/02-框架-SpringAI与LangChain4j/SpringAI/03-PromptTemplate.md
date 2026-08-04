@@ -123,6 +123,9 @@ Context：检索结果、历史摘要、工具返回
 ### 1. ChatClient 内联模板（日常最高频）
 
 ```java
+// s 是 SystemSpec(系统消息构建器),u 是 UserSpec(用户消息构建器)
+// 它们是 .system()/.user() 传入的 Consumer 回调参数——作用域隔离,
+// system 和 user 可以各自有 {company} 等占位符而不冲突
 String answer = chatClient.prompt()
         .system(s -> s.text("你是 {company} 的客服，语气 {tone}")
                 .param("company", c).param("tone", t))
