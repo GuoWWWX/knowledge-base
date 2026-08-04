@@ -24,13 +24,15 @@ mastery: ⭐☆☆☆☆
 - [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]] — 用接口声明 AI 服务（LangChain4j 最大特色）
 - [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/03-记忆与RAG]] — ChatMemory、EmbeddingStore、ContentRetriever
 - [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/04-与Spring生态集成]] — Spring Boot Starter、与 Spring AI 共存
+- [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/05-流式输出与结构化输出]] — TokenStream 流式、OutputParser/POJO 结构化
+- [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/06-多模型接入与配置]] — 多 Provider builder、Embedding 模型、切换与降级
 
 ## 🧭 学习路线
 
 1. **总览（01）**：`ChatLanguageModel` + `AiServices` + 记忆 + 工具 + 检索 = Java AI 应用。
 2. **特色（02）**：`AiServices` 接口声明式——定义接口即获得 AI 服务，重点对比 `ChatClient` 的链式风格。
-3. **能力（03）**：记忆与 RAG 组件，对照 Spring AI 的 `ChatMemory`/`VectorStore`。
-4. **落地（04）**：Spring Boot 集成方式与工程选型。
+3. **能力（03→05）**：记忆与 RAG 组件（对照 Spring AI 的 `ChatMemory`/`VectorStore`），流式与结构化输出（对照 Spring AI 的 SSE/Structured Output）。
+4. **工程（04→06）**：Spring Boot 集成方式、多模型接入与切换，最后读选型对比收尾。
 
 ## 🔗 相关
 
