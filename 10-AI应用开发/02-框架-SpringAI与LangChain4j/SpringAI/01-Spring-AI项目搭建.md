@@ -36,12 +36,12 @@ Spring Boot 应用
 
 ## 🤔 解决什么问题
 
-| 不用 Spring AI | 用 Spring AI |
-| ---- | ---- |
-| 每个模型 SDK 写法不同 | 用统一抽象切换 Provider |
-| 业务代码直接拼 HTTP 请求 | 由 Starter 管连接、序列化和配置 |
-| 工具调用、RAG、记忆各自散落 | 用 Spring Bean 组合 |
-| 难接入企业 Spring Boot 工程 | 天然适配配置、监控、依赖注入 |
+| 不用 Spring AI         | 用 Spring AI          |
+| -------------------- | -------------------- |
+| 每个模型 SDK 写法不同        | 用统一抽象切换 Provider     |
+| 业务代码直接拼 HTTP 请求      | 由 Starter 管连接、序列化和配置 |
+| 工具调用、RAG、记忆各自散落      | 用 Spring Bean 组合     |
+| 难接入企业 Spring Boot 工程 | 天然适配配置、监控、依赖注入       |
 
 ---
 

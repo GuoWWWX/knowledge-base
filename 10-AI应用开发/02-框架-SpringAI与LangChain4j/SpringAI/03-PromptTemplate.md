@@ -33,12 +33,20 @@ Prompt 是给模型的输入，Template 是可填变量的 Prompt。Spring AI �
 
 ## 🤔 解决什么问题
 
-| 字符串拼接 | PromptTemplate |
+| 字符串拼接 / `String.format` | PromptTemplate |
 | ---- | ---- |
 | 容易漏空格、漏变量 | 变量显式 |
 | 难复用 | 模板可沉淀 |
 | 难测试 | 可单独渲染检查 |
 | 容易把业务数据和提示词混在一起 | 结构更清楚 |
+
+> [!tip] 为什么不用 `String.format("...%s...", var)`？三个硬伤
+> 1. **顺序耦合**：占位符一多，参数顺序写反编译不报错，运行期 prompt 就错了；`{name}` 命名占位符顺序无关、一眼可读。
+> 2. **`%` 冲突**：prompt 里若本身有"提升 50% 的性能"，`String.format` 会把 `%` 当占位符（抛异常或输出错乱，要 `%%` 转义）；`{var}` 模板无此问题。
+> 3. **String.format 只能拼字符串**，`PromptTemplate.create()` 返回的是 **`Prompt` 消息对象**——能生成多条消息（system+user+历史）、能与工具/记忆/结构化输出集成（这些组件消费 Prompt 而非 String）。
+>
+> 另外两点工程价值：模板可放 `resources/prompts/*.st` 与代码分离（改话术不重新编译）；模板加载时能提前发现占位符缺失/多余（String.format 运行时才炸）。
+> **String.format 何时够用**：一次性、不维护的简单拼接（日志、调试）；"prompt 是产品内容"的场景一律用 PromptTemplate——它换来的不是"能占位"，而是"prompt 工程化"。
 
 ---
 
