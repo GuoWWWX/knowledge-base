@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "20-Java后端/01-Java核心/04-集合框架/06-Queue实现-ArrayDeque与PriorityQueue.md",
+                "file": "20-Java后端/01-Java核心/04-集合框架/04-HashMap原理与扩容.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "06-Queue实现-ArrayDeque与PriorityQueue"
+              "title": "04-HashMap原理与扩容"
             }
           }
         ]
@@ -172,27 +172,27 @@
   },
   "active": "7dce3dc9ce43da5f",
   "lastOpenFiles": [
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.0cdfb6e32cd3",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.44e4bf312aaf",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.006cf9d203ff",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.8987b924a3ce",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.2ec1a3f93d12",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.3030a0b42623",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.714a0ffbb37e",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.8929767ee97f",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.b6357f0e4396",
-    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md.tmp.16656.2d4499fda939",
     "20-Java后端/01-Java核心/04-集合框架/03-Set实现-HashSet与TreeSet.md",
+    "20-Java后端/01-Java核心/04-集合框架/_index.md",
+    "10-AI应用开发/01-LLM基础与Prompt/16-推理模型与思考控制.md.tmp.16656.ac84fdf4ad79",
+    "10-AI应用开发/05-Agent-MCP-Skills/06-Multi-Agent-Supervisor实现.md.tmp.16656.55612ca29aef",
+    "10-AI应用开发/05-Agent-MCP-Skills/01-Agent设计模式详解.md.tmp.16656.c44b788ceae0",
+    "10-AI应用开发/05-Agent-MCP-Skills/02-Tool-Use工具调用-代码实践.md.tmp.16656.5916f9f9777b",
+    "10-AI应用开发/05-Agent-MCP-Skills/15-Skills在企业落地的模式.md.tmp.16656.c493d0d46567",
+    "10-AI应用开发/05-Agent-MCP-Skills/14-设计自己的Skill实战.md.tmp.16656.6b5c61953f3a",
+    "10-AI应用开发/01-LLM基础与Prompt/17-Prompt-Caching提示缓存.md.tmp.16656.aef41b5922e5",
+    "10-AI应用开发/01-LLM基础与Prompt/17-Prompt-Caching提示缓存.md.tmp.16656.b3725ff589cf",
+    "10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解.md.tmp.16656.9e14b1fbe177",
+    "10-AI应用开发/04-多轮对话与上下文工程/08-对话持久化.md.tmp.16656.2bf33b1556b7",
     "20-Java后端/01-Java核心/04-集合框架/01-核心机制与选型.md",
+    "20-Java后端/01-Java核心/04-集合框架/02-List实现-ArrayList与LinkedList.md",
+    "20-Java后端/01-Java核心/04-集合框架/06-Queue实现-ArrayDeque与PriorityQueue.md",
     "20-Java后端/01-Java核心/_index.md",
     "20-Java后端/01-Java核心/01-泛型与类型擦除.md",
-    "20-Java后端/01-Java核心/04-集合框架/_index.md",
     "20-Java后端/01-Java核心/03-String与字符串常量池.md",
     "20-Java后端/01-Java核心/02-异常处理最佳实践.md",
     "20-Java后端/01-Java核心/10-Lambda与Stream.md",
     "20-Java后端/01-Java核心/11-IO与NIO.md",
-    "20-Java后端/01-Java核心/04-集合框架/06-Queue实现-ArrayDeque与PriorityQueue.md",
     "20-Java后端/01-Java核心/04-集合框架/05-Map实现-LinkedHashMap与TreeMap.md",
     "20-Java后端/01-Java核心/04-集合框架/04-HashMap原理与扩容.md",
     "20-Java后端/01-Java核心/04-集合框架-核心机制与选型.md",

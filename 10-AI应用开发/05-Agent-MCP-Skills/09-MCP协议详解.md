@@ -189,6 +189,9 @@ Client 发现 Server 暴露的：
 
 ## 传输方式：stdio vs Streamable HTTP
 
+> [!note] 版本说明
+> 2025-06-18 规范已移除旧的 **SSE（Server-Sent Events）** 传输，2025-11-25 规范新增了 **HTTP（无状态/带状态两种模式）** 传输。当前标准传输为 **stdio**（本地进程）与 **HTTP/Streamable HTTP**（远程）。部分旧框架仍兼容 SSE，但新项目不应再使用。
+
 ### stdio
 
 stdio 是本地进程通信。
@@ -211,9 +214,9 @@ stdio 是本地进程通信。
 - 权限边界依赖宿主机环境。
 - 部署、升级、隔离能力较弱。
 
-### Streamable HTTP
+### Streamable HTTP / HTTP
 
-Streamable HTTP 更适合远程部署的 MCP Server。
+Streamable HTTP 更适合远程部署的 MCP Server；2025-11-25 规范进一步引入 **HTTP 传输**（无状态 + 带状态两种模式，统一走 HTTP，替代旧 SSE 流式）。对使用者来说，远程部署一律用 HTTP 类传输即可。
 
 适合：
 
@@ -256,6 +259,36 @@ MCP 的消息层建立在 JSON-RPC 2.0 之上，这意味着它天然具备：
 - 可扩展通知机制。
 
 这使得 MCP 不只是“传一段 JSON”，而是具备标准 RPC 语义，便于调试、追踪和跨语言实现。
+
+一个最小的请求/响应示例（`tools/call`）：
+
+```json
+// 请求（Client → Server）
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather",
+    "arguments": { "city": "杭州" }
+  }
+}
+
+// 响应（Server → Client）
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [{ "type": "text", "text": "杭州：晴，28℃" }],
+    "isError": false
+  }
+}
+```
+
+> [!note] 看懂这三行
+> - `id` 用于把请求与响应配对（请求是 1，响应也要回 1）。
+> - `method` 是协议方法名（`tools/list`、`tools/call`、`resources/read`、`prompts/get` 等）。
+> - 出错时返回 `error` 对象（含 `code` 与 `message`），而不是 `result`；且 `params` 里的 `name`/`arguments` 由模型按工具 schema 生成，服务端必须做校验。
 
 ## 鉴权与授权
 
@@ -503,6 +536,6 @@ flowchart LR
 ## 📚 参考资料
 
 - [MCP 官方规范](https://modelcontextprotocol.io/)
-- [MCP 官方 Authorization 规范](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization)
-- [MCP 官方 Transport 文档](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
+- [MCP 官方 Authorization 规范](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+- [MCP 官方 Transport 文档](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
 - [Spring AI MCP 文档](https://docs.spring.io/spring-ai/reference/)

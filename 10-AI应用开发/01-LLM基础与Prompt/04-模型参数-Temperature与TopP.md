@@ -18,7 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 4 课，承接 [[01-LLM工作原理]] 的采样/解码环节**。结构化输出场景的参数选择见 [[11-结构化输出]]；推理模型用 effort 档位取代采样参数，见 [[16-推理模型与思考控制]]。
+- **本章第 4 课，承接 [[01-LLM工作原理]] 的采样/解码环节**。结构化输出场景的参数选择见 [[11-结构化输出]]；部分推理模型不再接受采样参数，改由 effort 档位控制，见 [[16-推理模型与思考控制]]。
 
 ## 📌 这是什么
 
@@ -61,7 +61,8 @@ Temperature 影响所有候选的相对概率；TopP 只保留累计概率达到
 ## 💻 代码实践
 
 ```java
-ChatOptions options = ChatOptions.builder()
+// 以 OpenAI 为例：ChatOptions 是接口，需用具体实现类的 builder
+OpenAiChatOptions options = OpenAiChatOptions.builder()
     .temperature(0.2)
     .topP(0.9)
     .build();

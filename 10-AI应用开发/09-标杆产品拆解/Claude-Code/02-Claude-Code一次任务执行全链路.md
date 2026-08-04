@@ -170,8 +170,8 @@ flowchart TD
 
 ## 📚 参考资料
 
-- [Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
-- [Claude Code Memory](https://docs.anthropic.com/en/docs/claude-code/memory)
-- [Claude Code Hooks](https://docs.anthropic.com/en/docs/claude-code/hooks)
-- [Claude Code MCP](https://docs.anthropic.com/en/docs/claude-code/mcp)
+- [Claude Code Overview](https://code.claude.com/docs/overview)
+- [Claude Code Memory](https://code.claude.com/docs/memory)
+- [Claude Code Hooks](https://code.claude.com/docs/hooks)
+- [Claude Code MCP](https://code.claude.com/docs/mcp)
 

@@ -37,7 +37,7 @@ MCP Client 不应该只是“能连上”。它还要决定哪些工具给当前
 
 | 职责 | 做法 | 风险 |
 | ---- | ---- | ---- |
-| 连接管理 | stdio/SSE/HTTP client 配置 | 本地和生产 transport 不一致。 |
+| 连接管理 | stdio/Streamable HTTP client 配置（SSE 已废弃） | 本地和生产 transport 不一致。 |
 | 工具筛选 | 按场景和权限选择 tools | 全量暴露导致模型乱调。 |
 | Schema 缓存 | 缓存 `tools/list` | 版本更新后要刷新。 |
 | 调用治理 | 超时、重试、熔断 | 重试写操作可能造成重复执行。 |

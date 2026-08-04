@@ -79,11 +79,24 @@ record WorkerResult(String worker, String status, List<String> facts, boolean ne
 @Service
 class SupervisorAgent {
     private final Map<String, WorkerAgent> workers;
+    private final ExecutorService pool = Executors.newFixedThreadPool(4);  // 并行执行池
 
     List<WorkerResult> dispatch(List<WorkerTask> tasks) {
-        return tasks.stream()
-                .map(task -> workers.get(task.worker()).run(task))
-                .toList();
+        // 并行执行所有 worker（只读查询场景），总超时兜底
+        try {
+            return pool.invokeAll(tasks.stream()
+                            .map(task -> (Callable<WorkerResult>) () -> workers.get(task.worker()).run(task))
+                            .toList(), 30, TimeUnit.SECONDS)
+                    .stream()
+                    .map(f -> {
+                        try { return f.get(); }
+                        catch (Exception e) { return new WorkerResult("", "error", List.of("worker 超时或失败: " + e.getMessage()), true); }
+                    })
+                    .toList();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("worker 并行执行被中断", e);
+        }
     }
 
     String summarize(String userGoal, List<WorkerResult> results) {

@@ -97,7 +97,7 @@ Memory 不只适用于编程。任何企业 Agent 都需要类似机制：
 
 ## 📚 参考资料
 
-- [Claude Code Memory](https://docs.anthropic.com/en/docs/claude-code/memory)
-- [Claude Code Settings](https://docs.anthropic.com/en/docs/claude-code/settings)
+- [Claude Code Memory](https://code.claude.com/docs/memory)
+- [Claude Code Settings](https://code.claude.com/docs/settings)
 - [[../../05-Agent-MCP-Skills/16-AGENTS规范详解]]
 

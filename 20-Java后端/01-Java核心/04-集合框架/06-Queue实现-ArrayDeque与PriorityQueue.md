@@ -50,7 +50,7 @@ stack.pop();                   // 出栈："b"
 // ===== PriorityQueue：按优先级出队 =====
 Queue<Integer> pq = new PriorityQueue<>();                       // 小顶堆：最小先出
 Queue<Integer> pq2 = new PriorityQueue<>(Comparator.reverseOrder());  // 大顶堆：最大先出
-pq.offer(5); pq.offer(1); pq.offer(3);
+	pq.offer(5); pq.offer(1); pq.offer(3);
 pq.poll();                     // 1（小顶堆）
 pq.peek();                     // 看堆顶（当前最小）
 

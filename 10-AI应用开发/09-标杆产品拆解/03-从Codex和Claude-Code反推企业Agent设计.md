@@ -139,6 +139,6 @@ flowchart TD
 ## 📚 参考资料
 
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
-- [Anthropic Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
+- [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification)
 

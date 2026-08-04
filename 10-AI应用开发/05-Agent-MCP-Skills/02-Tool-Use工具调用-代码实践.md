@@ -6,111 +6,183 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-08-03
 status: 已完成
-mastery: ⭐☆☆☆☆
+mastery: ⭐⭐⭐☆☆
 ---
 
-# Tool-Use工具调用-代码实践
+# 🛠️ Tool Use 工具调用 · 代码实践
 
 > [!abstract] 一句话总结
-> Tool-Use工具调用-代码实践是 AI 应用开发中的核心主题，重点在于理解概念边界、掌握工程落地方式，并能把它放进 Spring AI / LangChain4j / RAG / Agent 的真实链路里。
+> Tool Use（Function Calling）是**一切 Agent 的基石**：模型输出"要调哪个工具 + 什么参数"，应用执行工具并把结果回传给模型。本篇用 Spring AI 走通"定义工具 → 模型选工具 → 执行 → 回传结果"的完整循环，并讲清楚 schema 生成、参数校验、错误处理这些工程细节——这是 03 篇 ReAct 实现的前置。
+
+> [!info] 本节定位
+> 前置：[[01-Agent设计模式详解]]（Tool Use 在模式全景中的位置）。本篇是**代码实践**篇，讲清楚调用循环的每个环节；[[03-ReAct-Spring-AI实现]] 在其上叠加思考循环。延伸：[[09-MCP协议详解]]（把工具暴露成跨应用协议）、[[20-Agent安全与防注入]]（工具调用的安全边界）。
 
 ## 📌 这是什么
 
-本篇按定位、实现和工程落地来学习：
+一次工具调用在 Spring AI 里走四条消息：
 
-1. **概念层**：它在 Agent 体系中负责什么，和相邻概念边界在哪里。
-2. **实现层**：它落到代码、配置、数据结构或运行时机制时长什么样。
-3. **工程层**：它在真实系统里如何被验证、监控、优化和复盘。
+```text
+用户问题
+  ↓ ① 模型收到问题 + 工具清单（schema）
+② 模型输出 tool_calls：{name: "queryOrder", arguments: {orderId: "A1001"}}
+  ↓ ③ 应用执行工具，把结果作为 tool 消息回传
+④ 模型基于结果生成最终答案
+```
 
-学习时不要只记定义，至少要能回答：输入是什么、输出是什么、失败时会怎样、有哪些参数或边界会改变结果。
-
-## 🤔 解决什么问题 / 为什么需要
-
-- **明确边界**：先区分适用场景、输入输出、失败路径和验收标准。
-- **提高可靠性**：明确边界条件后，代码和方案更容易被测试、观测和复盘。
-- **支撑面试表达**：能从“是什么”讲到“为什么这样设计”，再讲到“项目里怎么落地”。
-- **连接项目实战**：本主题通常会出现在接口设计、性能优化、故障排查或 AI 应用链路中。
+**关键认知**：模型**不会真的执行任何代码**——它只负责"选工具 + 填参数"，执行、鉴权、校验、审计全部发生在你的应用里。这个边界决定了工具调用的工程职责：**模型是建议者，服务端是执行者**。
 
 ## 🧩 核心概念
 
-| 概念 | 含义 | 精通要点 |
+| 概念 | 含义 | 工程要点 |
 | ---- | ---- | -------- |
-| 任务分解 | Agent 把目标拆成多步行动。 | 复杂任务才值得上 Agent。 |
-| 工具连接 | Function Calling / MCP 暴露可执行能力。 | 工具描述、权限、审计要清楚。 |
-| 程序化知识 | Skills/AGENTS.md 把流程写成可加载指令。 | 让 Agent 按组织经验做事。 |
-| 治理机制 | 最大步数、错误恢复、成本预算、可观测。 | 没有治理的 Agent 很难生产化。 |
-
-## ⚙️ 工作原理 / 流程
-
-```mermaid
-flowchart LR
-    A[用户目标] --> B[规划/选择Skill]
-    B --> C[选择工具]
-    C --> D[调用Function或MCP]
-    D --> E[观察结果]
-    E --> F{是否完成}
-    F -->|否| B
-    F -->|是| G[汇总答案]
-```
-
-1. **明确场景**：先判断本主题用于记忆、检索、工具调用、评估、平台工程还是业务交付。
-2. **再定输入输出**：列出输入数据、关键参数、输出结果和失败返回。
-3. **中间过程可观测**：关键步骤要有日志、指标、trace、测试样例或可视化结果。
-4. **最后做取舍**：说明为什么不用另一种方案，以及当前方案的代价。
+| Tool Schema | 模型的工具清单（名字、参数、描述） | 描述决定模型选得准不准，必须具体 |
+| Tool Execution | 应用侧执行真实逻辑 | 鉴权、幂等、超时、异常映射 |
+| Tool Message | 执行结果回传给模型 | 模型靠它生成下一步或最终答案 |
+| 循环终止 | 模型不再输出 tool_calls 即结束 | 必须限制 maxSteps 防死循环 |
+| 工具调用日志 | 每次调用的审计记录 | 用户、租户、参数摘要、结果 |
 
 ## 💻 代码实践
+
+### 1. 定义工具（Spring AI @Tool 注解）
 
 ```java
 @Service
 class OrderTools {
-    @Tool(description = "根据订单号查询订单状态")
+    private final OrderService orderService;
+
+    @Tool(description = "根据订单号查询订单状态，订单号形如 A 开头 + 4 位数字，如 A1001")
     String queryOrder(String orderId) {
         return orderService.queryStatus(orderId);
     }
-}
 
-// Agent 循环要限制 maxSteps，并记录每次工具调用结果。
+    @Tool(description = "查询指定用户的全部订单，userId 为内部系统 ID")
+    List<Order> listOrders(String userId) {
+        return orderService.listByUser(userId);
+    }
+}
 ```
+
+> [!note] 描述怎么写
+> 描述里带上**参数格式和示例**（`订单号形如 A1001`），模型才能填对参数。描述模糊是"模型该调不调、调错参数"的第一大原因。
+
+### 2. 把工具交给 ChatClient
+
+```java
+@Bean
+ChatClient chatClient(ChatClient.Builder builder, OrderTools orderTools) {
+    return builder
+        .defaultTools(orderTools)   // 扫描 @Tool 方法，自动生成 schema
+        .build();
+}
+```
+
+调用：
+
+```java
+String answer = chatClient.prompt()
+    .user("帮我查一下订单 A1001 到哪了")
+    .call()
+    .content();
+```
+
+Spring AI 自动完成：生成 schema → 传给模型 → 模型输出 tool_calls → 执行 → 结果回传 → 最终答案。
+
+### 3. 手动控制循环（看透内部机制）
+
+想看清楚每一步，用 ChatModel 手动驱动：
+
+```java
+List<Message> messages = new ArrayList<>();
+messages.add(new UserMessage("查一下订单 A1001 状态"));
+
+for (int step = 0; step < 5; step++) {          // ① maxSteps 限制，防死循环
+    ChatResponse resp = chatModel.call(new Prompt(messages));
+    AssistantMessage assistantMsg = resp.getResult().getOutput();
+    messages.add(assistantMsg);
+
+    if (assistantMsg.hasToolCalls()) {          // ② 模型要调工具
+        for (ToolCall call : assistantMsg.getToolCalls()) {
+            String result = executeTool(call);   // ③ 执行 + 鉴权 + 日志
+            messages.add(new ToolResponseMessage(call.id(), result));
+        }
+    } else {
+        return assistantMsg.getText();           // ④ 不再调工具 → 输出答案
+    }
+}
+throw new IllegalStateException("超过最大步数，终止");   // ⑤ 防死循环兜底
+```
+
+```java
+private String executeTool(ToolCall call) {
+    // 鉴权：该用户能否调用这个工具？（不能只看模型传参）
+    // 校验：call.arguments() 里的参数是否合法
+    // 幂等：写操作要带 requestId，防重试重复执行
+    // 审计：记录 用户、工具名、参数摘要、结果
+    return toolDispatcher.dispatch(call.name(), call.arguments());
+}
+```
+
+> [!important] 五个工程细节
+> 1. **maxSteps 必须设**：模型可能反复调同一个工具，不限制就是死循环 + 烧钱。
+> 2. **参数要二次校验**：模型填的参数不可信，执行前用 schema 校验（类型、必填、枚举、长度）。
+> 3. **写操作要幂等**：工具执行失败重试时，不能让"转账"被执行两次。
+> 4. **鉴权在服务端**：不信任模型传的 userId，从会话上下文取。
+> 5. **每次调用留日志**：这是排查"模型为什么乱调"的唯一依据。
 
 ## 🔍 源码 / 原理深挖
 
-- 阅读官方文档的概念章节，确认术语不要只靠二手文章。
-- 把参数、限制、错误码、计费方式写进自己的调用封装。
-- 对比至少两种方案，记录什么时候选 A、什么时候选 B。
-- 为生产环境补上超时、重试、降级、观测和权限控制。
+### Spring AI 工具调用的三层
+
+| 层 | 类 | 职责 |
+| ---- | ---- | ---- |
+| 注解层 | `@Tool` / `@ToolParam` | 声明工具与参数描述 |
+| 注册层 | `ToolCallback` | 把方法包装成"schema + 执行器"的单元 |
+| 执行层 | `ToolCallingManager` | 解析模型输出的 tool_calls，调用对应 ToolCallback |
+
+**schema 是怎么生成的**：`@Tool` 注解的 `description` + 方法签名（参数名、类型、`@ToolParam` 描述）会被序列化成 JSON Schema，随请求发给模型——所以**参数类型用简单类型**（String/int/枚举），复杂对象模型填不准。
 
 ## ⚠️ 踩坑与注意事项
 
-- 只看模型回答是否像样，不做结构化校验和回归样例。
-- 把上下文越塞越长，却没有做排序、压缩和预算控制。
-- 工具描述模糊，导致模型该调用时不调用或调用错参数。
-- 没有记录 trace，线上失败后无法复盘模型输入。
+- [ ] **工具描述模糊**：模型该调用时不调用，或参数填错
+- [ ] **不限制 maxSteps**：模型反复调用工具，死循环 + 成本失控
+- [ ] **信任模型传参**：userId、权限参数直接用了，越权风险
+- [ ] **写操作不幂等**：重试导致重复转账、重复发单
+- [ ] **不记录调用日志**：线上模型乱调，无从排查
+- [ ] **工具返回超大结果**：整个塞回上下文，撑爆窗口（应截断/摘要后回传）
+- [ ] **异常处理粗暴**：工具抛异常直接断链，应转为错误消息回传，让模型重试或换工具
 
 ## 🎯 面试问题
 
 > [!question] 高频问题
-> - Q: Tool-Use工具调用-代码实践 解决的核心问题是什么？
->   - A: Tool-Use工具调用-代码实践是 AI 应用开发中的核心主题，重点在于理解概念边界、掌握工程落地方式，并能把它放进 Spring AI / LangChain4j / RAG / Agent 的真实链路里。
-> - Q: 它和相邻概念的区别是什么？
->   - A: 先讲适用边界，再讲实现差异，最后给一个项目里的选择理由。
-> - Q: 如果线上效果不好，你怎么排查？
->   - A: 先看输入、配置、日志/trace、指标，再用最小样例复现，最后修改参数或实现并做回归。
+> - **Q: 模型"调用工具"时，代码真的执行了吗？**
+>   - A: 没有。模型只输出 tool_calls（工具名 + 参数 JSON），执行发生在应用侧；模型拿到执行结果后再生成答案。
+> - **Q: 工具调用循环怎么防止死循环？**
+>   - A: 限制 maxSteps + 每步都记录日志；超过步数直接终止并抛错。生产上还要监控单次对话的调用次数和成本。
+> - **Q: 工具参数模型填错了怎么办？**
+>   - A: 两层：一是执行前用 JSON Schema 二次校验（类型/必填/枚举）；二是把校验失败转成清晰的错误消息回传给模型，让它修正参数重试。
+> - **Q: Function Calling 和 MCP 的关系？**
+>   - A: Function Calling 是应用内工具调用；MCP 把工具按标准协议暴露，跨应用复用。MCP Server 内部本质上还是"模型选工具 + 应用执行"的循环。详见 [[09-MCP协议详解]]。
 
 ## ✅ 精通检查清单
 
-- 能用 1 分钟讲清 Tool-Use工具调用-代码实践 的核心价值。
-- 能画出主流程图，并指出关键失败点。
-- 能写出最小 demo 或代码模板。
-- 能说出 2 个常见坑和 1 个真实项目落地点。
-- 能把本主题和相邻主题做对比选型。
+- 能画出工具调用循环的四条消息，并指出"模型只建议、应用才执行"这个边界
+- 能写出 Spring AI 的 @Tool 定义 + ChatClient 接入 + 手动循环三版代码
+- 能说出五个工程细节（maxSteps、参数校验、幂等、服务端鉴权、日志）并解释各自防什么
+- 能解释 @Tool 方法签名如何变成发给模型的 JSON Schema
+- 能答出"模型填错参数怎么办""怎么防死循环"等面试题
 
 ## 🔗 关联笔记
 
+- [[01-Agent设计模式详解]] —— Tool Use 在模式全景中的位置
+- [[03-ReAct-Spring-AI实现]] —— 在其上叠加"思考-行动-观察"循环
+- [[09-MCP协议详解]] —— 把工具暴露成跨应用协议
+- [[20-Agent安全与防注入]] —— 工具调用的安全边界
+- [[22-Agent成本控制与降级]] —— 调用次数与成本控制
 - [[_index]]
-- [[10-AI应用开发/00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 
-- [OpenAI Platform Docs](https://platform.openai.com/docs/)
+- [Spring AI Function Calling 文档](https://docs.spring.io/spring-ai/reference/api/chat/functions.html)
+- [OpenAI Function Calling Guide](https://platform.openai.com/docs/guides/function-calling)

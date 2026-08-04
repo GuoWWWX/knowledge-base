@@ -82,6 +82,6 @@ Codex 和 Claude Code 都是“编程 Agent”里非常成功的产品，但它�
 ## 📚 参考资料
 
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
-- [Anthropic Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code/overview)
+- [Anthropic Claude Code Documentation](https://code.claude.com/docs/overview)
 - [[../05-Agent-MCP-Skills/16-AGENTS规范详解]]
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]

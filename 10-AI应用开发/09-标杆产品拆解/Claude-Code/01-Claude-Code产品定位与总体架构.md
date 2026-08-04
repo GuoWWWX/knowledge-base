@@ -96,6 +96,6 @@ Claude Code 说明一个成功 Agent 产品不一定要从复杂 UI 开始。只
 
 ## 📚 参考资料
 
-- [Anthropic Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
-- [Claude Code Settings](https://docs.anthropic.com/en/docs/claude-code/settings)
+- [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
+- [Claude Code Settings](https://code.claude.com/docs/settings)
 

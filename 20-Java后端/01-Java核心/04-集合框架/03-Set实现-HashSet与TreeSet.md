@@ -24,12 +24,11 @@ mastery: ⭐⭐⭐☆☆
 
 ## 📌 这是什么
 
-| 实现 | 底层 | 顺序 | 允许 null | 复杂度 | 一句话使用场景 |
-| ---- | ---- | ---- | ---- | ---- | ---- |
-| **HashSet** | HashMap | 无序 | 允许 1 个 | contains O(1) 平均 | 默认去重、快速判断存在 |
-| LinkedHashSet | LinkedHashMap | **插入序** | 允许 1 个 | O(1) 平均 | 去重 + 要保插入顺序 |
-| TreeSet | TreeMap（红黑树） | **按比较器排序** | 不允许 | O(log n) | 去重 + 要排序/范围查询 |
-
+| 实现            | 底层            | 顺序         | 允许 null | 复杂度              | 一句话使用场景       |
+| ------------- | ------------- | ---------- | ------- | ---------------- | ------------- |
+| **HashSet**   | HashMap       | 无序         | 允许 1 个  | contains O(1) 平均 | 默认去重、快速判断存在   |
+| LinkedHashSet | LinkedHashMap | **插入序**    | 允许 1 个  | O(1) 平均          | 去重 + 要保插入顺序   |
+| TreeSet       | TreeMap（红黑树）  | **按比较器排序** | 不允许     | O(log n)         | 去重 + 要排序/范围查询 |
 ## 💻 怎么用（常用 API 速览）
 
 ```java
@@ -64,11 +63,8 @@ ts.subSet(3, true, 7, true);        // [3,7] 闭区间视图
 ```
 
 **⚠️ 高频坑**：TreeSet 的元素必须实现 `Comparable` 或构造时传 `Comparator`，否则 `add` 抛 `ClassCastException`；自定义对象放 HashSet 必须正确实现 equals/hashCode（契约见 04 课）。
-
 ## 🔍 关键源码（贴出逐段讲）
-
 ### HashSet：一行委托，没有任何自己的存储逻辑
-
 ```java
 // HashSet 的全部"存储"就两个字段：
 // private final HashMap<E,Object> map;              // 内部就是一个 HashMap

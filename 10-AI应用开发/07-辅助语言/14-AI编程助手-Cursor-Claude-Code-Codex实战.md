@@ -72,7 +72,7 @@ AI IDE 和编程 Agent 已经从“补全代码”变成“读仓库、改文件
 ## 📚 参考资料
 
 - [Cursor Docs](https://docs.cursor.com/)
-- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code/overview)
+- [Claude Code Documentation](https://code.claude.com/docs/overview)
 - [OpenAI Codex](https://developers.openai.com/codex/)
 - [[10-AI应用开发/05-Agent-MCP-Skills/16-AGENTS规范详解]]
 

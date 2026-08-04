@@ -97,10 +97,10 @@ flowchart TD
 
 ## 📚 参考资料
 
-- [Claude Code MCP](https://docs.anthropic.com/en/docs/claude-code/mcp)
-- [Claude Code Hooks](https://docs.anthropic.com/en/docs/claude-code/hooks)
-- [Claude Code Subagents](https://docs.anthropic.com/en/docs/claude-code/sub-agents)
-- [Claude Code Skills](https://docs.anthropic.com/en/docs/claude-code/skills)
+- [Claude Code MCP](https://code.claude.com/docs/mcp)
+- [Claude Code Hooks](https://code.claude.com/docs/hooks)
+- [Claude Code Subagents](https://code.claude.com/docs/sub-agents)
+- [Claude Code Skills](https://code.claude.com/docs/skills)
 - [[../../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[../../05-Agent-MCP-Skills/13-Skills详解]]
 

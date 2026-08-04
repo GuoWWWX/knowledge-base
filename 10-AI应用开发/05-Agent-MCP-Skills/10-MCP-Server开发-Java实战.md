@@ -23,7 +23,7 @@ MCP Server 是 Agent 访问外部能力的标准化服务端。对 Java 团队�
 1. 把订单、库存、知识库、工单等能力暴露为 MCP tools。
 2. 用 resources 暴露可读上下文，如文档、配置、业务实体摘要。
 3. 用 prompts 提供可复用提示词模板。
-4. 通过 stdio、SSE 或 streamable HTTP 被 IDE、Agent Runtime、网关调用。
+4. 通过 stdio（本地）或 Streamable HTTP（远程）被 IDE、Agent Runtime、网关调用。
 
 ## 🤔 解决什么问题 / 为什么需要
 
@@ -38,7 +38,7 @@ MCP Server 是 Agent 访问外部能力的标准化服务端。对 Java 团队�
 | ---- | -------------- | -------- |
 | Tool schema | 参数名、类型、描述、必填项 | 描述必须具体，避免模型误填。 |
 | Handler | 调用领域服务 | 鉴权、幂等、超时、异常映射。 |
-| Transport | stdio / SSE / HTTP | 本地开发和生产部署分开配置。 |
+| Transport | stdio / Streamable HTTP（SSE 已废弃） | 本地开发和生产部署分开配置。 |
 | Audit | tool call 日志 | 记录用户、租户、参数摘要、结果。 |
 | Version | server 与 tool 版本 | 避免客户端缓存旧 schema。 |
 
@@ -108,7 +108,7 @@ spring:
 - 工具描述只写“查询订单”，模型不知道输入订单号还是用户号。
 - Tool 返回整个 Entity，泄露内部字段；应返回专门的 View DTO。
 - 在工具参数中接受 `userId` 并信任它，导致越权查询。
-- 本地 stdio 正常，生产 SSE/HTTP 没配置鉴权和超时。
+- 本地 stdio 正常，生产 HTTP 没配置鉴权和超时。
 - 修改 tool schema 后客户端仍缓存旧定义，调用参数不匹配。
 
 ## 🎯 面试问题

@@ -186,12 +186,17 @@ G --> H[TopN 上下文]
 过滤条件示例：
 
 ```java
+// in 需要带引号的数组字面量（Spring AI filter expression 语法）
+String acl = "'" + String.join("','", userAclTags) + "'";   // 如 ['finance','legal']
 SearchRequest request = SearchRequest.builder()
     .query(question)
     .topK(30)
-    .filterExpression("tenant_id == " + tenantId + " && acl_tags in " + userAclTags)
+    .filterExpression("tenant_id == " + tenantId + " && acl_tags in " + acl)
     .build();
 ```
+
+> [!warning] 注意
+> 不要把 Java List 直接拼进 filterExpression——`in` 需要带单引号的数组字面量（如 `acl_tags in ['a','b']`），直接拼 List 会生成非法表达式。
 
 关键原则：
 

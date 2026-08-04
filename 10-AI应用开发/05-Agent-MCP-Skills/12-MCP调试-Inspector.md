@@ -32,7 +32,7 @@ Inspector 是 MCP 官方调试工具，用来模拟 MCP Client：
 - **确认 server 是否能被发现**：连接参数、命令、环境变量、HTTP 地址是否正确。
 - **确认 schema 是否清楚**：参数描述是否让 Agent 能正确填值。
 - **确认 handler 是否可执行**：业务异常、鉴权、超时能否按预期返回。
-- **确认传输问题**：stdio、SSE、HTTP 的启动方式和日志位置不同。
+- **确认传输问题**：stdio、Streamable HTTP 的启动方式和日志位置不同（SSE 为已废弃的旧传输）。
 
 ## 🧩 调试顺序
 
@@ -104,7 +104,7 @@ OrderStatusView queryOrderStatus(String orderId) {
 
 - 能用 Inspector 验证连接、tools/list、tools/call。
 - 能根据 Inspector 结果判断问题在 server、client 还是 prompt。
-- 能解释 stdio 与 HTTP/SSE 调试差异。
+- 能解释 stdio 与 Streamable HTTP 调试差异。
 - 能用边界参数验证工具 schema 和异常返回。
 
 ## 🔗 关联笔记

@@ -45,7 +45,7 @@ LLM 是无状态的：每次调用都要把 system prompt、工具列表、全�
 | 概念 | 含义 | 备注 |
 | ---- | ---- | ---- |
 | 前缀匹配 (Prefix Match) | 缓存以"渲染后的字节前缀"为 key，必须从第一个字节起完全一致 | 前缀中任何一个字节变化，其后所有缓存全部失效 |
-| 渲染顺序 | 请求按 `tools` → `system` → `messages` 顺序拼成前缀 | 所以改工具列表 = 从头失效 |
+| 渲染顺序 | 请求按 `tools` → `system` → `messages` 顺序拼成前缀（**以 Anthropic 为例**；OpenAI 无 tools 断点、DeepSeek 自动） | 所以改工具列表 = 从头失效 |
 | cache_control 断点 | Anthropic 的显式标记：`{"type": "ephemeral"}`，表示"缓存到这里为止" | 每请求最多 4 个断点 |
 | TTL | 缓存存活时间：默认 5 分钟（每次命中会刷新），可选 1 小时 | 1h 写入更贵，适合低频但规律的流量 |
 | cache_creation_input_tokens | 响应 usage 字段：本次写入缓存的 token 数 | 写入按约 1.25×（5m）/ 2×（1h）计费 |
@@ -69,7 +69,7 @@ LLM 是无状态的：每次调用都要把 system prompt、工具列表、全�
 
 ```mermaid
 flowchart TD
-    A[请求到达] --> B["按 tools → system → messages 渲染成字节序列"]
+    A[请求到达] --> B["按 tools → system → messages 渲染成字节序列（Anthropic 约定）"]
     B --> C{"从第一个字节起，与已有缓存条目比对前缀"}
     C -->|完全一致| D["命中：cache_read_input_tokens > 0，约 0.1x 计费"]
     C -->|某个字节起不同| E["未命中：该位置之后全部重新计算"]
@@ -113,7 +113,7 @@ Anthropic HTTP 请求体（各语言 SDK 最终都渲染成这个形状）：
 
 ```json
 {
-  "model": "claude-opus-5",
+  "model": "claude-sonnet-5",   // 以官方最新模型为准
   "max_tokens": 1024,
   "system": [
     {

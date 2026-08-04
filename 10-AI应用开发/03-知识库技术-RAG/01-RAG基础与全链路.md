@@ -48,7 +48,7 @@ RAG（Retrieval-Augmented Generation，检索增强生成）把知识库和 LLM 
 | Retriever | 根据问题召回候选片段 | TopK、阈值、元数据过滤、混合检索 |
 | Rerank | 对候选片段重新排序 | 提升上下文质量，但增加延迟和成本 |
 | Generator | LLM 基于证据生成答案 | Prompt 要约束“只基于资料回答” |
-| Evaluation | 评估检索和生成质量 | context precision、faithfulness、answer relevancy |
+| Evaluation | 评估检索和生成质量 | context precision、context recall、faithfulness、answer relevancy |
 
 ## ⚙️ 工作原理 / 流程
 

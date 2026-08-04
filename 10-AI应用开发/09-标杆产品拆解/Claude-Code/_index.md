@@ -48,9 +48,9 @@ mastery: ⭐☆☆☆☆
 
 ## 📚 参考资料
 
-- [Anthropic Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
-- [Claude Code Memory](https://docs.anthropic.com/en/docs/claude-code/memory)
-- [Claude Code MCP](https://docs.anthropic.com/en/docs/claude-code/mcp)
-- [Claude Code Hooks](https://docs.anthropic.com/en/docs/claude-code/hooks)
-- [Claude Code Subagents](https://docs.anthropic.com/en/docs/claude-code/sub-agents)
-- [Claude Code Skills](https://docs.anthropic.com/en/docs/claude-code/skills)
+- [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
+- [Claude Code Memory](https://code.claude.com/docs/memory)
+- [Claude Code MCP](https://code.claude.com/docs/mcp)
+- [Claude Code Hooks](https://code.claude.com/docs/hooks)
+- [Claude Code Subagents](https://code.claude.com/docs/sub-agents)
+- [Claude Code Skills](https://code.claude.com/docs/skills)

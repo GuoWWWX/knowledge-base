@@ -68,7 +68,7 @@ flowchart LR
 ```python
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import faithfulness, answer_relevancy, context_precision
+from ragas.metrics import Faithfulness, AnswerRelevancy, ContextPrecision
 
 dataset = Dataset.from_dict({
     "question": ["合同付款条件是什么？"],
@@ -81,11 +81,14 @@ dataset = Dataset.from_dict({
 
 result = evaluate(
     dataset,
-    metrics=[faithfulness, answer_relevancy, context_precision],
+    metrics=[Faithfulness(), AnswerRelevancy(), ContextPrecision()],
 )
 
 print(result)
 ```
+
+> [!note] 版本提示
+> 以上为 Ragas 0.2+ 的类名 API。旧版（0.1.x）用函数式 API（如 `from ragas.metrics import faithfulness, answer_relevancy`），0.3+ 已移除，直接按新写法即可。
 
 ## ⚠️ 生产坑
 

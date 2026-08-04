@@ -127,5 +127,5 @@ flowchart TD
 
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
 - [OpenAI Codex Manual](https://developers.openai.com/codex/codex-manual.md)
-- [Anthropic Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
+- [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
 
