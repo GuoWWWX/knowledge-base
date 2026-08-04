@@ -63,6 +63,7 @@ Advisor 把这些横切逻辑收敛成可组合的链。
 ## 💻 示例：组合记忆和 RAG
 
 ```java
+// chatMemory 的构造见 08 课（2.0：MessageWindowChatMemory + ChatMemoryRepository）
 ChatClient client = ChatClient.builder(chatModel)
         .defaultAdvisors(
                 MessageChatMemoryAdvisor.builder(chatMemory).build(),
@@ -70,8 +71,10 @@ ChatClient client = ChatClient.builder(chatModel)
         )
         .build();
 
+// 2.0 起记忆类 Advisor 必须显式传 conversationId，否则抛 IllegalArgumentException：
 String answer = client.prompt()
         .user("继续解释刚才那个概念，并引用知识库内容")
+        .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, "user-1001"))
         .call()
         .content();
 ```

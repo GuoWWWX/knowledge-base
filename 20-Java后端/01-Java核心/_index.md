@@ -15,7 +15,7 @@ updated: 2026-08-03
 - [x] [[01-泛型与类型擦除]] — 类型系统地基：擦除、通配符、PECS、桥接方法
 - [x] [[02-异常处理最佳实践]] — 错误处理地基：异常链、try-with-resources、性能成本
 - [x] [[03-String与字符串常量池]] — 不可变性、常量池、拼接性能
-- [ ] [[04-集合框架/_index|04 · 集合框架（6 篇子目录）]] — 总纲 + List/Set/HashMap/Map变体/Queue 源码
+- [x] [[04-集合框架/_index|04 · 集合框架（6 篇子目录）]] — 总纲 + List/Set/HashMap/Map变体/Queue 源码
 - [ ] [[10-Lambda与Stream]] — 数据处理：函数式接口、惰性流水线、并行边界
 - [ ] [[11-IO与NIO]] — 数据移动：流、Buffer/Channel/Selector、零拷贝、句柄泄漏
 - [ ] [[12-反射与动态代理]] — 运行期机制（上）：框架（Spring AOP、RPC）的地基

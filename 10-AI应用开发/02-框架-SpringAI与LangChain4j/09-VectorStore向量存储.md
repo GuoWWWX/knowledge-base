@@ -58,6 +58,9 @@ flowchart LR
 | `SearchRequest` | 查询、topK、阈值、过滤条件 |
 | `QuestionAnswerAdvisor` | 把检索结果自动注入 Prompt |
 
+> [!info] 版本说明（2026-08）
+> Spring AI 2.0 精简了向量库实现清单（移除 SAP HANA / Infinispan 模块），当前主流实现为 pgvector、Redis、Milvus、Chroma、MongoDB Atlas、Elasticsearch、Qdrant 等；本课讲的是与实现无关的抽象层（`VectorStore` 接口），选型见 [[10-AI应用开发/03-知识库技术-RAG/15-向量库选型对比|RAG 章向量库选型]]。
+
 ---
 
 ## 💻 基础写入与检索

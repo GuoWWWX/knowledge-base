@@ -75,7 +75,7 @@ ChatResponse response = chatClient.prompt()
         .chatResponse();
 ```
 
-完整响应里通常能拿到候选结果、元数据、Token 使用情况等信息，适合做日志、计费和观测。
+完整响应里通常能拿到候选结果、元数据、Token 使用情况等信息，适合做日志、计费和观测。Spring AI 2.0 进一步增强了 ChatModel / Tool Calling 的观测能力（基于 Micrometer Observation），生产接入时可直接用。
 
 ---
 

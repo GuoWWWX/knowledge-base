@@ -77,6 +77,12 @@ Spring Boot 应用
 > [!tip] 版本原则
 > Spring AI 版本变化较快，项目里优先用 BOM 管版本，不要手动给每个 Spring AI 模块写不同版本。
 
+> [!info] 版本现状（2026-08）
+> - **Spring AI 2.0.0 已 GA**（2026-06 发布）：基于 **Spring Boot 4.x**，MCP SDK 升级到 **2.0**。
+> - 2.0 主要变化（影响写代码）：模型 Options 全面改为 **builder 模式**（setter 移除，如 `OpenAiChatOptions.builder().temperature(0.7).build()`）；`PromptChatMemoryAdvisor` 移除，记忆类 Advisor 必须显式传 conversationId；SAP HANA / Infinispan 向量库模块移除；ChatModel / Tool Calling 可观测性增强。
+> - 维护线：1.1.8（Boot 3.5.x）、1.0.9；**新项目直接上 2.0**，老项目迁移参考[官方 Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html)。
+> - 本课其余内容（BOM 管理、`ChatClient.Builder`、`spring.ai.openai.*` 配置）在 2.0 中保持不变。
+
 ## ⚙️ 基础配置
 
 ```yaml

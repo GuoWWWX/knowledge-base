@@ -15,6 +15,11 @@ mastery: ⭐☆☆☆☆
 > [!info] 本区说明
 > 对应学习路径 **阶段二**。存放 Java AI 框架的核心抽象、用法、源码理解相关笔记。Spring AI 为主，LangChain4j 为辅。
 
+> [!info] 框架版本现状（2026-08）
+> - **Spring AI 2.0.0 GA**（2026-06）：基于 Boot 4.x、MCP SDK 2.0；Options 全面 builder 化；记忆类 Advisor 需显式 conversationId；SAP HANA/Infinispan 向量库移除；可观测性增强。维护线：1.1.8、1.0.9。
+> - **LangChain4j 1.18.1**（2026-07）：1.x 持续迭代。
+> - 本目录示例以概念与稳定 API 为主，具体版本以官方 BOM 为准（见 [[01-Spring-AI项目搭建]]）。
+
 ## 📚 知识笔记清单
 
 > [!success] 建议学习顺序

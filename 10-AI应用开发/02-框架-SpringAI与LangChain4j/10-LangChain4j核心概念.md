@@ -21,6 +21,9 @@ mastery: ⭐☆☆☆☆
 - **本章第 10 课，LangChain4j 对照**。前置：前 9 课建立的 Spring AI 心智；本节以对照视角看 LangChain4j 的核心抽象（`ChatLanguageModel`、`AiServices` 等）。
 - **延伸**：选型结论在下一课 [[11-SpringAI与LangChain4j对比]]。
 
+> [!info] 版本现状（2026-08）
+> LangChain4j 当前 **1.18.1**（2026-07 发布），1.x 持续稳定迭代；`OpenAiChatModel.builder()`、`AiServices`、`@Tool` 等核心 API 自 1.0 GA 起保持稳定，本课示例可直接使用。
+
 ## 📌 这是什么
 
 LangChain4j 面向 Java 开发者，目标是简化 LLM 应用开发。它不像 Spring AI 那样强绑定 Spring 生态，而是提供一组普通 Java 抽象，也能和 Spring Boot 集成。

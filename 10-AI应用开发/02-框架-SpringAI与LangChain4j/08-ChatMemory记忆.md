@@ -61,7 +61,18 @@ Spring AI 的 Chat Memory 相关能力通常和 Advisor 一起使用，让历史
 
 ## 💻 示例：基于 Advisor 注入记忆
 
+> [!info] 2.0 记忆三件套（2026-06 起）
+> `ChatMemory`（接口）→ `MessageWindowChatMemory`（内置窗口实现，默认 20 条，超限淘汰旧消息但保留 system 消息）→ `ChatMemoryRepository`（存储实现：`InMemoryChatMemoryRepository`、`JdbcChatMemoryRepository`、`RedisChatMemoryRepository`、`MongoChatMemoryRepository`、`CassandraChatMemoryRepository`、`Neo4jChatMemoryRepository`）。
+
 ```java
+@Bean
+ChatMemory chatMemory() {
+    return MessageWindowChatMemory.builder()
+            .maxMessages(20)                                     // 窗口大小（默认 20）
+            .chatMemoryRepository(new InMemoryChatMemoryRepository())  // 换 JDBC/Redis 即可持久化
+            .build();
+}
+
 @Bean
 ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
     return builder
@@ -81,6 +92,9 @@ String answer = chatClient.prompt()
         .call()
         .content();
 ```
+
+> [!warning] 2.0 起 conversationId 必填
+> 所有记忆类 Advisor 都要求显式传入 `ChatMemory.CONVERSATION_ID`，省略会抛 `IllegalArgumentException`（1.x 的 `PromptChatMemoryAdvisor` 已移除，不再有隐式会话）。这也是 2.0 强化"会话状态显式化"的设计。
 
 后续同一个 `conversationId` 的请求就能带上历史。
 

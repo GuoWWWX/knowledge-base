@@ -14,9 +14,9 @@ updated: 2026-08-03
 
 - [x] [[01-核心机制与选型]] — 集合总纲：家族树、选型表、公共源码机制（契约/fail-fast/迭代器/工具类）
 - [x] [[02-List实现-ArrayList与LinkedList]] — 数组 vs 链表源码、扩容 1.5 倍、对比表
-- [ ] [[03-Set实现-HashSet与TreeSet]] — 委托 Map 源码、Comparable vs Comparator
-- [ ] [[04-HashMap原理与扩容]] — 哈希深挖：扰动、负载因子、树化、扩容拆链
-- [ ] [[05-Map实现-LinkedHashMap与TreeMap]] — 保序/LRU/范围查询源码
+- [x] [[03-Set实现-HashSet与TreeSet]] — 委托 Map 源码、Comparable vs Comparator
+- [x] [[04-HashMap原理与扩容]] — 哈希深挖：扰动、负载因子、树化、扩容拆链
+- [x] [[05-Map实现-LinkedHashMap与TreeMap]] — 保序/LRU/范围查询源码
 - [x] [[06-Queue实现-ArrayDeque与PriorityQueue]] — 循环数组、二叉堆、TopK
 
 ## 🧭 学习路线
