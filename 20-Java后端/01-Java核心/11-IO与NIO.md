@@ -95,9 +95,73 @@ b.clear();                // 读→写(全部清): position=0, limit=capacity �
 
 `ByteBuffer.allocateDirect(cap)` 在堆外分配内存，读写时**省去"堆内 ↔ 系统调用"之间的一次拷贝**（JNI 可以直接访问地址），适合长连接、大数据量读写；代价是分配/回收成本高（由 GC 管理 DirectByteBuffer 的 Cleaner 回收），**不宜频繁创建**。
 
-### Selector 为什么能省线程
+### Selector 为什么能省线程：不是"一个线程"，而是"多线程分工"
 
-`Selector.select()` 阻塞到**至少一个已注册 Channel 有事件就绪**，返回就绪集合后，线程逐个处理。Linux 底层是 epoll（O(1) 查找就绪事件、水平/边缘触发），相比"每连接一个阻塞线程"，线程数从 O(连接数) 降到 O(核数)。
+> [!warning] 常见误解
+> 很多人把 NIO 高并发理解成"**一个 select 线程干所有事**"——监听、读、写、业务全在一条线程里。这是**严重误导**。真实的 NIO 服务（Netty、Kafka 都是这个模型）是**多线程分工**：**select 线程只负责"监听+分发"，干活的 worker 线程是另一批**。
+
+#### 1. 为什么不能"一个 select 线程干所有事"
+
+```java
+// ❌ 错误示范：select 循环里直接做业务
+while (true) {
+    selector.select();                       // 阻塞等待就绪
+    for (SelectionKey key : selector.selectedKeys()) {
+        if (key.isReadable()) {
+            handleBusiness(key);             // ❌ 慢业务卡在这里 → 整个 select 停摆
+            // 只要一个连接的业务慢，其他所有就绪连接都等着
+        }
+    }
+}
+```
+
+**问题**：select 线程就一条，它一旦去处理慢业务（DB、RPC、大计算），就**没人在 select 了**——其他所有连接的读写事件全部堆积，等于整个服务卡死。
+
+#### 2. 生产模型：一个 select 线程 + 一组 worker 线程
+
+```mermaid
+flowchart LR
+    subgraph Boss/Reactor 线程（1~2 个，只做 select）
+        S[Selector.select<br/>阻塞等待就绪]
+    end
+    S -->|就绪连接| W1[Worker 线程 1<br/>读写+业务]
+    S -->|就绪连接| W2[Worker 线程 2<br/>读写+业务]
+    S -->|就绪连接| W3[Worker 线程 N<br/>读写+业务]
+```
+
+分工（Netty 的 Reactor 模型）：
+
+| 线程 | 职责 | 数量 |
+| ---- | ---- | ---- |
+| **Boss/Reactor 线程** | 只做 `select()` + 把就绪的连接**分发给 worker**（不做业务） | 1~2 个 |
+| **Worker 线程** | 真正 `read/write` + 执行业务 | 默认 = 2×CPU 核数 |
+
+```java
+// ✅ 生产姿势（Netty 的 Reactor 思路）：
+// Boss 线程：只 select，事件就绪后注册给 worker
+// Worker 线程：处理读写 + 业务，各自有独立的 Selector
+// 连接被"负载均衡"到不同的 worker（每个 worker 维护自己的连接子集）
+```
+
+**这样设计的关键**：
+1. **select 线程永远空闲**——它只负责"发现谁就绪"，立刻把活派给 worker，自己马上回到 `select()` 继续监听 → 就绪事件不被阻塞。
+2. **worker 线程并行干活**——多个连接的业务**真正并行**执行，而不是在一条 select 线程里排队。
+3. **一个 worker 只处理自己的连接子集** → 每个 worker 内部对连接是串行处理（一个连接的读写不并发），**省去锁**。
+
+**所以"线程数从 O(连接数) 降到 O(核数)"的真相是**：
+- 1 万连接，**不是** 1 万线程，也不是 1 个线程，而是 **2 个 select 线程 + 2×核数个 worker 线程**（如 16 核 = 2 + 32 = 34 个线程）。
+- select 线程只做"发现就绪 + 分发"，worker 线程做"真正干活"——**这就是"复制维护线程 + 工作线程"的模型**。
+
+#### 3. 面试怎么说（修正版）
+
+> [!question] Q: 为什么 NIO 能支撑高并发连接？
+> A: 靠 Selector 多路复用 + **多线程分工**：1~2 个 **Boss/Reactor 线程**只负责 `select()` 监听就绪事件并分发连接（不做业务），一组 **Worker 线程**（2×CPU 核数）真正读写 + 执行业务。每个 worker 只处理自己负责的那部分连接，内部串行免锁。所以线程数从 BIO 的 O(连接数) 降到 O(核数)，1 万连接只需几十个线程。
+
+#### 4. 几个相关坑（面试加分）
+
+- **worker 里也不能做阻塞 IO**：worker 线程的 select 循环如果被 DB/锁/大计算卡住，它负责的那些连接全部超时。**select 线程和 worker 线程都不能阻塞**（这跟 [[09-WebFlux与响应式编程|WebFlux 事件循环]] 的道理一模一样）。
+- **epoll 的惊群**：多线程同时 `select()` 同一个 Selector 时，内核可能唤醒多个线程处理同一个连接（惊群）。Netty 的解法是**每个线程独立 Selector**（主从 Reactor），而不是多线程共享一个 Selector。
+- **主从 Reactor**：Netty 里 Boss 线程组 + Worker 线程组，Boss 把新连接注册给某个 Worker 的 Selector，之后该连接的所有事件都由那个 Worker 处理——**连接与 worker 绑定**，天然免锁。
 
 ## 💻 代码实践 / 排查命令
 
@@ -141,7 +205,7 @@ lsof -p <pid> | awk '{print $9}' | sort | uniq -c | sort -nr | head   # 热点�
 - `readAllBytes` 读大文件导致内存暴涨。
 - ByteBuffer 写完忘记 `flip`，读完忘记 `clear/compact`。
 - 以为 NIO 一定更快：**低并发简单文件读写中传统 IO 更直接**，NIO 的复杂度只有在连接数/数据量大时才回本。
-- 在 NIO 事件循环线程里做阻塞操作（DB、锁、大计算）——整个 Selector 被卡住，等于所有连接超时。
+- 在 NIO 事件循环线程里做阻塞操作（DB、锁、大计算）——**select 线程和 worker 线程都不能阻塞**，任何一个卡住都会拖垮它负责的所有连接。
 - 句柄用完不关（`Files.list`、`Stream`、`Channel` 都是资源，都要 try-with-resources）。
 
 ## 🎯 面试问题
@@ -154,7 +218,7 @@ lsof -p <pid> | awk '{print $9}' | sort | uniq -c | sort -nr | head   # 热点�
 > - Q: 零拷贝是什么？
 >   - A: 减少数据在用户态/内核态之间的拷贝次数。FileChannel.transferTo 走 sendfile，文件数据从内核缓冲区直达网卡，用户态零拷贝。
 > - Q: 为什么 NIO 能支撑高并发连接？
->   - A: Selector 多路复用：一个线程阻塞等待"就绪事件集合"，只处理就绪的连接（底层 epoll），线程数从 O(连接数) 降到 O(核数)。
+>   - A: 靠 Selector 多路复用 + 多线程分工：1~2 个 Boss/Reactor 线程只负责 select() 监听就绪事件并分发连接（不做业务），一组 Worker 线程（2×CPU 核数）真正读写 + 执行业务，每个 worker 只处理自己的连接子集、内部串行免锁。线程数从 BIO 的 O(连接数) 降到 O(核数)。（详见"Selector 为什么能省线程"小节）
 
 ## 🧭 源码入口速查
 
@@ -196,7 +260,7 @@ for (int i = 0; i < 100000; i++) {
 
 ## 🔗 关联笔记
 
-- 本课内：上一课 [[10-Lambda与Stream]]；下一课 [[12-反射与动态代理]]
+- 本课内：上一课 [[10-Lambda与Stream]]；下一课 [[12-反射与动态代理/_index|12-反射与动态代理]]
 - 延伸：[[20-Java后端/02-JVM/08-常用工具-jstat-jmap-jstack-Arthas|JVM 排查工具]]（jstack 定位 IO 阻塞）；Netty 网络层属于中间件章节
 
 ## 📚 参考资料

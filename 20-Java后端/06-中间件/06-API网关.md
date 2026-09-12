@@ -6,327 +6,179 @@ tags:
   - 主题/平台工程化
   - 阶段/06
 created: 2026-07-04
-updated: 2026-07-06
+updated: 2026-09-12
 status: 已完成
-mastery: ⭐⭐⭐☆☆
+mastery: ⭐⭐⭐⭐⭐
 ---
 
-# API网关
+# API 网关原理与实战
 
-> [!abstract] 一句话总结
-> API 网关是南北向流量的统一入口，负责路由、认证、鉴权、限流、灰度、协议适配和观测；真正决定网关水平的不是会不会配路由，而是能否在高并发、低延迟和强治理约束下把通用能力做对且不拖垮后端。
+> [!abstract] 一句话心智模型
+> 如果把整个微服务集群比作**一座高度安保的现代化大型产业生态园区**：
+> - **API 网关（Spring Cloud Gateway）** 就是**园区唯一的正门主关卡与智能安检大厅**；
+> - **统一海关安检（认证鉴权）**：外来访客（客户端）在此统一核验身份证与通行证（Token 校验、签名验证、黑名单拦截），合法的访客被贴上内部工牌（解析后的用户上下文 Header 透传），内部服务无需各自重复进行繁重的安检工作；
+> - **智能摆渡与路线指引（动态路由与断言）**：根据访客的目的地凭证（Predicate 匹配路径、Header、权重），将请求精准引导至对应的业务大楼（微服务集群）；
+> - **防踩踏限流阀门（Rate Limiter）**：在关卡处安置基于**令牌桶算法**的高速旋转闸机，遭遇千万级洪峰时将超标流量无情阻挡在门外，誓死保卫园区内核心服务的生命安全！
 
-## 📌 精准定位
+---
 
-- 网关负责统一入口控制面，把路由、认证、鉴权、限流、灰度、审计、日志和 trace 前置。
-- 网关适合做“通用能力”，不适合做“重业务编排”，否则会把入口层做成单点复杂系统。
-- API 网关解决的是南北向流量治理；服务间调用治理更多依赖注册发现、客户端负载均衡和服务治理框架。
-- 关键边界：网关必须低延迟、可横向扩展、可快速回滚，过滤器里不能塞无界阻塞逻辑。
-- 面试重点：要能讲清过滤器链、认证鉴权边界、灰度发布、RequestRateLimiter、重试幂等限制、Reactive 非阻塞约束和故障排查路径。
+## 🏛️ 一、架构演进：为什么 Gateway 淘汰了 Zuul 1.x？
 
-## 🧩 核心概念
+在微服务早期，Netflix 的 **Zuul 1.x** 是最广为人知的网关。为什么在 Spring Cloud 生态中它被彻底废弃，全面转向 **Spring Cloud Gateway**？
 
-| 概念 | 具体含义 | 工程要点 |
-| ---- | -------- | -------- |
-| Route Predicate | 根据 path、host、header、cookie、method、weight 等匹配路由。 | 路由匹配顺序直接影响命中结果。 |
-| GatewayFilter / GlobalFilter | 在请求前后执行通用处理。 | 顺序不对会改变鉴权、限流和日志语义。 |
-| 认证 Authentication | 判断“你是谁”。 | 常见是 JWT、Session、AK/SK、OAuth2/OIDC。 |
-| 鉴权 Authorization | 判断“你能访问什么”。 | 资源、租户、角色、数据范围要分层设计。 |
-| RequestRateLimiter | 在网关层做限流。 | KeyResolver 设计不当会误伤用户。 |
-| Weight 路由 | 按权重分流到不同路由。 | 适合灰度放量，但要结合流量观测。 |
-| Reactive 非阻塞 | 基于 Netty/Reactor 事件循环处理请求。 | 阻塞 IO 会直接卡住 event loop。 |
-| 可观测性 | access log、trace、指标、审计。 | 网关是排障第一跳，日志字段必须完整。 |
+```mermaid
+flowchart TD
+    subgraph Zuul1["Zuul 1.x: 传统阻塞式 I/O 模型 (Thread per Connection)"]
+        T1["请求 1"] --> Th1["工作线程 1 (全程独占并阻塞等待下游返回)"]
+        T2["请求 2"] --> Th2["工作线程 2 (阻塞等待)"]
+        T3["请求 3"] --> Th3["工作线程 3 (线程池满，新请求排队超时崩溃!)"]
+    end
 
-## ⚙️ 工作原理 / 主流程
+    subgraph Gateway["Spring Cloud Gateway: Reactor + Netty 响应式非阻塞模型"]
+        R1["海量请求 1, 2, 3..."] --> EL["少数几个 EventLoop 线程 (单核一个)"]
+        EL -->|"非阻塞注册异步回调"| Netty["底层非阻塞网络 I/O\n(仅用几十个线程即可轻松抗下数万高并发连接！)"]
+    end
+```
+
+### 底层第一性原理剖析：
+- **Zuul 1.x 的线程泥潭**：
+  - 基于传统的 Java Servlet 规范，采用**同步阻塞 I/O**。
+  - 每个 HTTP 请求必须绑定一个独立的 Worker 线程。如果下游微服务出现慢查询或网络卡顿，这个线程就会被死死卡在 `read()` 上无法释放。当并发量稍大，网关的 200 个线程瞬间全部被耗尽，整个网关立刻拒绝服务！
+- **Spring Cloud Gateway 的响应式革命**：
+  - 基于 **Spring 5、Project Reactor 和 Netty** 构建。
+  - 核心工作在 **事件循环（EventLoop）** 线程上。当网关向下游发起 RPC 调用时，当前线程**绝不阻塞等待**，而是直接注册一个异步回调后立刻抽身去处理下一个请求！下游响应回来时，通过事件驱动触发回调将数据返还给客户端。
+  - **收益**：**仅仅依靠极少的 CPU 核心线程（通常等于 CPU 核数），就能以极低的内存开销从容支撑数万级并发长短连接！**
+
+> [!CAUTION] 响应式网关铁律：严禁在 Gateway 过滤器中执行任何阻塞代码！
+> 既然 EventLoop 线程数量极少（比如 8 核 CPU 只有 8 个工作线程），**一旦有新手在自定义的 `GlobalFilter` 中写了 `Thread.sleep()`、同步读取 Redis、或者用 JDBC 执行了耗时 SQL**：
+> - 这个宝贵的 EventLoop 线程会被当场卡死！
+> - 如果 8 个核心线程全被阻塞代码卡死，**整个网关将彻底瘫痪，所有微服务的流量入口瞬间冰冻！**
+> - **军规**：在网关内部进行任何外部调用，必须使用基于响应式的非阻塞客户端（如 `WebClient`、Reactive Redis）！
+
+---
+
+## 🧭 二、三大核心支柱：Route、Predicate 与 Filter
+
+在 Spring Cloud Gateway 中，一切逻辑围绕三大概念展开：
+
+```
+Route（路由） = ID + 目标 URI + Predicates（一组断言条件） + Filters（一组过滤器）
+```
 
 ```mermaid
 flowchart LR
-A[Client 请求] --> B[SLB/WAF/Nginx]
-B --> C[Gateway Route Predicate 匹配]
-C --> D[Pre Filter: traceId/流量染色]
-D --> E[认证 Authentication]
-E --> F[鉴权 Authorization]
-F --> G[限流/黑白名单/风控]
-G --> H[路径改写/头处理]
-H --> I[LoadBalancer 选择下游实例]
-I --> J[转发到后端服务]
-J --> K[Post/Error Filter: 指标/日志/异常映射]
-K --> L[Response 返回客户端]
+    Req["外部 HTTP 请求"] --> P{"Predicates 断言匹配\n(Path? Method? Header? 权重?)"}
+    P -- "不匹配" --> NextRoute["尝试下一条路由 (或返回 404)"]
+    P -- "匹配成功" --> PreF["Pre 过滤器链\n(Token 鉴权、添加头、限流)"]
+    PreF --> Downstream["通过 LoadBalancer 转发给下游微服务"]
+    Downstream --> PostF["Post 过滤器链\n(响应加密、统一日志、耗时打点)"]
+    PostF --> Resp["返还客户端"]
 ```
 
-主流程要点：
+### 1. Predicates（断言工厂：决定流量走哪条路）
+断言就像是一组 `if` 条件语句，必须全部满足（与逻辑）才算匹配该路由：
+```yaml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: order-service-route
+          uri: lb://order-service # lb 代表使用 Spring Cloud LoadBalancer 动态负载均衡
+          predicates:
+            - Path=/api/order/** # 路径断言
+            - Method=GET,POST    # 请求方式断言
+            - Header=X-Request-Id, \d+ # 请求头必须携带纯数字的 RequestId
+            - Weight=order-group, 80   # 权重路由：承担 80% 流量 (灰度发布利器)
+```
 
-1. 请求先匹配路由规则，确定该请求要走哪条链路。
-2. 前置过滤器一般先做 traceId、流量染色，再做认证鉴权和限流。
-3. 路由确定后，通过服务发现和负载均衡选出目标实例。
-4. 转发完成后，后置过滤器负责日志、指标、审计和统一异常映射。
-5. 任何一步都不应该做长时间阻塞，否则会拖慢整条 event loop。
+### 2. Filters（过滤器：在转发前后大显身手）
+过滤器分为 `GatewayFilter`（针对单条路由生效）和 `GlobalFilter`（对所有路由全局生效）：
+- **Pre 阶段**：在请求转发给下游之前执行。经典职能：**解析 JWT Token 校验登录态、从白名单中放行静态资源、提取 `user_id` 写入 Header 透传给下游、令牌桶限流**。
+- **Post 阶段**：在下游服务响应之后、返回给客户端之前执行。经典职能：**计算接口全链路耗时、打印 Access 访问日志、统一追加安全响应头**。
 
-## 🛂 网关认证与鉴权
+---
 
-### 常见边界划分
+## 🚦 三、高并发流量防护：令牌桶限流算法与 Redis 实战
 
-| 层次 | 负责内容 | 不该负责的内容 |
-| ---- | -------- | -------------- |
-| Gateway | 登录态校验、Token 解析、签名校验、基础黑白名单、租户识别、基础权限拦截 | 细粒度业务规则、复杂领域授权 |
-| 业务服务 | 资源级权限、数据级权限、业务状态校验 | 重复做所有通用 Token 解析 |
-| 身份中心 | 用户身份、角色、客户端凭证 | 业务服务内部授权逻辑 |
+面对大促秒杀或恶意黑客攻击，网关是全站的第一道防线，必须具备**秒级限流与熔断自愈能力**。
 
-### 典型认证链路
+### 1. 经典限流算法对比（为什么选择令牌桶？）
+
+| 限流算法 | 工作机制 | 致命缺陷 | 适用场景 |
+| :--- | :--- | :--- | :--- |
+| **固定窗口 (Fixed Window)** | 限制每秒最多 100 个请求。 | **临界突刺问题**：在第 0.9 秒冲入 100 个请求，在第 1.1 秒又冲入 100 个请求，在中间 0.2 秒内承受了 200 个并发，直接打穿系统！ | 粗粒度防刷 |
+| **滑动窗口 (Sliding Window)** | 将 1 秒切分为 10 个 100ms 窗口，平滑滑动。 | 解决了临界突刺，但无法处理**突发流量的平滑削峰**。 | 监控大盘计数 |
+| **漏桶算法 (Leaky Bucket)** | 水滴以任意速率滴入桶，以**恒定速率**从底孔漏出。 | 过于死板！**无法应对合理的突发流量**，哪怕下游服务容量充沛，突发流量也会被直接拒绝。 | 强平滑输出（如流量整形） |
+| **令牌桶算法 (Token Bucket)** | 系统以**恒定速率向桶中发放令牌**；桶满则溢出；请求到达时必须**取出一枚令牌才能放行**。 | 允许**在桶容量允许的范围内应对瞬时突发洪峰**，且长期平均速率受发牌速率严格约束！ | **网关高并发限流业界首选（Gateway 默认算法）** |
 
 ```mermaid
 flowchart TD
-A[请求进入 Gateway] --> B[解析 Authorization Header]
-B --> C{Token/签名合法?}
-C -->|否| D[401 Unauthorized]
-C -->|是| E[解析用户/租户/客户端身份]
-E --> F{是否有访问该路由权限?}
-F -->|否| G[403 Forbidden]
-F -->|是| H[写入用户上下文与 trace 标签]
-H --> I[透传到下游服务]
+    subgraph 令牌桶限流模型["令牌桶算法 (Token Bucket)"]
+        Gen["定时生成器: 以恒定速率 r (replenishRate) 发放令牌"] --> Bucket["令牌容量池 (burstCapacity: 如最多存 20 个)"]
+        Req["客户端请求到达"] --> Fetch{"尝试从桶中获取令牌"}
+        Fetch -- "获取成功" --> Pass["放行转发给下游业务"]
+        Fetch -- "桶已空 (无可用令牌)" --> Reject["429 Too Many Requests (快速拒绝，保卫下游)"]
+    end
 ```
 
-工程建议：
+### 2. Spring Cloud Gateway + Redis 令牌桶生产落地
 
-- 401 和 403 要严格区分，前者是“未认证”，后者是“已认证但无权访问”。
-- Token 解析后不要把完整敏感信息透传给下游，通常只传用户 ID、租户 ID、角色摘要、traceId。
-- 权限模型复杂时，网关只做第一层粗过滤，细权限由业务服务再判断。
-- 所有拒绝动作都要打审计日志，便于安全排查。
-
-## 🌗 灰度发布、权重路由与流量染色
-
-Spring Cloud Gateway 常见能力：
-
-- `Header`、`Cookie`、`Host`、`Path` Predicate 做人群路由。
-- `Weight` Predicate 做权重分流。
-- 自定义 Filter 打流量标签并向下游透传。
-
-```mermaid
-flowchart TD
-A[请求进入] --> B{命中灰度规则?}
-B -->|是| C[写入 X-Traffic-Color=gray]
-B -->|否| D[写入 X-Traffic-Color=stable]
-C --> E[灰度路由/权重分流]
-D --> F[稳定路由]
-E --> G[下游继续透传标签]
-F --> G
-G --> H[按标签观察成功率/P99]
-H --> I{指标异常?}
-I -->|是| J[回滚权重或关闭灰度]
-I -->|否| K[继续放量]
-```
-
-生产要点：
-
-- 灰度规则最好可热更新、可回滚、可审计。
-- 仅做权重还不够，必须有流量染色，否则服务间调用会串色。
-- 需要把灰度流量的成功率、延迟、状态码分布单独统计。
-- MQ 消费、定时任务、回调链路是否参与灰度要提前定义清楚。
-
-## ⚖️ 限流、重试与超时预算
-
-### 网关限流常见维度
-
-- 用户 ID
-- 租户 ID
-- API key / clientId
-- Path + Method
-- 来源 IP
-- 设备 ID / 渠道
-
-### KeyResolver 设计原则
-
-- 不能只按 IP，NAT、公司出口、CDN 回源场景会误伤。
-- 不能只按用户，匿名用户或未登录请求要有兜底 key。
-- 核心接口和普通查询接口要区分阈值。
-- 多租户场景一般要同时考虑租户级和用户级限流。
-
-### 关于网关重试
-
-- 网关层重试只能用于明确幂等的 GET、HEAD 或带幂等键的请求。
-- POST、支付、下单、扣库存类请求默认不要在网关层做自动重试。
-- 网关重试会放大全局流量，因此必须受总 deadline 约束。
-- 下游服务已经有重试时，网关通常不应再做一层全局重试。
-
-## 💻 代码 / 配置 / 伪代码
+Spring Cloud Gateway 官方内置了基于 **Redis + Lua 脚本** 的分布式令牌桶限流器（`RequestRateLimiter`）：
 
 ```yaml
 spring:
   cloud:
     gateway:
       routes:
-        - id: order-stable
+        - id: order-service-rate-limit
           uri: lb://order-service
           predicates:
-            - Path=/api/orders/**
-            - Weight=order-group, 95
+            - Path=/api/order/**
           filters:
-            - StripPrefix=1
-        - id: order-gray
-          uri: lb://order-service
-          predicates:
-            - Path=/api/orders/**
-            - Header=X-Traffic-Color, gray
-            - Weight=order-group, 5
-          filters:
-            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100 # 每秒向令牌桶中发放 100 个令牌 (平均 QPS)
+                redis-rate-limiter.burstCapacity: 200 # 桶的最大容量，允许应对最大 200 的瞬时洪峰
+                key-resolver: "#{@userKeyResolver}"   # 限流维度解析器 (按用户、IP 或接口)
 ```
 
+**编写限流维度解析器（Java Bean）**：
 ```java
-public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-    String token = resolveToken(exchange.getRequest().getHeaders());
-    UserContext user = authService.verify(token);
-    String trafficColor = grayRule.match(user, exchange.getRequest()) ? "gray" : "stable";
-    ServerHttpRequest request = exchange.getRequest().mutate()
-        .header("X-User-Id", user.userId())
-        .header("X-Tenant-Id", user.tenantId())
-        .header("X-Traffic-Color", trafficColor)
-        .build();
-    return chain.filter(exchange.mutate().request(request).build());
+@Configuration
+public class RateLimiterConfig {
+
+    // 按照客户端真实 IP 进行限流
+    @Bean
+    public KeyResolver ipKeyResolver() {
+        return exchange -> Mono.just(
+            exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
+        );
+    }
+
+    // 按照登录用户 ID 进行限流 (防单用户刷接口)
+    @Bean
+    public KeyResolver userKeyResolver() {
+        return exchange -> Mono.justOrEmpty(
+            exchange.getRequest().getHeaders().getFirst("X-User-Id")
+        ).defaultIfEmpty("anonymous");
+    }
 }
 ```
 
-## 🛠️ 工程案例：统一 BFF + 微服务网关
+---
 
-场景：
+## ⚡ 一分钟面试必杀卡
 
-- App、H5、管理后台统一接入 Spring Cloud Gateway。
-- 下游包括订单、用户、支付、营销多个微服务。
-- 需要支持 JWT 鉴权、租户隔离、灰度发布、接口限流和 trace 透传。
-
-落地方案：
-
-1. Gateway 前面接 WAF/SLB，网关自身多实例部署。
-2. GlobalFilter 统一生成 traceId、解析 JWT、识别租户与用户。
-3. 权限粗过滤在网关做，资源级权限在业务服务二次校验。
-4. 使用 `RequestRateLimiter` 做用户级和租户级限流。
-5. 对订单接口按 header 做 5% 灰度，透传 `X-Traffic-Color`。
-6. 所有 access log 带 routeId、status、latency、traceId、userId、tenantId。
-
-收益：
-
-- 鉴权和审计统一，避免每个服务重复做一套。
-- 灰度发布和限流策略统一入口配置，回滚快。
-- 排障时可以从网关第一跳快速拆分是入口问题还是下游问题。
-
-## 🧨 常见故障图谱
-
-```mermaid
-flowchart TD
-A[网关异常: 404/401/403/429/5xx/高延迟] --> B{按症状分类}
-B --> C[404/路由不通]
-B --> D[401/403激增]
-B --> E[429增多]
-B --> F[P99升高]
-B --> G[5xx增多]
-C --> C1[检查 Path/Host/Header Predicate]
-C --> C2[检查 StripPrefix/RewritePath]
-C --> C3[检查服务名与注册中心]
-D --> D1[检查 Token 解析]
-D --> D2[检查鉴权规则发布]
-D --> D3[检查时钟偏移/签名]
-E --> E1[检查 KeyResolver]
-E --> E2[检查 Redis/Lua 限流存储]
-E --> E3[检查阈值是否误配]
-F --> F1[检查 event loop 是否阻塞]
-F --> F2[检查下游 RT 和连接池]
-F --> F3[检查重试放大]
-G --> G1[检查下游服务状态]
-G --> G2[检查异常映射与 fallback]
-G --> G3[检查灰度路由是否串色]
-```
-
-## ⚠️ 生产坑与注意事项
-
-- 在 Reactive Gateway 里直接调用阻塞式 JDBC、老版 Redis 客户端或同步 HTTP 客户端，卡死 event loop。
-- 过滤器顺序混乱，先限流后鉴权或先改写路径后验签，导致语义错误。
-- 网关 timeout 大于下游 timeout，用户已经超时，网关还在傻等下游。
-- 开启全局 Retry 且作用在 POST，请求被重复提交。
-- access log 没有 routeId、traceId、userId，排障只能靠猜。
-- 只按 IP 限流，NAT 场景下误伤整片用户。
-- 灰度只切入口不切服务间流量，造成版本串色。
-- 在网关做复杂业务聚合，导致入口层又慢又难回滚。
-
-## 🧭 排查路径
-
-### 1. 404 或路由不通
-
-- 查 Predicate 是否命中：Path、Host、Method、Header、Cookie。
-- 查路径改写：`StripPrefix`、`RewritePath` 是否写错。
-- 查服务发现：`lb://service-name` 的服务名是否正确注册。
-- 查是否灰度条件把请求路由到不存在的分支。
-
-### 2. 401/403 突然增多
-
-- 看 Token 是否过期、签名密钥是否更新、时钟是否漂移。
-- 看权限规则是否刚发布，是否误拦截正常租户或角色。
-- 核对 401 和 403 是否被错误混用。
-- 结合审计日志看具体拒绝原因。
-
-### 3. 429 大量出现
-
-- 先确认限流是在网关还是下游。
-- 查 KeyResolver 维度是否合理，是否只按 IP。
-- 看 Redis/Lua 或限流存储是否本身抖动，导致误判拒绝。
-- 核对阈值是否与活动峰值和容量评估匹配。
-
-### 4. 网关延迟高或 5xx 增多
-
-- 先拆：是网关自身慢，还是下游服务慢。
-- 看 Netty event loop、CPU、连接数、GC、下游 RT。
-- 查是否有阻塞过滤器、全局重试、连接池耗尽。
-- 用 trace 区分 TLS、路由、过滤器、下游调用哪段最慢。
-
-## 🎯 面试问题
-
-> [!question] 高频问题
-> - Q: API 网关和 Nginx 有什么区别？
->   - A: Nginx 更偏通用反向代理，API 网关在路由基础上进一步承接认证、鉴权、限流、灰度、服务发现和统一观测。
-> - Q: 为什么过滤器顺序很重要？
->   - A: 因为 trace、认证、鉴权、限流、路径改写、日志的先后不同会直接改变请求语义和安全边界。
-> - Q: Spring Cloud Gateway 为什么强调不能阻塞？
->   - A: 它基于 Netty/Reactor 的事件循环模型，阻塞一个 event loop 就会影响同线程上的大量连接。
-> - Q: 网关层能不能做重试？
->   - A: 只能对明确幂等的请求谨慎做，且要受总超时预算约束，非幂等请求默认不能在网关层自动重试。
-> - Q: 网关认证和服务鉴权怎么分工？
->   - A: 网关做统一身份校验和基础权限拦截，细粒度业务权限仍要在服务内根据资源和数据范围判断。
-
-## 🎤 面试 3 层回答
-
-### 30 秒版
-
-API 网关是所有外部流量进入系统的第一跳，核心职责是统一路由、认证鉴权、限流、灰度和观测。真正难点不在配路由，而在于既要做强治理，又不能把入口层做成高延迟和大单点。
-
-### 2 分钟版
-
-一个成熟的网关会先通过 Route Predicate 做路由匹配，然后在过滤器链里完成 trace、认证、鉴权、限流、路径改写和灰度打标，最后通过服务发现和负载均衡把请求转发到下游。Spring Cloud Gateway 是基于 Netty/Reactor 的，所以最大的坑是阻塞 event loop。生产上还要特别注意 RequestRateLimiter 的 key 设计、灰度发布的流量染色、网关重试的幂等限制，以及 access log 和 trace 的完整性。网关适合承接统一能力，但不应该堆复杂业务编排，否则会拖垮整个入口层。
-
-### 项目版
-
-在一个多端统一接入项目里，我用 Spring Cloud Gateway 做过 JWT 认证、租户识别、接口限流和灰度发布。入口先在 GlobalFilter 里解析 token、写 traceId 和流量标签，再按 route 做权限和限流，最后把用户 ID、租户 ID、灰度标签透传给下游。排障时，我一般先从 routeId、status、latency、traceId 看是网关问题还是下游问题。如果 429 突增，会先查 KeyResolver；如果 P99 升高，会重点查是否有阻塞过滤器或下游 RT 抖动。
-
-## ✅ 精通检查清单
-
-- 能讲清 Route Predicate、Filter Chain、LoadBalancer 的主流程。
-- 能区分认证 Authentication 和鉴权 Authorization 的职责边界。
-- 能说明网关限流、灰度、重试、超时预算的设计原则。
-- 能解释 Reactive 网关为什么不能做阻塞 IO。
-- 能从 404、401/403、429、5xx、P99 升高五类问题切入排障。
-
-## 🔗 关联笔记
-
-- [[_index]]
-- [[20-Java后端/00-总览/学习仪表盘]]
-- [[../07-分布式与微服务/07-服务治理与负载均衡]]
-- [[../07-分布式与微服务/06-限流-熔断-降级]]
-- [[../07-分布式与微服务/08-链路追踪]]
-- [[04-注册中心-Nacos]]
-- [[05-配置中心]]
-- [[../04-Spring生态/08-SpringCloud组件概览]]
-
-## 📚 参考资料
-
-- Spring Cloud Gateway Reference
-- Spring Security Reference
-- Envoy Architecture Overview
-- OAuth 2.0 / OpenID Connect Specifications
+> [!NOTE] 面试高频问题标准答题套路
+> 
+> **Q1：Spring Cloud Gateway 为什么性能远高于传统的 Zuul 1.x？**
+> - **A**：
+>   - **Zuul 1.x** 基于传统 Servlet 规范，采用**同步阻塞 I/O**模型，每个请求分配一个线程。当下游微服务变慢时，Worker 线程池会被迅速耗尽，并发上限极低。
+>   - **Spring Cloud Gateway** 基于 **Spring 5、Project Reactor 和 Netty** 构建，采用**异步非阻塞的响应式事件驱动模型**。少量几个 EventLoop 线程即可多路复用处理海量并发请求，遇到远程调用立刻注册异步回调而释放当前线程，内存占用更低、吞吐量实现质的飞跃。
+> 
+> **Q2：网关如何实现高并发限流？令牌桶与漏桶有什么区别？**
+> - **A**：
+>   - 网关通常选用**令牌桶算法（Token Bucket）**，配合 Redis + Lua 脚本实现分布式原子限流。
+>   - **核心区别**：
+>     - **漏桶算法**的出水速率是绝对恒定的，无法处理任何突发并发，超出恒定速率的流量只能排队或被丢弃；
+>     - **令牌桶算法**在限制长期平均速率的同时，由于桶内允许积攒一定额度的令牌（`burstCapacity`），因此**允许系统应对合理范围内的瞬时突发洪峰**，更符合互联网真实业务流量特征。

@@ -6,235 +6,259 @@ tags:
   - 主题/Spring
   - 阶段/04
 created: 2026-07-04
-updated: 2026-07-05
+updated: 2026-09-11
 status: 已完成
-mastery: ⭐⭐⭐☆☆
+mastery: ⭐⭐⭐⭐⭐
 ---
 
-# IoC容器与Bean生命周期
+# 🏭 01 · IoC 容器与 Bean 生命周期（汽车生产线与预售精装房）
 
-> [!abstract] 一句话总结
-> IoC 容器把类与配置解析成 BeanDefinition，再由 BeanFactory 完成实例化、依赖注入、初始化、代理包装和销毁；精通点是 `refresh` 主流程、后处理器顺序、AOP 代理创建时机和三级缓存。
+> **一句话导读**：别再死记硬背“控制反转”和“依赖注入”了！Spring 的 IoC 容器就是一座顶级的**“全自动化汽车组装总装车间”**。搞懂一个 Bean 从图纸设计到报废回收的完整旅程，Spring 的底层骨架你就吃透了一半。
 
-## 📌 精准定位
+---
 
-- 负责对象创建、依赖装配、生命周期回调和扩展点编排。
-- 不负责业务对象的线程安全，单例 Bean 的可变字段仍会被多线程共享。
-- 关键边界：`new` 出来的对象不走容器，`@Autowired`、AOP、`@PostConstruct` 都不会生效。
-- 面试重点：能讲清 Bean 从扫描到可用的完整链路，以及循环依赖、代理缺失、Bean 创建过早等问题。
+## 🚗 核心心智模型：自己造车 vs 现代化汽车工厂
 
-## 🧩 核心概念
-
-| 概念 | 具体含义 | 精通要点 |
-| ---- | -------- | -------- |
-| BeanDefinition | Bean 的元数据，包含 class、scope、构造参数、属性和 init/destroy 方法。 | 会定位 `DefaultListableBeanFactory` 的 `beanDefinitionMap`。 |
-| BeanFactory | 容器底层接口，核心动作是 `getBean`。 | 理解懒加载、依赖查找和单例缓存。 |
-| ApplicationContext | 在 BeanFactory 外增加事件、资源、环境和国际化。 | Spring Boot Web 常见上下文是 `ServletWebServerApplicationContext`。 |
-| BeanFactoryPostProcessor | 在 Bean 实例化前修改 BeanDefinition。 | `ConfigurationClassPostProcessor` 解析配置类。 |
-| BeanPostProcessor | 初始化前后插入逻辑，AOP 代理也靠它完成。 | 重点关注 before/after initialization 和 early proxy。 |
-| FactoryBean | 本身是 Bean，但用于生产另一个对象。 | `&beanName` 拿 FactoryBean 本身。 |
-
-## ⚙️ refresh 主流程
+很多人初学 Spring 时，最困惑的就是为什么简单的对象创建要搞得这么复杂：
 
 ```mermaid
 flowchart TD
-A[AbstractApplicationContext.refresh] --> B[prepareRefresh]
-B --> C[obtainFreshBeanFactory]
-C --> D[prepareBeanFactory]
-D --> E[invokeBeanFactoryPostProcessors]
-E --> F[registerBeanPostProcessors]
-F --> G[initMessageSource/initEventMulticaster]
-G --> H[onRefresh]
-H --> I[registerListeners]
-I --> J[finishBeanFactoryInitialization]
-J --> K[preInstantiateSingletons]
-K --> L[finishRefresh]
+    subgraph Bad["传统方式：自己纯手工搓一辆汽车"]
+        A1["你要开车 (OrderService)"]
+        A1 --> A2["自己买发动机 (new Engine())"]
+        A2 --> A3["发现发动机需要齿轮 (new Gear())"]
+        A3 --> A4["发现齿轮需要螺丝 (new Screw())..."]
+        A5["💥 痛点：只要螺丝规格改了，上层所有代码全部报废重写！耦合极度严重！"]
+    end
+
+    subgraph Good["IoC 模式：全自动化汽车制造工厂 (Spring 容器)"]
+        B1["你只需要向工厂提单：'我要一辆搭配 V8 发动机的红旗车'"]
+        B2["工厂根据【蓝图】自动采购、精细装配、质检打磨，把组装完毕的车钥匙交到你手里！"]
+        B3["💡 控制权反转了：以前是你主动到处 new 零件，现在是工厂把零件主动塞给你！"]
+    end
 ```
 
-关键节点：
+### 专业术语大白话翻译：
+- **IoC（Inversion of Control，控制反转）**：**思想境界**。对象的创建权、组装权、生命周期管理权，从程序员手中**反转交给了 Spring 容器**。
+- **DI（Dependency Injection，依赖注入）**：**实现手段**。容器在把对象造出来的过程中，动态地把这个对象所依赖的其他组件“注入”进去（比如把 `Engine` 螺丝拧进 `Car` 里面）。
+- **Bean**：在 Spring 容器里登记在册、由容器统一管理生命周期的 Java 对象。
 
-1. `obtainFreshBeanFactory`：准备 BeanFactory。
-2. `invokeBeanFactoryPostProcessors`：解析配置类、扫描 Bean、注册 BeanDefinition。
-3. `registerBeanPostProcessors`：注册影响生命周期的后处理器，包括 AOP 相关处理器。
-4. `finishBeanFactoryInitialization`：预实例化非懒加载单例。
-5. `preInstantiateSingletons`：触发单例 Bean 创建。
+---
 
-## 🧬 Bean 生命周期
+## 🏗️ 幕后功臣：图纸（BeanDefinition）与工厂（BeanFactory）
+
+在 Spring 真正 `new` 出一个对象之前，它必须先有一张**施工图纸**：
 
 ```mermaid
-flowchart TD
-A[BeanDefinition] --> B[实例化 instantiate]
-B --> C[属性填充 populateBean]
-C --> D[Aware 回调]
-D --> E[BeanPostProcessor before]
-E --> F[初始化: PostConstruct/InitializingBean/init-method]
-F --> G[BeanPostProcessor after]
-G --> H{是否创建 AOP 代理}
-H -->|是| I[代理对象进入单例池]
-H -->|否| J[原始对象进入单例池]
-I --> K[使用中]
-J --> K
-K --> L[销毁: PreDestroy/DisposableBean/destroy-method]
+flowchart LR
+    Source["Java 代码 / 注解<br/>(@Component, @Bean)"] --> Reader["扫描与解析"]
+    Reader --> BD["📋 BeanDefinition (施工图纸)<br/>- 类全限定名<br/>- 单例还是多例？<br/>- 是否懒加载？<br/>- 依赖哪些属性？<br/>- 初始化方法叫什么？"]
+    BD --> Factory["🏭 BeanFactory / ApplicationContext (生产总装工厂)"]
+    Factory --> RealBean["🚘 真正可用的成品 Bean 实例"]
 ```
 
-标准顺序：
+> 💡 **大厂面试追问：`BeanFactory` 和 `ApplicationContext` 有什么区别？**
+> - **`BeanFactory`（最底层简陋小车间）**：Spring 最基础的 IoC 容器接口，只提供最基础的 `getBean` 检索能力。采用**懒加载**（只有你真正向它要对象时才去创建）。
+> - **`ApplicationContext`（现代化超级数字化大厂）**：`BeanFactory` 的子接口，具备了工厂的所有能力，并且自带企业级全套外挂：**国际化支持（MessageSource）、事件广播机制（ApplicationEventPublisher）、环境配置解析（Environment）、AOP 自动集成**。应用启动时默认预先实例化所有单例 Bean。
 
-1. 实例化对象。
-2. 属性填充和依赖注入。
-3. `BeanNameAware`、`BeanFactoryAware`、`ApplicationContextAware`。
-4. `BeanPostProcessor#postProcessBeforeInitialization`。
-5. `@PostConstruct`。
-6. `InitializingBean#afterPropertiesSet`。
-7. 自定义 `init-method`。
-8. `BeanPostProcessor#postProcessAfterInitialization`，AOP 代理通常在这里返回。
-9. 容器关闭时执行 `@PreDestroy`、`DisposableBean#destroy`、`destroy-method`。
+---
 
-## 🔁 三级缓存与循环依赖
+## 💉 依赖注入的三种姿势：为什么 Spring 官方强推构造器？
 
-Spring 单例循环依赖核心缓存：
-
-| 缓存 | 含义 | 作用 |
-| ---- | ---- | ---- |
-| `singletonObjects` | 一级缓存，完整单例对象 | 最终可用 Bean |
-| `earlySingletonObjects` | 二级缓存，早期引用 | 已提前暴露的对象或早期代理 |
-| `singletonFactories` | 三级缓存，ObjectFactory | 延迟生成早期引用，给 AOP 机会 |
-
-### 能解决什么
+在日常开发中，我们有 3 种方式把依赖注入进来：
 
 ```java
+// 姿势 1：属性字段注入 (最常见，但最不推荐！)
 @Service
-class A { @Autowired B b; }
-@Service
-class B { @Autowired A a; }
-```
-
-这种单例属性注入循环依赖可以解决，因为 A 实例化后可提前暴露引用，B 注入 A 的早期引用，最后 A 完成初始化。
-
-### 不能解决什么
-
-```java
-@Service
-class A { A(B b) {} }
-@Service
-class B { B(A a) {} }
-```
-
-构造器循环依赖无法解决，因为对象还没实例化完，无法提前暴露引用。
-
-### 为什么需要三级缓存
-
-如果只有二级缓存，AOP 代理对象可能创建时机不对。三级缓存通过 `ObjectFactory` 延迟生成早期引用，让 `SmartInstantiationAwareBeanPostProcessor#getEarlyBeanReference` 有机会返回代理对象，避免注入原始对象导致代理失效。
-
-## 🧪 常见案例
-
-### 案例 1：对象不是 Spring 创建，注入不生效
-
-```java
-OrderService service = new OrderService();
-service.create(); // @Autowired、@Transactional 都不会生效
-```
-
-原因：绕过容器，Spring 无法做依赖注入和代理。
-
-修复：从容器获取 Bean，或让调用方也交给 Spring 管理。
-
-### 案例 2：`@PostConstruct` 调用事务方法不生效
-
-```java
-@PostConstruct
-public void init() {
-  this.createOrder(); // 本类调用，不经过代理
+public class OrderService {
+    @Autowired 
+    private InventoryService inventoryService; 
 }
 
-@Transactional
-public void createOrder() {}
+// 姿势 2：Setter 方法注入 (可选依赖时可用)
+@Service
+public class OrderService {
+    private InventoryService inventoryService;
+    @Autowired
+    public void setInventoryService(InventoryService inventoryService) {
+        this.inventoryService = inventoryService;
+    }
+}
+
+// 姿势 3：构造器注入 (🌟 Spring 官方强烈推荐首选！)
+@Service
+public class OrderService {
+    private final InventoryService inventoryService;
+
+    // 单构造器时 @Autowired 注解甚至可以完全省略！
+    public OrderService(InventoryService inventoryService) {
+        this.inventoryService = inventoryService;
+    }
+}
 ```
 
-原因：本类自调用绕过 AOP 代理，而且初始化阶段代理可能尚未完全可用。
+### 🚨 为什么字段注入 `@Autowired` 被官方嫌弃？
+1. **隐藏依赖关系**：外部如果不启动 Spring 容器，你写单测时直接 `new OrderService()`，里面的 `inventoryService` 是 `null`，很容易报空指针！
+2. **无法将依赖声明为 `final`**：构造器注入可以让属性声明为 `final`，确保对象创建出来后**不可变、线程安全**。
+3. **更容易闻到代码的“坏味道”**：当一个类的构造器入参多达 7、8 个时，你会立刻警觉这个类违反了单一职责原则，必须重构；而字段注入不管写多少个都不显眼，容易造出超级臃肿的大怪物。
 
-修复：启动后用事件监听、ApplicationRunner，或拆到其他 Bean 调用。
+---
 
-### 案例 3：BeanPostProcessor 过早 getBean
+## 🔄 Bean 的完整生命周期：精装房交付五大阶段
 
-某些后处理器提前调用 `getBean`，可能导致 Bean 在所有 BPP 注册完成前就被创建，从而缺少 AOP 代理。
+面试中最恐怖的连环问：“请详细描述 Spring Bean 的生命周期流程。”
+不要死记硬背！把它想象成**一套预售期房从图纸规划到业主入住、最终拆迁的全过程**：
 
-排查：启动日志中常见 `BeanPostProcessorChecker` 提示该 Bean 不适合被所有后处理器处理。
+```mermaid
+flowchart TD
+    Step1["1. 实例化 (Instantiation)<br/>👉 挖掘机挖地基，给毛坯房框架打桩！<br/>(通过反射调用构造方法 new 出裸对象)"] --> Step2["2. 属性填充 (Populate Properties)<br/>👉 砌砖头、接通水电气、安装门窗！<br/>(依赖注入 @Autowired 字段赋值)"]
+    
+    Step2 --> Step3["3. 认清家门 (Aware 接口回调)<br/>👉 拿到门牌号与房产证！<br/>(BeanNameAware, BeanFactoryAware, ApplicationContextAware)"]
+    
+    Step3 --> Step4["4. 装修与检验 (初始化阶段)"]
+    
+    subgraph InitPhase["第 4 阶段：装修检验四部曲"]
+        I1["4.1 监理初检：BeanPostProcessor 前置处理 (postProcessBeforeInitialization)"] --> I2["4.2 业主验收初始化：@PostConstruct / InitializingBean"]
+        I2 --> I3["4.3 监理终检验收：BeanPostProcessor 后置处理 (postProcessAfterInitialization)<br/>🚨 核心大杀器：在此处生成 AOP 动态代理对象！"]
+    end
+    
+    Step4 --> Step5["5. 入住与报废 (使用与销毁)"]
+    
+    subgraph DestructPhase["第 5 阶段：拆迁与清理"]
+        D1["业主正常拎包入住使用 (In Use)"] --> D2["容器关闭拆迁：@PreDestroy / DisposableBean 资源释放"]
+    end
+```
 
-## 🔍 源码入口 / 关键组件
+### 五大阶段深度拆解：
 
-- `AbstractApplicationContext#refresh`
-- `PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors`
-- `ConfigurationClassPostProcessor`
-- `DefaultListableBeanFactory#preInstantiateSingletons`
-- `AbstractBeanFactory#doGetBean`
-- `AbstractAutowireCapableBeanFactory#doCreateBean`
-- `DefaultSingletonBeanRegistry#getSingleton`
-- `AutowiredAnnotationBeanPostProcessor`
-- `AnnotationAwareAspectJAutoProxyCreator`
+1. **实例化（Instantiation）**：
+   - 内存里刚通过反射 `Class.newInstance()` 或者构造方法把对象 new 出来。此时它只是一个“裸对象”，内部的 `@Autowired` 字段全部都是 `null`！
+2. **属性填充（Populate Properties）**：
+   - Spring 顺着图纸，扫描这个对象需要哪些依赖，调用 setter 或反射暴力将其他 Bean 注入进来。
+3. **Aware 接口回调（认清自身坐标）**：
+   - 框架问对象：“你想不想知道自己在 Spring 里叫啥名字？” -> 实现 `BeanNameAware`。
+   - “你想不想拿到整个 Spring 大工厂的控制权？” -> 实现 `ApplicationContextAware`。
+4. **初始化（Initialization - 关键扩展点）**：
+   - **`BeanPostProcessor.postProcessBeforeInitialization`**：后置处理器前置拦截（比如处理 `@PostConstruct` 注解）。
+   - **`InitializingBean / init-method`**：执行业务自己定义的初始化逻辑（比如加载本地缓存、建立网络长连接）。
+   - **`BeanPostProcessor.postProcessAfterInitialization`**：**全框架最重要的扩展点！**
+     - Spring AOP 在这里偷偷发力！**如果该 Bean 需要被切面拦截（比如加了 `@Transactional`），Spring 会在此处用动态代理把它包装成代理对象返回！**
+5. **销毁（Destruction）**：
+   - 容器关闭时，执行 `@PreDestroy` 或 `DisposableBean` 的 `destroy()` 方法，关闭连接池、清理临时文件。
 
-## ⚠️ 生产坑与注意事项
+---
 
-- 构造器循环依赖无法靠三级缓存解决。
-- `@PostConstruct` 中调用本类事务方法不会经过代理。
-- `BeanPostProcessor` 过早 `getBean` 会导致代理不完整。
-- `@Configuration(proxyBeanMethods=false)` 会改变 Bean 方法互调语义。
-- 单例 Bean 持有可变状态会产生并发问题。
-- 启动类扫描路径不对，会导致 Bean 未注册。
-- `FactoryBean` 和普通 Bean 名称获取方式不同。
+## 💻 动手实验：代码亲眼印证生命周期时序
 
-## 🧭 排查路径
+保存为 `BeanLifecycleDemo.java` 亲自运行验证：
 
-- 启动失败：看 `BeanCreationException` 最内层 cause。
-- 注入不生效：确认对象是否由 Spring 创建，包扫描是否覆盖。
-- 循环依赖：不要只打开 `allow-circular-references`，优先拆职责。
-- 代理缺失：检查 final、自调用、private 方法、Bean 创建过早。
-- Bean 来源不清楚：看 BeanDefinition 的 resource/source，或调试 `registerBeanDefinition`。
+```java
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-## 🎯 面试问题
+public class BeanLifecycleDemo {
 
-> [!question] 高频问题
-> - Q: Bean 生命周期顺序？
->   - A: 实例化、属性填充、Aware、后处理器 before、初始化、后处理器 after、可用、销毁。
-> - Q: 三级缓存解决什么？
->   - A: 解决单例属性注入循环依赖，并通过三级缓存的 ObjectFactory 给 AOP 提前代理留机会。
-> - Q: 为什么构造器循环依赖解决不了？
->   - A: 构造器注入时对象还没创建完成，无法提前暴露早期引用。
-> - Q: BeanFactory 和 ApplicationContext 区别？
->   - A: BeanFactory 是容器基础能力，ApplicationContext 增加事件、资源、环境、国际化，并通常预实例化单例。
-> - Q: FactoryBean 是什么？
->   - A: 一个能生产其他对象的特殊 Bean。拿产品对象用 `beanName`，拿工厂本身用 `&beanName`。
+    static class House implements BeanNameAware, InitializingBean {
+        public House() {
+            System.out.println("1. 构造方法：地基打好了（实例化）");
+        }
 
-## 🎤 面试 3 层回答
+        @Override
+        public void setBeanName(String name) {
+            System.out.println("2. BeanNameAware：拿到房产证门牌号 -> " + name);
+        }
 
-### 30 秒版
+        @PostConstruct
+        public void postConstruct() {
+            System.out.println("4. @PostConstruct：开始贴瓷砖木地板");
+        }
 
-Spring IoC 的核心是先把配置解析成 BeanDefinition，再由 BeanFactory 按生命周期创建 Bean。重点流程是实例化、依赖注入、Aware、初始化、BeanPostProcessor、AOP 代理和销毁。
+        @Override
+        public void afterPropertiesSet() {
+            System.out.println("5. InitializingBean：全屋通水通电完毕");
+        }
 
-### 2 分钟版
+        @PreDestroy
+        public void preDestroy() {
+            System.out.println("7. @PreDestroy：房屋到期拆迁，收拾家具");
+        }
+    }
 
-我会从 `refresh` 主流程讲起：先准备 BeanFactory，再执行 BeanFactoryPostProcessor 解析配置和扫描 BeanDefinition，然后注册 BeanPostProcessor，最后预实例化单例。单个 Bean 创建时，会经过实例化、属性填充、Aware、初始化前后处理器和销毁回调。循环依赖依赖三级缓存，只支持单例属性注入，构造器循环依赖不支持。
+    // 装修监理（后置处理器）
+    static class HouseInspector implements BeanPostProcessor {
+        @Override
+        public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+            if (bean instanceof House) {
+                System.out.println("3. 监理前置验收 (BeforeInitialization)");
+            }
+            return bean;
+        }
 
-### 项目版
+        @Override
+        public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+            if (bean instanceof House) {
+                System.out.println("6. 监理终检验收合格，交钥匙！(AfterInitialization - 代理生成点)");
+            }
+            return bean;
+        }
+    }
 
-项目里如果遇到注入不生效、事务不生效或 AOP 缺失，我会先判断对象是不是容器创建的，再看是否本类自调用、final/private、Bean 创建过早或包扫描路径问题。
+    @Configuration
+    static class AppConfig {
+        @Bean
+        House house() { return new House(); }
+        @Bean
+        HouseInspector inspector() { return new HouseInspector(); }
+    }
 
-## ✅ 精通检查清单
+    public static void main(String[] args) {
+        System.out.println("====== Spring 容器启动 ======");
+        var context = new AnnotationConfigApplicationContext(AppConfig.class);
 
-- 能画出 `refresh` 主流程。
-- 能讲清 Bean 生命周期顺序。
-- 能解释 BeanFactoryPostProcessor 与 BeanPostProcessor 区别。
-- 能说明三级缓存和循环依赖边界。
-- 能定位注入不生效、代理缺失、Bean 创建失败问题。
+        System.out.println("\n====== 业主正常入住使用 ======");
+        House house = context.getBean(House.class);
 
-## 🔗 关联笔记
+        System.out.println("\n====== Spring 容器关闭 ======");
+        context.close();
+    }
+}
+```
 
-- [[_index]]
-- [[20-Java后端/00-总览/学习仪表盘]]
-- [[03-Spring事务管理]]
-- [[02-AOP原理与应用]]
-- [[04-SpringBoot自动配置原理]]
+**控制台完美输出：**
+```text
+====== Spring 容器启动 ======
+1. 构造方法：地基打好了（实例化）
+2. BeanNameAware：拿到房产证门牌号 -> house
+3. 监理前置验收 (BeforeInitialization)
+4. @PostConstruct：开始贴瓷砖木地板
+5. InitializingBean：全屋通水通电完毕
+6. 监理终检验收合格，交钥匙！(AfterInitialization - 代理生成点)
 
-## 📚 参考资料
+====== 业主正常入住使用 ======
 
-- Spring Framework Reference: Core Technologies
-- Spring 源码 `org.springframework.beans.factory.support`
+====== Spring 容器关闭 ======
+7. @PreDestroy：房屋到期拆迁，收拾家具
+```
+
+---
+
+## 🧠 一分钟复盘核心记忆卡
+
+1. **IoC/DI 本质**：交出对象的创建与维护权，由自动化总装车间统一供给。
+2. **图纸与工厂**：注解解析成 `BeanDefinition`，由 `ApplicationContext` 集中装配。
+3. **生命周期口诀**：**“先造骨架（实例化），再装水电（属性注入），认清家门（Aware），两头监理（PostProcessor），入住与拆迁（使用与销毁）”**。
+
+---
+
+## 🧭 下一步
+
+在对象实例化的过程中，有一个最令程序员和面试官抓狂的经典难题：
+**如果 A 对象需要注入 B，而 B 对象又同时需要注入 A（循环依赖），Spring 是怎么破解这个死扣的？为什么必须用三级缓存？**
+请进入下一篇重磅专题：[[13-Spring循环依赖与三级缓存]]！

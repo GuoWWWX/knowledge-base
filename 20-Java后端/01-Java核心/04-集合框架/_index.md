@@ -18,12 +18,14 @@ updated: 2026-08-03
 - [x] [[04-HashMap原理与扩容]] — 哈希深挖：扰动、负载因子、树化、扩容拆链
 - [x] [[05-Map实现-LinkedHashMap与TreeMap]] — 保序/LRU/范围查询源码
 - [x] [[06-Queue实现-ArrayDeque与PriorityQueue]] — 循环数组、二叉堆、TopK
+- [x] [[07-排序详解]] — Java 排序 API：Arrays.sort/Collections.sort/Stream.sorted 底层(TimSort/双轴快排)、稳定性、Comparator、多字段排序、TopK（算法本身见算法章）
 
 ## 🧭 学习路线
 
 1. **先读总纲 [[01-核心机制与选型]]**：建立家族树全貌、背下选型表，理解 equals/hashCode 契约、modCount/fail-fast、迭代器这些公共机制——后面各篇直接引用，不再重复。
 2. **再按实现分篇**：[[02-List实现-ArrayList与LinkedList]] → [[03-Set实现-HashSet与TreeSet]] → [[04-HashMap原理与扩容]] → [[05-Map实现-LinkedHashMap与TreeMap]] → [[06-Queue实现-ArrayDeque与PriorityQueue]]。每篇都把关键 JDK 源码贴进文档逐段讲解，附高频面试题。
-3. **面试导向**：学完每篇能回答该篇"面试问题"小节（高频 + 追问），并能写出最小验证代码。
+3. **排序收尾**：[[07-排序详解]] 讲 Java 排序 API（底层算法、稳定性、Comparator、TopK）；手写算法在算法章。
+4. **面试导向**：学完每篇能回答该篇"面试问题"小节（高频 + 追问），并能写出最小验证代码。
 
 ## 🧪 验证目标
 

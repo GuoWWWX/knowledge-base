@@ -6,317 +6,219 @@ tags:
   - 主题/Spring
   - 阶段/04
 created: 2026-07-04
-updated: 2026-07-05
+updated: 2026-09-11
 status: 已完成
-mastery: ⭐⭐⭐☆☆
+mastery: ⭐⭐⭐⭐⭐
 ---
 
-# Spring事务管理
+# 💳 03 · Spring 事务管理（银行柜台一票否决与 7 大失效死穴）
 
-> [!abstract] 一句话总结
-> Spring 事务用 AOP 把业务方法包进 PlatformTransactionManager 的提交/回滚模板；精通点是传播行为、隔离级别、rollback 规则、线程连接绑定和事务失效边界。
+> **一句话导读**：加了 `@Transactional` 却依然没回滚，导致线上超卖数百万？Spring 事务的本质就是一套**“基于 AOP 的数据库连接保镖”**。掌握事务的 7 种传播行为和**大厂必考的 7 大失效死穴**，让你彻底告别线上一致性灾难。
 
-## 📌 精准定位
+---
 
-- 负责把一段数据库操作纳入同一个事务上下文。
-- 不负责跨库、消息和远程调用的天然一致。
-- 关键边界：事务上下文绑定在线程上，异步线程和本类内部调用默认拿不到事务。
-- 面试重点不是只背 `@Transactional`，而是能解释“为什么失效、怎么排查、如何和 MySQL 锁/MVCC、MQ 一致性联动”。
+## 🏦 核心心智模型：银行联合转账与一票否决权
 
-## 🧩 核心概念
-
-| 概念 | 具体含义 | 精通要点 |
-| ---- | -------- | -------- |
-| PlatformTransactionManager | 事务管理器抽象，JDBC 常用 DataSourceTransactionManager。 | 理解 getTransaction、commit、rollback。 |
-| TransactionInterceptor | 事务 AOP 拦截器。 | 主入口是 invokeWithinTransaction。 |
-| 传播行为 | REQUIRED、REQUIRES_NEW、NESTED 等参与规则。 | 能说清挂起、新连接和保存点。 |
-| rollback 规则 | 默认 RuntimeException 和 Error 回滚。 | 受检异常要显式 rollbackFor。 |
-| 线程绑定 | 事务资源绑定在 ThreadLocal。 | 异步线程、线程池切换默认不继承事务。 |
-| 事务同步回调 | afterCommit、beforeCommit 等回调。 | 适合提交后发事件，不适合替代 MQ 可靠投递。 |
-
-## ⚙️ 工作原理 / 主流程
-
-```mermaid
-flowchart TD
-A[代理方法调用] --> B[TransactionInterceptor]
-B --> C[读取 TransactionAttribute]
-C --> D[getTransaction]
-D --> E{是否已有事务?}
-E -->|有| F[按传播行为加入/挂起/保存点]
-E -->|无| G[获取 Connection 并关闭 autoCommit]
-F --> H[绑定资源到 TransactionSynchronizationManager]
-G --> H
-H --> I[执行业务 SQL]
-I --> J{异常匹配 rollback?}
-J -->|是| K[rollback]
-J -->|否| L[commit]
-K --> M[触发同步回调并释放资源]
-L --> M
-```
-
-1. `@EnableTransactionManagement` 注册事务 Advisor。
-2. 事务切面匹配 `@Transactional` 方法。
-3. 进入方法前根据传播行为获取或创建事务。
-4. `DataSourceTransactionManager#doBegin` 获取连接、关闭自动提交、绑定到线程。
-5. MyBatis/JdbcTemplate 通过 `DataSourceUtils` 取同一连接。
-6. `RuleBasedTransactionAttribute#rollbackOn` 决定异常是否回滚。
-7. 提交或回滚后清理 `TransactionSynchronizationManager` 中的资源。
-
-## 💻 代码 / 配置 / 伪代码
-
-```java
-@Service
-class OrderAppService {
-  @Transactional(rollbackFor = Exception.class)
-  public void createOrder(CreateOrderCmd cmd) {
-    orderMapper.insert(cmd.toOrder());
-    stockMapper.deduct(cmd.skuId(), cmd.count());
-    outboxMapper.insert(OutboxEvent.orderCreated(cmd.orderId()));
-  }
-}
-```
-
-## 🔍 源码入口 / 关键组件
-
-- `TransactionInterceptor#invoke`
-- `TransactionAspectSupport#invokeWithinTransaction`
-- `AbstractPlatformTransactionManager#getTransaction`
-- `AbstractPlatformTransactionManager#commit`
-- `AbstractPlatformTransactionManager#rollback`
-- `DataSourceTransactionManager#doBegin`
-- `TransactionSynchronizationManager`
-- `DataSourceUtils#getConnection`
-
-## 🔁 传播行为深挖
-
-| 传播行为 | 已有事务时 | 无事务时 | 典型场景 | 风险 |
-| -------- | ---------- | -------- | -------- | ---- |
-| REQUIRED | 加入当前事务 | 新建事务 | 默认业务写操作 | 内层异常影响外层整体回滚 |
-| REQUIRES_NEW | 挂起外层，新建事务 | 新建事务 | 记录审计、失败日志 | 多占一个连接，嵌套多会打满连接池 |
-| NESTED | 创建保存点 | 新建事务 | 局部失败可回滚到保存点 | 依赖数据库保存点，和 REQUIRES_NEW 不同 |
-| SUPPORTS | 加入事务 | 非事务执行 | 查询方法 | 写操作误用可能没有事务 |
-| NOT_SUPPORTED | 挂起事务 | 非事务执行 | 长耗时非事务操作 | 不能依赖事务一致性 |
-| MANDATORY | 加入事务 | 抛异常 | 必须被外层事务包裹 | 调用方忘记开事务会失败 |
-| NEVER | 抛异常 | 非事务执行 | 禁止事务场景 | 较少使用 |
-
-### NESTED 与 REQUIRES_NEW 的核心区别
-
-- `NESTED` 仍在同一个物理事务中，只是创建保存点；外层最终回滚时，内层即使成功也会一起回滚。
-- `REQUIRES_NEW` 会挂起外层事务，开启新的物理事务；内层提交后，外层回滚不影响内层。
-- `REQUIRES_NEW` 需要额外数据库连接，高并发下可能把连接池打满。
-
-## ⚠️ 事务失效矩阵
-
-| 场景 | 是否生效 | 原因 | 修复 |
-| ---- | -------- | ---- | ---- |
-| private 方法加 `@Transactional` | 否 | Spring AOP 代理无法拦截 private 方法 | 放到 public 方法或独立 Bean |
-| final 方法/类 | 通常否 | CGLIB 无法重写 final 方法 | 避免 final，或使用接口代理但仍要经过代理 |
-| 本类内部调用 | 否 | `this.method()` 绕过代理 | 拆到另一个 Service，或通过代理对象调用 |
-| 异步线程中执行 DB | 否 | 事务资源绑定当前线程 | 异步方法单独开启事务，避免依赖外层事务 |
-| 异常被 catch 不抛出 | 默认提交 | 拦截器看不到异常 | 重新抛出，或 `setRollbackOnly()` |
-| 抛 checked exception | 默认不回滚 | 默认只回滚 RuntimeException/Error | `rollbackFor = Exception.class` |
-| 多数据源事务管理器不匹配 | 可能不生效 | Mapper 使用的数据源和事务管理器不是同一个 | 指定正确 transactionManager |
-| 方法不是 public | 可能不生效 | 代理和事务属性解析边界 | 事务入口统一使用 public |
-| 数据库引擎不支持事务 | 否 | 如 MyISAM | 使用 InnoDB |
-| DDL 语句 | 不可靠 | MySQL DDL 可能隐式提交 | 避免在业务事务里执行 DDL |
-
-## 🧪 典型案例
-
-### 案例 1：自调用导致事务失效
-
-```java
-@Service
-class OrderService {
-  public void create() {
-    saveOrder(); // this.saveOrder()，不会经过代理
-  }
-
-  @Transactional
-  public void saveOrder() {
-    orderMapper.insert(...);
-    stockMapper.deduct(...);
-  }
-}
-```
-
-修复：
-
-```java
-@Service
-class OrderAppService {
-  private final OrderTxService orderTxService;
-
-  public void create() {
-    orderTxService.saveOrder();
-  }
-}
-
-@Service
-class OrderTxService {
-  @Transactional(rollbackFor = Exception.class)
-  public void saveOrder() {
-    orderMapper.insert(...);
-    stockMapper.deduct(...);
-  }
-}
-```
-
-### 案例 2：catch 异常后事务提交
-
-```java
-@Transactional
-public void createOrder() {
-  orderMapper.insert(...);
-  try {
-    stockMapper.deduct(...);
-  } catch (Exception e) {
-    log.error("deduct failed", e);
-  }
-}
-```
-
-这里异常被吞掉，事务拦截器认为方法正常返回，会提交订单。修复方式：
-
-- 重新抛出异常。
-- 或调用 `TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()`。
-
-### 案例 3：事务里调用 RPC 导致连接池耗尽
-
-```java
-@Transactional
-public void pay() {
-  orderMapper.updateStatus(...);
-  remoteCouponService.sendCoupon(...); // 慢 RPC
-  accountMapper.updateBalance(...);
-}
-```
-
-问题：事务持有连接和行锁期间等待网络调用，RPC 慢会放大锁等待和连接池占用。
-
-修复：
-
-- 事务内只做本地数据库状态变更。
-- 提交后通过 outbox/MQ 异步发券。
-- 远程调用必须有超时、重试和幂等。
-
-### 案例 4：REQUIRES_NEW 打满连接池
-
-外层事务持有一个连接，内层 `REQUIRES_NEW` 又申请一个连接。如果一个请求内循环调用多次，或并发很高，连接池容易耗尽。
-
-排查信号：
-
-- HikariCP active connection 接近 max。
-- 线程栈卡在获取连接。
-- MySQL `innodb_trx` 中长事务增多。
-
-修复：
-
-- 减少 `REQUIRES_NEW` 使用。
-- 审计日志可异步写。
-- 必须使用时限制并发和循环次数。
-
-## 🧩 事务与 MySQL 锁 / MVCC 的关系
-
-- Spring 事务只负责在 Java 层开启、提交、回滚事务；真正的锁、MVCC、隔离级别由数据库实现。
-- 隔离级别通过连接设置传给数据库，例如 RC/RR。
-- 在事务内执行当前读，如 `SELECT ... FOR UPDATE`、`UPDATE`，会触发 InnoDB 加锁。
-- 长事务会延迟 undo 清理，可能导致历史版本堆积。
-- 事务里做慢 RPC 或大批量处理，会延长锁持有时间，引发锁等待和死锁概率上升。
-
-## 📬 DB + MQ 一致性
-
-### 错误做法
-
-```java
-@Transactional
-public void createOrder() {
-  orderMapper.insert(...);
-  mq.send(orderCreatedEvent); // 如果这里成功但事务回滚，消息脏发；如果这里失败但事务提交，消息丢失
-}
-```
-
-### 推荐做法：Outbox 本地消息表
-
-```java
-@Transactional(rollbackFor = Exception.class)
-public void createOrder() {
-  orderMapper.insert(...);
-  outboxMapper.insert(new OutboxEvent("ORDER_CREATED", orderId, payload));
-}
-```
-
-然后后台任务或 CDC 投递 outbox：
+什么是事务？想象你在银行办理一笔转账：
 
 ```mermaid
 flowchart LR
-A[业务事务] --> B[写订单表]
-A --> C[写 outbox 表]
-C --> D[投递任务/CDC]
-D --> E[MQ]
-E --> F[消费者幂等处理]
+    Step1["1. 扣减你的账户 1000 元<br/>(UPDATE balance - 1000)"] --> Step2["2. 增加对方账户 1000 元<br/>(UPDATE balance + 1000)"]
+    
+    Step2 -.->|"💥 发生故障！断电或对方账号注销"| Rollback["🚨 触发一票否决！立刻回滚！<br/>(所有操作全部撤销，你的 1000 块安然无恙)"]
+    Step2 -->|"✅ 全部顺利无异常"| Commit["🏆 永久盖章入库！提交事务！"]
 ```
 
-优点：业务数据和消息记录在同一个本地事务里提交。缺点是链路更长，需要处理重试、去重、状态更新和监控。
+这就是数据库的 **ACID 特性**（原子性、一致性、隔离性、持久性）。
+而 Spring 的主要贡献是：**让你不用再手写繁杂的 JDBC 事务模板代码，用一个声明式注解 `@Transactional` 就能包办一切！**
 
-## 🧭 排查路径
+---
 
-- 不回滚：看异常类型、是否被吞、是否经过代理、是否匹配 rollback 规则。
-- 没有开启事务：看方法可见性、本类调用、是否被 Spring 管理、AOP 是否生效。
-- 锁等待：查 `information_schema.innodb_trx`、`performance_schema.data_locks`、`SHOW ENGINE INNODB STATUS`。
-- 连接池打满：排查长事务、`REQUIRES_NEW`、事务内 RPC、慢 SQL。
-- 多数据源异常：确认 `transactionManager` 与 Mapper 所用数据源一致。
-- DB+MQ 不一致：查业务表、outbox 表、MQ 投递日志、消费者幂等表。
+## 🔬 揭开面纱：`@Transactional` 是如何施展魔法的？
 
-## 🎯 面试问题
+很多人以为 `@Transactional` 是数据库自带的功能，其实**它完全是基于我们在上一篇学到的 AOP 动态代理机制实现的！**
 
-> [!question] 高频问题
-> - Q: Spring 事务为什么会失效？
->   - A: 本质是没有经过事务代理，或代理看不到异常，或事务资源不在当前线程。典型包括 private/final 方法、本类自调用、异步线程、异常被 catch、checked exception 未配置 rollbackFor、多数据源事务管理器不匹配。
-> - Q: 默认什么异常回滚？
->   - A: RuntimeException 和 Error。受检异常默认不回滚，需要 `rollbackFor = Exception.class`。
-> - Q: NESTED 和 REQUIRES_NEW 区别？
->   - A: NESTED 用同一个物理事务的保存点，外层回滚会影响内层；REQUIRES_NEW 挂起外层并开启新事务，内层提交后不受外层回滚影响，但会多占连接。
-> - Q: 事务为什么不要调 RPC？
->   - A: 网络延迟会拉长连接和锁持有时间，RPC 失败语义也无法天然绑定 DB 提交，容易造成锁等待、连接池耗尽和数据不一致。
-> - Q: 事务如何绑定线程？
->   - A: `TransactionSynchronizationManager` 用 ThreadLocal 保存连接、事务同步回调等资源，所以异步线程默认没有外层事务。
-> - Q: DB+MQ 一致怎么做？
->   - A: 常用本地消息表/outbox、事务消息或 CDC。普通事务内直接发 MQ 不能保证数据库提交和消息投递一致。
+Spring 内部有一个叫做 `TransactionInterceptor` 的核心切面：
 
-## 🎤 面试 3 层回答
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as 调用方
+    participant Proxy as 事务 AOP 代理对象
+    participant TM as 事务管理器 (TransactionManager)
+    participant DB as 数据库连接 (Connection)
+    participant Target as 真正的业务 Service
 
-### 30 秒版
+    Client->>Proxy: 1. 调用 orderService.create()
+    Proxy->>TM: 2. 准备开启事务
+    TM->>DB: 3. 从连接池获取连接，关闭自动提交：conn.setAutoCommit(false);
+    Note over TM, DB: 4. 把当前连接绑定到 ThreadLocal 中！
+    
+    Proxy->>Target: 5. 执行业务逻辑 (里面的所有 SQL 共享同一个连接)
+    
+    alt 业务正常无异常
+        Proxy->>DB: 6. 自动提交：conn.commit();
+        Proxy-->>Client: 7. 成功返回
+    else 抛出运行时未捕获异常
+        Proxy->>DB: 6. 自动撤销：conn.rollback();
+        Proxy-->>Client: 7. 向外抛出异常，业务数据无损！
+    end
+```
 
-Spring 事务本质是 AOP 拦截方法，在方法前获取连接并绑定到当前线程，方法正常提交，异常匹配 rollback 规则就回滚。它最容易出问题的地方是代理没生效、异常没抛出、异步线程丢事务，以及事务里做了慢 RPC 或 MQ。
+---
 
-### 2 分钟版
+## 💥 大厂面试王炸：Spring 事务失效的 7 大高频血泪坑
 
-我会从三个层面讲：第一，源码主线是 `TransactionInterceptor -> TransactionAspectSupport -> PlatformTransactionManager`；第二，事务资源通过 `TransactionSynchronizationManager` 绑定线程，所以自调用、异步、多数据源都会影响事务边界；第三，数据库锁和 MVCC 由 MySQL 实现，Spring 只是控制提交回滚。生产上要避免长事务、事务里 RPC，以及 DB+MQ 直接耦合，跨资源一致性用 outbox 或事务消息。
+面试官最喜欢问：“你在实际开发中，遇到过哪些 `@Transactional` 失效的场景？如何排查？”
+**请将以下 7 大经典死穴刻在骨子里：**
 
-### 项目版
+```mermaid
+flowchart TD
+    classDef pit fill:#fff1f0,stroke:#ffa39e,stroke-width:1px;
 
-在订单/秒杀项目里，创建订单、扣库存和写 outbox 必须在一个本地事务里完成；真正发送 MQ 放到事务提交之后的异步投递。这样可以避免订单提交了但消息没发，或者消息发了但事务回滚。支付回调和超时关单用状态机条件更新，事务尽量短，避免锁等待。
+    Pits["🚨 Spring 事务失效的 7 大凶手"]
+    Pits --> P1["1. 方法不是 public 修饰 (切面直接忽略)"]:::pit
+    Pits --> P2["2. 内部方法自调用 this.method() (绕过代理对象)"]:::pit
+    Pits --> P3["3. 异常被代码悄悄 try-catch 吞掉了 (Spring以为成功了)"]:::pit
+    Pits --> P4["4. 抛出受检异常未配 rollbackFor (默认只回滚 RuntimeException)"]:::pit
+    Pits --> P5["5. 数据库存储引擎不支持事务 (如 MySQL 的 MyISAM)"]:::pit
+    Pits --> P6["6. 类没有被 Spring 容器管理 (忘了加 @Service)"]:::pit
+    Pits --> P7["7. 新建子线程执行业务 (跨线程 ThreadLocal 连接丢失)"]:::pit
+```
 
-## ✅ 精通检查清单
+### 1. 坑一：同类内部方法自调用（最隐蔽、最常见！）
+```java
+@Service
+public class OrderService {
+    public void createOrder() {
+        // 🚨 翻车！调用同类的私有/公有事务方法，直接走 this，绕过了代理对象！
+        this.insertOrder(); 
+    }
 
-- 能画出事务代理和提交/回滚主流程。
-- 能说清 `TransactionInterceptor`、`PlatformTransactionManager`、`TransactionSynchronizationManager` 的职责。
-- 能列出事务失效矩阵，并解释根因。
-- 能区分 REQUIRED、REQUIRES_NEW、NESTED。
-- 能结合 MySQL 锁和 MVCC 解释长事务风险。
-- 能给出 DB+MQ 一致性的 outbox 方案。
+    @Transactional
+    public void insertOrder() {
+        // 这里的事务注解完全无效！发生异常绝不回滚！
+    }
+}
+```
+- **解法**：重构代码将 `insertOrder` 移至独立的 Service，或通过自己注入自己调用。
 
-## 🔗 关联笔记
+### 2. 坑二：把异常悄悄用 `try-catch` 吞掉了
+```java
+@Transactional
+public void payOrder() {
+    try {
+        orderDao.updateStatus();
+        accountDao.deductMoney(); // 假设这里抛出异常
+    } catch (Exception e) {
+        // 🚨 翻车！异常被你自己吞了，Spring 以为一切安好，直接执行 conn.commit()！
+        log.error("支付出错了", e);
+    }
+}
+```
+- **解法**：`catch` 记录日志后，**必须再次向外 `throw e`**；或者手动标记回滚：`TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();`。
 
-- [[_index]]
-- [[20-Java后端/00-总览/学习仪表盘]]
-- [[../05-数据库与存储/03-MySQL锁机制]]
-- [[../05-数据库与存储/02-事务与隔离级别]]
-- [[../06-中间件/03-消息可靠性-顺序-幂等]]
-- [[../09-项目实战/01-项目-高并发秒杀系统]]
+### 3. 坑三：默认只回滚 `RuntimeException`（抛出受检异常未回滚）
+```java
+@Transactional // 🚨 隐患！
+public void readFileAndUpdateDb() throws IOException {
+    orderDao.insert();
+    throw new IOException("读取文件失败"); // IOException 是 Checked Exception！
+}
+```
+- **原因**：Spring 默认只在遇到 `RuntimeException` 或 `Error` 时才回滚！遇到 `Exception` 的其他子类（受检异常）默认**直接提交**！
+- **生产军规**：**永远显式加上 `rollbackFor = Exception.class`！**
+  ```java
+  @Transactional(rollbackFor = Exception.class)
+  ```
 
-## 📚 参考资料
+### 4. 坑四：方法不是 `public` 修饰
+- Spring 的 `AbstractFallbackTransactionAttributeSource` 在解析方法属性时，会明确检查 `Modifier.isPublic(method.getModifiers())`。
+- 如果修饰符是 `private`、`protected` 或包级可见，Spring 会直接忽略事务切面！
 
-- Spring Framework Reference: Transaction Management
-- MySQL Reference Manual: InnoDB Transactions
-- Microservices Patterns: Transactional Outbox
+### 5. 坑五：多线程异步操作（跨线程连接丢失）
+```java
+@Transactional
+public void mainTask() {
+    orderDao.insert();
+    // 🚨 翻车！新线程里的操作完全不受当前事务管控！
+    new Thread(() -> {
+        stockDao.deduct(); // 如果这里抛异常，主线程早已提交，无法一起回滚！
+    }).start();
+}
+```
+- **原因**：Spring 事务依赖的是当前线程绑定的 `ThreadLocal` 数据库连接。新开子线程拥有全新的线程栈，根本拿不到主线程的事务连接。
+
+---
+
+## 🌊 事务的 7 大传播行为（Propagation）大白话速记
+
+当两个带事务的方法发生嵌套调用时（方法 A 调 方法 B），事务究竟该如何表现？
+
+| 传播属性 | 现实生活大白话 | 典型场景 |
+| :--- | :--- | :--- |
+| **`REQUIRED`** *(默认)* | **“有组织就加入组织，没组织就自立山头”**。<br/>如果 A 有事务，B 就融进去；如果 A 没有，B 自己开一个。 | 90% 的绝大多数业务场景。 |
+| **`REQUIRES_NEW`** | **“不管你有没有组织，我都必须自己开一个全新事务，互不相干”**。<br/>挂起 A 的事务，B 自己开独立事务，B 的回滚与否不影响 A。 | **记录操作日志、发放独立优惠券**（就算主业务报错，日志也必须成功落库！）。 |
+| **`NESTED`** | **“大局为重，设立保存点（Savepoint）”**。<br/>如果 A 有事务，B 成为嵌套子事务；B 如果失败，可以只回滚 B 自己的部分，A 可以决定是否继续。 | 批量发送消息或批量处理（某一条失败不影响整体）。 |
+| **`SUPPORTS`** | **“随遇而安”**。A 有我就有，A 没有我也没有。 | 查询类方法。 |
+| **`NOT_SUPPORTED`** | **“独善其身”**。以无事务方式执行，如果 A 有事务就先把 A 挂起。 | 耗时极长、不需要事务保护的外部计算。 |
+| **`MANDATORY`** | **“必须有靠山”**。A 必须有事务，如果没有直接抛异常！ | 必须依赖上层事务调用的关键子方法。 |
+| **`NEVER`** | **“清高绝不沾边”**。绝不允许在事务中执行，有事务就抛异常！ | 明确禁止事务包裹的特殊场景。 |
+
+---
+
+## 💻 工业级标准：声明式与编程式事务的最佳组合
+
+在很多超高并发或涉及慢 I/O（比如调外部第三方微信支付接口）的场景中，**使用大范围的 `@Transactional` 会导致数据库长连接被长时间霸占，拖垮数据库连接池！**
+
+此时推荐使用 Spring 提供的**编程式事务（`TransactionTemplate`）**，精准缩小事务粒度：
+
+```java
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@Service
+public class OptimizedOrderService {
+    private final TransactionTemplate transactionTemplate;
+
+    public OptimizedOrderService(TransactionTemplate transactionTemplate) {
+        this.transactionTemplate = transactionTemplate;
+    }
+
+    public void processOrder() {
+        // 1. 慢操作：调用外部远程接口，绝不能放在数据库事务里！
+        callExternalPayment();
+
+        // 2. 精准极简事务：只把真正的数据库写操作包裹起来！
+        transactionTemplate.execute(status -> {
+            try {
+                orderDao.insert();
+                stockDao.deduct();
+                return true;
+            } catch (Exception e) {
+                status.setRollbackOnly(); // 发生异常回滚
+                throw e;
+            }
+        });
+
+        // 3. 异步操作：发短信、发邮件
+        sendNotification();
+    }
+}
+```
+
+---
+
+## 🧠 一分钟复盘核心记忆卡
+
+1. **核心本质**：Spring 事务就是通过 **AOP 动态代理 + ThreadLocal 绑定数据库连接** 自动实现 `commit` 和 `rollback`。
+2. **生产铁律**：**永远配置 `rollbackFor = Exception.class`**，切忌在类内部自调用，切忌在事务方法里做慢 I/O 网络请求！
+3. **传播行为**：最常用 `REQUIRED`（融入）与 `REQUIRES_NEW`（独立起灶炉）。
+
+---
+
+## 🧭 下一步
+
+在事务执行成功后，我们经常需要发短信、扣减积分或通知下游模块。如果直接在事务代码里调用，一旦发短信超时就会拖慢核心事务。
+如何在当前进程内优雅地完成事件发布与解耦，并在事务提交后才触发通知？
+请进入下一篇：[[11-Spring事件机制]]！

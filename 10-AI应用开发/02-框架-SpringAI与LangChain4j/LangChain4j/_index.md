@@ -20,7 +20,7 @@ mastery: ⭐☆☆☆☆
 
 ## 📚 知识笔记清单（按学习顺序编号，顺着编号读即可）
 
-- [x] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]] — 框架定位与核心抽象总览
+- [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]] — 框架定位与核心抽象总览
 - [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]] — 用接口声明 AI 服务（LangChain4j 最大特色）
 - [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/03-记忆与RAG]] — ChatMemory、EmbeddingStore、ContentRetriever
 - [ ] [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/04-与Spring生态集成]] — Spring Boot Starter、与 Spring AI 共存

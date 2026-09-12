@@ -93,12 +93,12 @@ String reply = agent.answer("极客科技", "我的订单 12345 到哪了？");
 
 **与 Spring AI 的心智对比**（面试常问）：
 
-| 维度 | Spring AI | LangChain4j |
-| ---- | ---- | ---- |
-| 调用风格 | `ChatClient` 链式：`prompt().user().call()` | `AiServices` 声明式：接口 + builder |
-| 工具 | `@Tool` + `.tools(...)` | `@Tool` + `.tools(...)`（同为方法即工具） |
-| 业务集成 | Spring Bean + 注入 | 接口代理，也可配 Spring Boot Starter |
-| 心智模型 | 显式编排调用链 | 隐式代理编排 |
+| 维度   | Spring AI                                | LangChain4j                      |
+| ---- | ---------------------------------------- | -------------------------------- |
+| 调用风格 | `ChatClient` 链式：`prompt().user().call()` | `AiServices` 声明式：接口 + builder    |
+| 工具   | `@Tool` + `.tools(...)`                  | `@Tool` + `.tools(...)`（同为方法即工具） |
+| 业务集成 | Spring Bean + 注入                         | 接口代理，也可配 Spring Boot Starter     |
+| 心智模型 | 显式编排调用链                                  | 隐式代理编排                           |
 
 ## ⚠️ 踩坑与注意事项
 

@@ -1,46 +1,95 @@
 ---
-title: 02 · 框架 Spring AI 与 LangChain4j（索引）
+title: 02 · Java AI 框架（索引）
 tags:
   - 领域/AI应用
   - 类型/索引
   - 阶段/02
 created: 2026-05-31
-updated: 2026-08-04
+updated: 2026-08-13
 status: 已完成
-mastery: ⭐☆☆☆☆
+mastery: ⭐⭐⭐☆☆
 ---
 
-# ☕ 02 · 框架（Spring AI / LangChain4j）
+# ☕ 02 · Java AI 框架（Spring AI 与 LangChain4j）
 
 > [!info] 本区说明
-> 对应学习路径 **阶段二**。本区是 Java AI 框架的总览区：两个框架各有独立子目录深入介绍，本区负责选型对比与总览导航。Spring AI 为主，LangChain4j 为辅。
+> 对应学习路径 **阶段二**。全面构建 Java 工程师面向大模型时代的工程落地架构体系：以 **Spring AI** 作为企业级主线，以 **LangChain4j** 作为声明式接口对照，以 **Embabel Agent** 作为多 Agent 规划进阶。
 
-> [!info] 框架版本现状（2026-08）
-> - **Spring AI 2.0.0 GA**（2026-06）：基于 Boot 4.x、MCP SDK 2.0；Options 全面 builder 化；记忆类 Advisor 需显式 conversationId；SAP HANA/Infinispan 向量库移除；可观测性增强。维护线：1.1.8、1.0.9。
-> - **LangChain4j 1.18.1**（2026-07）：1.x 持续迭代。
-> - 各篇示例以概念与稳定 API 为主，具体版本以官方 BOM 为准（见 [[SpringAI/01-Spring-AI项目搭建]]）。
+---
 
-## 📚 目录结构
+## 🗺️ 全章学习路线与架构总览
 
-| 入口 | 内容 | 什么时候读 |
-| ---- | ---- | ---- |
-| [[SpringAI/_index\|Spring AI 子区]] | Spring AI 9 篇：搭建、ChatClient、模板、流式、多模型、工具、Advisor、记忆、向量库 | **主线**，按编号读 |
-| [[LangChain4j/_index\|LangChain4j 子区]] | LangChain4j 4 篇：核心概念、AiServices、记忆与 RAG、生态集成 | **对照**，学完 Spring AI 后读 |
-| [[01-SpringAI与LangChain4j对比\|两框架对比与选型]] | 抽象对照表、选型结论 | 两个子区都看完后读 |
+```mermaid
+flowchart TD
+    M0["00-Java-AI框架全景与心智模型<br/>（大模型时代的 JDBC 与 Spring Data）"] --> S1
+    M0 --> S2
 
-## 🧭 学习路线
+    subgraph S1["主线专栏：Spring AI 企业级生态"]
+        B1["01-工程搭建与Starter"] --> B2["02-ChatClient与ChatModel"]
+        B2 --> B3["03-PromptTemplate与04-SSE流式"]
+        B3 --> B4["05-多模型切换与06-Function Calling"]
+        B4 --> B5["07-Advisor拦截器(AOP核心)"]
+        B5 --> B6["08-ChatMemory与09-VectorStore"]
+    end
 
-1. **主线：Spring AI 子区**（[[SpringAI/01-Spring-AI项目搭建]] → [[SpringAI/09-VectorStore向量存储]]）——先跑通工程，再逐个掌握核心原语。
-2. **对照：LangChain4j 子区**（[[LangChain4j/01-LangChain4j核心概念]] → [[LangChain4j/04-与Spring生态集成]]）——用 Spring AI 的心智对照理解，避免框架内耗。
-3. **收尾：选型对比**（[[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比]]）——按团队技术栈和场景做决策。
+    subgraph S2["对照专栏：LangChain4j 声明式生态"]
+        C1["01-核心概念与驱动"] --> C2["02-AiServices声明式接口(Feign风格)"]
+        C2 --> C3["03-记忆与RAG & 04-Spring集成"]
+    end
 
-## 🧾 本章复习
+    subgraph S3["进阶扩展：Embabel 复杂 Agent 编排"]
+        D1["01-概览选型"] --> D2["03-Blackboard状态与05-Planner规划"]
+    end
 
-- [[99-本章总结与复习]]
+    S1 --> CMP["01-SpringAI与LangChain4j终极对比选型"]
+    S2 --> CMP
+    CMP --> S3
+    S3 --> FIN["99-本章总结与复习<br/>（大厂30秒必杀与生产十诫）"]
 
-## 🔗 相关
+    style M0 fill:#e1f5fe,stroke:#0288d1,stroke-width:1px
+    style CMP fill:#fff3e0,stroke:#e65100,stroke-width:1px
+    style FIN fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
+```
 
-- 学习路径对应章节：[[10-AI应用开发/00-总览/AI应用开发学习路径#第五章 分阶段学习计划]]（阶段二）
-- 上级：[[10-AI应用开发/00-总览/学习仪表盘]]
+---
 
+## 📚 知识导航清单
 
+### 00 · 全景心智
+- [[00-Java-AI框架全景与心智模型]] 🌟（大模型时代的 JDBC、Spring Data 哲学与企业级优势）
+
+### 01 · 框架终极对比与选型
+- [[01-SpringAI与LangChain4j对比]] ⚖️（底层哲学、Fluent 链式 vs 声明式 Feign 风格硬核对比）
+
+### 02 · Spring AI 专区（企业生产首选主线）
+- [[SpringAI/_index|Spring AI 体系总览索引]]
+  - [[SpringAI/01-Spring-AI项目搭建|01-Spring-AI项目搭建]]（BOM 依赖与多 Provider 接入）
+  - [[SpringAI/02-ChatClient与ChatModel|02-ChatClient与ChatModel]]（底层驱动与 Fluent API 门面）
+  - [[SpringAI/03-PromptTemplate|03-PromptTemplate]]（结构化模板与动态入参管理）
+  - [[SpringAI/04-流式输出-SSE|04-流式输出-SSE]]（响应式 Flux 与打字机长连接）
+  - [[SpringAI/05-多模型接入与切换|05-多模型接入与切换]]（@Qualifier 装配与业务动态路由）
+  - [[SpringAI/06-Function-Calling工具调用|06-Function-Calling工具调用]]（@Tool 注解与多轮反射自闭环）
+  - [[SpringAI/07-Advisor拦截器|07-Advisor拦截器]]（Spring AI 的 AOP 灵魂，脱敏与审计实战）
+  - [[SpringAI/08-ChatMemory记忆|08-ChatMemory记忆]]（滑动窗口淘汰与 Redis/JDBC 持久化）
+  - [[SpringAI/09-VectorStore向量存储|09-VectorStore向量存储]]（PGVector/Milvus 驱动与相似度检索）
+
+### 03 · LangChain4j 专区（声明式优雅对照）
+- [[LangChain4j/_index|LangChain4j 体系总览索引]]
+  - [[LangChain4j/01-LangChain4j核心概念|01-核心概念与架构]]
+  - [[LangChain4j/02-AiServices声明式AI服务|02-AiServices声明式服务]]（如同 OpenFeign 的极致接口体验）
+  - [[LangChain4j/03-记忆与RAG|03-记忆与RAG]]
+  - [[LangChain4j/04-与Spring生态集成|04-与Spring生态集成]]
+
+### 04 · Embabel Agent 进阶专区
+- [[EmbabelAgent/_index|Embabel Agent 编排专区索引]]（面向 JVM 的强类型状态机与多 Agent 规划）
+
+### 99 · 本章通关总结
+- [[99-本章总结与复习]]（全章核心拓扑、大厂 30 秒必杀 10 连问、生产落地十诫）
+
+---
+
+## 🔗 相关链接
+
+- 上级总览：[[10-AI应用开发/00-总览/学习仪表盘]]
+- 前置章节：[[10-AI应用开发/01-LLM基础与Prompt/_index|01 · LLM 基础与 Prompt 工程]]
+- 下一章节：[[10-AI应用开发/03-知识库技术-RAG/_index|03 · 知识库技术：RAG]]

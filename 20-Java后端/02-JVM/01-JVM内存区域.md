@@ -6,118 +6,298 @@ tags:
   - 主题/JVM
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-12
 status: 已完成
-mastery: ⭐⭐⭐☆☆
+mastery: ⭐⭐⭐⭐⭐
 ---
 
-# JVM内存区域
+# JVM 内存区域
 
-> [!abstract] 一句话总结
-> JVM 内存区域描述 Java 程序运行时数据放在哪里，是理解对象生命周期、GC、OOM 和线程栈问题的基础。
+> [!abstract] 一句话心智模型
+> JVM 内存划分为三大领地：
+> - **流水线车间（堆内存 Heap）**：全厂工人共享，专为对象实例的生老病死服务，GC 的绝对主战场，内部细分为新生代（8:1:1）与老年代；
+> - **工人个人工位（线程私有区）**：虚拟机栈（个人清单）、程序计数器（当前工序行号）、本地方法栈（外包联络），随线程而生，随线程而灭，天然线程安全，无需 GC；
+> - **中央档案室与保税码头（元空间 + 直接内存）**：元空间在操作系统本地内存中存放类图纸（Class元数据）；直接内存专供 NIO/Netty 数据直通装卸，实现零拷贝。
 
-## 📌 这是什么
+---
 
-- 线程私有区域包括程序计数器、虚拟机栈、本地方法栈。
-- 线程共享区域包括堆和方法区；HotSpot 中方法区常见实现是元空间。
-- 直接内存不属于 JVM 运行时数据区规范的一部分，但 NIO 和 Netty 大量使用，排查 OOM 必须关注。
+## 🎯 工业园区版 JVM 内存全景架构图
 
-## 🤔 解决什么问题 / 为什么需要
+```mermaid
+flowchart TB
+    subgraph 操作系统物理内存["物理机 / 容器物理内存 (Native Memory)"]
+        subgraph JVM进程空间["JVM 进程内存空间"]
+            subgraph 线程共享区["【线程共享区】（生命周期 = JVM 进程，需重点监控）"]
+                subgraph 堆内存["堆内存 Heap（GC 主战场，-Xms / -Xmx）"]
+                    subgraph 新生代["新生代 Young Gen (-Xmn, 默认占堆 1/3)"]
+                        Eden["Eden 区 (8份)\n新对象诞生地\n含 TLAB 线程独享分配槽"]
+                        S0["Survivor S0 / From (1份)\n存活幸存者"]
+                        S1["Survivor S1 / To (1份)\n复制算法中转站"]
+                    end
+                    Old["老年代 Old Gen (-XX:NewRatio, 默认占堆 2/3)\n长寿对象、大对象、高并发大缓存"]
+                end
+            end
 
-- 看到 OutOfMemoryError 或 StackOverflowError 时能先判断是哪块内存出问题。
-- 理解局部变量、对象、类元数据、常量、直接缓冲区的归属。
-- 为 GC 日志分析、内存 dump 和参数调优建立地图。
+            subgraph 线程私有区["【线程私有区】（每个线程各有一套，生命周期 = 线程）"]
+                subgraph 线程A["线程工作栈 (Thread A)"]
+                    StackA["Java 虚拟机栈 (-Xss 默认 1MB)\n栈帧: [局部变量表 | 操作数栈 | 动态链接 | 返回地址]"]
+                    PCA["程序计数器 (PC Register)\n记录当前字节码行号"]
+                    NativeA["本地方法栈 (Native Stack)\n执行 native C/C++ 方法"]
+                end
+            end
+        end
 
-## 🧩 核心概念
+        subgraph 堆外本地内存["堆外本地内存 (Off-Heap / Native Memory)"]
+            Metaspace["元空间 Metaspace (-XX:MetaspaceSize)\n类元数据、方法字节码、运行时常量池"]
+            DirectMem["直接内存 Direct Memory (-XX:MaxDirectMemorySize)\nDirectByteBuffer / Netty 零拷贝缓冲区"]
+            JITCode["CodeCache (JIT 编译缓存)\n存放即时编译生成的高性能机器码"]
+        end
+    end
 
-| 概念 | 含义 | 精通要点 |
-| ---- | ---- | -------- |
-| 程序计数器 | 记录当前线程执行到哪条字节码。 | 线程私有，几乎不会 OOM。 |
-| 虚拟机栈 | 每次方法调用创建栈帧，保存局部变量表、操作数栈等。 | 栈太深可能 StackOverflowError。 |
-| 堆 | 对象实例和数组主要分配区域。 | GC 管理重点。 |
-| 元空间 | 类元数据、方法元数据等。 | 使用本地内存，受 MaxMetaspaceSize 约束。 |
-| 直接内存 | 堆外内存，常见于 DirectByteBuffer。 | 受 MaxDirectMemorySize 影响。 |
+    Eden -->|"Minor GC 存活"| S0
+    S0 <-->|"轮换复制复制年龄+1"| S1
+    S1 -->|"达到年龄阈值/动态年龄判断"| Old
 
-## ⚙️ 工作原理 / 流程
+    classDef shared fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef private fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef offheap fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    class 堆内存,新生代,Old,Eden,S0,S1 shared;
+    class 线程A,StackA,PCA,NativeA private;
+    class Metaspace,DirectMem,JITCode offheap;
+```
+
+---
+
+## 🧩 线程共享区：堆内存（Heap）深度解构
+
+堆是 JVM 中最大的一块内存，所有在代码中通过 `new` 关键字创建出来的对象实例和数组，几乎全都存放在这里。
+
+### 1. 为什么堆要“分代”？（第一性原理）
+计算机科学中存在一条著名的经验规律——**弱分代假说（Weak Generational Hypothesis）**：
+- **绝大多数对象都是“朝生夕灭”的**（例如方法内部创建的局部变量、HTTP 请求传入的 DTO，方法执行完毕即废弃，存活率通常低于 10%）；
+- **越是熬过多次 GC 的对象，越倾向于长久存活**（例如 Spring 单例 Bean、数据库连接池、长期静态缓存）。
+
+> [!TIP] 如果不分代会发生什么？
+> 如果堆不分代，垃圾回收器每次想要清理几个垃圾对象，就必须把整个 16G、32G 的堆**完完整整扫描一遍**！这就好比环卫工为了扔掉一瓶矿泉水空瓶，必须把整个工业园区的所有建筑从头到尾摸查一遍。
+> 分代之后，绝大多数短命对象集中在**新生代**，几毫秒内轻量清理；长命对象集中在**老年代**，低频清理。GC 效率直接提升成百上千倍！
+
+---
+
+### 2. 新生代的 8:1:1 结构：为什么有两个 Survivor？
+
+新生代默认按 `8 : 1 : 1` 的比例划分为 `Eden`、`Survivor 0 (From)`、`Survivor 1 (To)`。
+
+```
+新生代总空间（默认占堆的 1/3）
+┌───────────────────────────────────────┬─────────────┬─────────────┐
+│               Eden 区                 │ Survivor S0 │ Survivor S1 │
+│               （80%）                 │   （10%）   │   （10%）   │
+└───────────────────────────────────────┴─────────────┴─────────────┘
+          新对象在这里诞生                 两块轮流交替清空的幸存者区域
+```
+
+#### 为什么是两块 Survivor（S0/S1）而不是一块？
+- **如果只有一块 Survivor**：Eden 区满了触发 GC，存活对象搬到 Survivor。此时 Survivor 既有老存活对象，又有新搬来的对象，并且不断产生空间空隙，会产生极严重的**内存碎片**！
+- **有两块 Survivor（采用“标记-复制”算法）**：
+  1. 任何时刻，S0 和 S1 **必有一块是完全空白的（作为 To 区）**。
+  2. 当 Eden 满了发生 Minor GC 时，GC 收集器将 Eden 和当前有数据的 From 区中的所有活对象，**一次性整齐复制**到空的 To 区中，同时活对象的年龄加 1。
+  3. 复制完成后，原 Eden 和 From 区内的所有垃圾被**瞬间整块格式化抹除**！
+  4. From 和 To 交换角色，下次轮换。
+  - **结果**：空间永远紧凑工整，彻底消除内存碎片，而且可用空间高达 `80% + 10% = 90%`！
+
+---
+
+### 3. 对象晋升老年代的四大铁律（面试必背）
+
+一个对象从 Eden 区出生后，究竟在什么条件下会被送入老年代？
+
+```mermaid
+flowchart TD
+    A["new 产生新对象"] --> B{"是否超大对象?\n(> PretenureSizeThreshold)"}
+    B -- "是" --> C["直接进入老年代\n(避免在 Eden/S 区反复搬运大内存)"]
+    B -- "否" --> D["在 Eden 区分配 (优先通过 TLAB)"]
+    
+    D --> E{"Eden 区空间不足?\n触发 Minor GC"}
+    E -- "存活" --> F["复制到 Survivor 闲置区 (To 区)\n对象年龄 Age + 1"]
+    
+    F --> G{"判定晋升条件"}
+    G -- "条件1: 年龄达到阈值\n(默认 Age >= 15)" --> H["晋升老年代 (Promotion)"]
+    G -- "条件2: 动态年龄判定\n(同龄累积内存 > Survivor 的 50%)" --> H
+    G -- "条件3: 幸存区放不下\n(Survivor 空间溢出担保)" --> H
+    G -- "都不满足" --> I["留在 Survivor 区，等待下一次轮换"]
+```
+
+1. **年龄阈值达到上限**：
+   - 每次经历 Minor GC 存活，对象的年龄（Age）就会加 1。
+   - 当年龄达到 `-XX:MaxTenuringThreshold`（HotSpot 默认值是 **15**，CMS 收集器默认为 **6**）时，晋升老年代。
+   - **底层硬件限制**：为什么默认最大是 15？因为在 64 位 HotSpot 的对象头 Mark Word 中，**分代年龄只占了 4 个 bit**！二进制 `1111` 换算成十进制正好是 15。你就算在启动参数里配置 `-XX:MaxTenuringThreshold=16`，JVM 也会直接报错拒绝启动！
+2. **动态年龄判断（Dynamic Age Calculation）**：
+   - JVM 并不会死板地等到 15 岁才晋升。
+   - **规则**：如果在 Survivor 空间中，**年龄从 1 到 N 的对象总大小超过了该 Survivor 空间的一半（50%）**，那么**所有年龄大于等于 N 的对象，无需等待 15 岁，直接全部提前晋升老年代**！
+   - **设计初衷**：防止大量同龄中长期对象把 Survivor 撑爆，避免 Survivor 溢出引发更频繁的 GC。
+3. **大对象直接进入老年代**：
+   - 比如极长的字符串、巨大的 `byte[]` 数组。
+   - 参数 `-XX:PretenureSizeThreshold` 可以设定大对象阈值（仅对 Serial 和 ParNew 有效）。
+   - **设计初衷**：大对象如果在 Eden 和 Survivor 之间来回倒手复制，会导致极大的内存带宽拷贝开销。
+4. **空间分配担保机制（Handle Promotion Failure）**：
+   - 在发生 Minor GC 之前，JVM 会先检查：**老年代当前最大的连续可用空间，是否大于新生代所有对象的总和？**
+   - 如果大于，说明这次 Minor GC 是百分之百安全的；
+   - 如果小于，JVM 会检查 `-XX:HandlePromotionFailure` 设置，看是否允许担保失败。若允许，再检查老年代可用空间是否大于**历次晋升老年代对象的平均大小**；如果大于，则冒险尝试 Minor GC；如果依然小于或者不允许担保，直接触发一次**对整个堆的 Full GC**！
+
+---
+
+### 4. TLAB：高并发分配内存的无锁黑科技
+
+在多线程高并发环境下，成千上万个线程同时在 Eden 区执行 `new Object()`，它们如何瓜分 Eden 区的内存空间？
 
 ```mermaid
 flowchart LR
-    A[Java进程] --> B[线程私有]
-    B --> C[PC]
-    B --> D[Java栈/本地方法栈]
-    A --> E[线程共享]
-    E --> F[Heap]
-    E --> G[Metaspace]
-    A --> H[Direct Memory]
+    subgraph 方案A["方案A：全员争抢全局指针 (性能灾难)"]
+        T1["线程 1"] -->|"CAS 争抢"| P["Eden 区空闲指针 (Pointer)"]
+        T2["线程 2"] -->|"CAS 争抢"| P
+        T3["线程 3"] -->|"CAS 争抢"| P
+    end
+
+    subgraph 方案B["方案B：TLAB 线程本地分配缓冲区 (HotSpot 默认)"]
+        Eden2["Eden 区"]
+        Eden2 -->|"划分专属工位"| TLAB1["TLAB 1 (专供线程1无锁分配)"]
+        Eden2 -->|"划分专属工位"| TLAB2["TLAB 2 (专供线程2无锁分配)"]
+        Eden2 -->|"划分专属工位"| TLAB3["TLAB 3 (专供线程3无锁分配)"]
+    end
 ```
 
-## 🔍 源码 / 原理深挖
+- **第一性原理**：如果所有线程共享同一个 Eden 区分配指针，并发创建对象就必须用 **CAS 原子锁** 保证指针移动的安全性。在高并发场景下，CPU 核心全都在疯狂执行 CAS 重试，性能急剧崩塌！
+- **TLAB（Thread Local Allocation Buffer）的破局之道**：
+  - JVM 在 Eden 区预先为**每一个线程划分一小块独占的内存缓冲区**（默认仅占 Eden 的 1% 左右）。
+  - 线程创建对象时，直接在自己的 TLAB 空间内通过简单的“指针碰撞（Bump the pointer）”无锁分配，**零并发竞争，速度接近 C 语言的栈分配**！
+  - 只有当自己的 TLAB 空间用完，需要向 Eden 申请新的 TLAB 块时，才需要走一次 CAS 同步加锁。
+  - 参数：`-XX:+UseTLAB`（默认开启）。
 
-- HotSpot 堆通常按收集器划分为年轻代/老年代或 Region。
-- 每个线程都有自己的 Java 栈，线程数过多会消耗大量栈内存。
-- 类加载过多、动态生成类过多，可能导致 Metaspace OOM。
+---
 
-## 💻 代码实践 / 排查命令
+## 🧩 线程私有区：栈与程序计数器
 
-```bash
-# 常用观测命令
-jcmd <pid> VM.flags
-jcmd <pid> GC.heap_info
-jcmd <pid> VM.native_memory summary
-jmap -histo:live <pid> | head
+每个线程创建时，JVM 都会为其分配独立的栈内存与程序计数器，它们不会受到其他线程干扰，**天然线程安全**。
+
+### 1. 虚拟机栈与“栈帧（Stack Frame）”
+
+虚拟机栈（`-Xss`，默认 1MB）描述的是 **Java 方法执行的线程内存模型**。
+线程每调用一个方法，就会压入一个**栈帧**；方法执行完毕返回，对应的栈帧就会出栈弹出。
+
+```
+线程栈 (Thread Stack)
+┌──────────────────────────────────────────────────────────┐
+│ 当前栈帧（正在执行的方法）                                  │
+│ ┌───────────────────┬──────────────┬──────────┬────────┐ │
+│ │ 局部变量表         │ 操作数栈     │ 动态链接 │ 返回   │ │
+│ │ (this, 参数, 局部)│ (计算临时槽) │ (常量池) │ 地址   │ │
+│ └───────────────────┴──────────────┴──────────┴────────┘ │
+├──────────────────────────────────────────────────────────┤
+│ 上一层调用方法的栈帧                                      │
+├──────────────────────────────────────────────────────────┤
+│ main 方法栈帧 (栈底)                                     │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## 🛠️ 排查 / 实践要点
+- **局部变量表（Local Variable Table）**：
+  - 存放方法参数以及方法内部定义的局部变量。
+  - 最小存储单元是 **Slot（变量槽）**。32 位以内的数据类型（`int`, `float`, `boolean`, 对象引用等）占 1 个 Slot；64 位的 `long` 和 `double` 占 2 个 Slot。
+  - 如果是实例方法，局部变量表的第 0 个 Slot 默认存放当前对象的引用 `this`。
+- **操作数栈（Operand Stack）**：
+  - 执行引擎的工作台，用于暂存字节码计算过程中的中间变量。比如执行 `iadd` 时，将栈顶的两个整数弹出相加，再把结果压回栈顶。
+- **动态链接（Dynamic Linking）**：
+  - 存放指向运行时常量池中该方法的符号引用，用于将运行时的“符号引用”转换为底层的“直接物理方法内存地址”。
+- **方法出口（Return Address）**：
+  - 记录当本方法执行完毕后，应该返回到调用方方法的哪一条字节码指令继续往下走。
 
-- 堆 OOM 看 heap dump；元空间 OOM 看类加载数量和动态代理/类加载器泄漏；直接内存 OOM 看 NIO/Netty buffer。
-- 容器环境同时检查 -Xmx、MaxRAMPercentage、线程栈 -Xss 和容器 memory limit。
-- 内存问题不要只盯堆，RSS 远大于 Xmx 时重点看直接内存、线程栈、metaspace、JNI。
+> [!WARNING] 栈上常见异常
+> - **`StackOverflowError`**：线程请求的栈深度超出了虚拟机允许的最大深度（最经典元凶：**没有出口的无限递归调用**）。
+> - **`OutOfMemoryError: unable to create new native thread`**：当系统创建了成千上万个线程，每个线程都需要占用物理内存分配 1MB 的栈，当物理内存被耗尽无法再为新线程开辟栈空间时抛出。
 
-## ⚠️ 踩坑与注意事项
+---
 
-- 把方法区、永久代、元空间混为一谈：永久代是旧 HotSpot 实现，JDK 8 后主要是元空间。
-- 以为所有 OOM 都能通过加 Xmx 解决。
-- 忽略线程数对栈内存和本地内存的影响。
+### 2. 程序计数器（Program Counter Register）
 
-## 🎯 面试问题
+- **职能**：记录当前线程正在执行的字节码指令地址。
+- **为什么需要？**：现代 CPU 依靠**时间片轮转机制**在多个线程之间快速切换。当线程 A 的时间片用完挂起，过了一会儿 CPU 重新切换回线程 A 时，JVM 必须知道**上一次这个线程执行到哪一行字节码指令了**。程序计数器就是这个“进度书签”。
+- **唯一特性**：程序计数器是 JVM 规范中**唯一一个没有任何 OutOfMemoryError 规定**的区域，占用内存极其微小且固定。
 
-> [!question] 高频问题
-> - Q: JVM 运行时数据区有哪些？
->   - A: 线程私有有程序计数器、虚拟机栈、本地方法栈；线程共享有堆和方法区，HotSpot 常用元空间实现方法区；另外还要关注直接内存。
-> - Q: 堆和栈的区别？
->   - A: 栈跟随线程和方法调用，保存栈帧和局部变量；堆在线程间共享，主要保存对象实例，由 GC 管理。
-> - Q: 为什么会 Metaspace OOM？
->   - A: 类加载数量过多、动态生成类过多或类加载器无法卸载，元空间持续增长直到超过限制。
+---
 
-## 🧭 源码入口速查
+## 🏛️ 堆外本地内存：元空间与直接内存
 
-- JVM 规范第 2.5 节定义运行时数据区：PC、Java Virtual Machine Stacks、Heap、Method Area、Run-Time Constant Pool、Native Method Stacks。
-- HotSpot 参数入口：`-Xms/-Xmx` 控制堆，`-Xss` 控制线程栈，`-XX:MaxMetaspaceSize` 控制元空间上限，`-XX:MaxDirectMemorySize` 控制直接内存上限。
-- `jcmd <pid> VM.native_memory summary`：需要启动时打开 `-XX:NativeMemoryTracking=summary|detail`，用于解释 RSS 大于 Xmx。
-- `jcmd <pid> GC.class_stats` 在部分 JDK/配置下可看类元数据；通用场景用 `jcmd <pid> VM.classloader_stats`。
+很多初学者误以为 JVM 占用的内存就是堆内存（`-Xmx`）。在生产环境中，你会经常发现堆只配置了 4G，但整个 Java 进程在操作系统中却占了 6G、7G 物理内存（RSS），超出的部分主要就在**堆外本地内存**。
 
-## 🧪 最小验证
+### 1. 方法区（规范）与元空间（实现）的演进历史
 
-```bash
-java -Xms256m -Xmx256m -Xss256k -XX:MaxMetaspaceSize=128m \
-  -XX:NativeMemoryTracking=summary -jar app.jar
-jcmd <pid> VM.native_memory summary
+| JDK 版本 | 物理实现 | 所在位置 | 存放内容 | 淘汰/改动原因 |
+| :--- | :--- | :--- | :--- | :--- |
+| **JDK 6 及以前** | **永久代 (PermGen)** | **JVM 堆内** | 类元信息、方法字节码、**字符串常量池 (StringTable)**、静态变量 | 受限于 `-XX:MaxPermSize` 堆内固定上限，极易由于类过多或大量字符串导致 `OOM: PermGen space`。 |
+| **JDK 7** | **永久代 (PermGen)** | **JVM 堆内** | 类元信息、方法字节码 | **将字符串常量池与静态变量率先迁入堆内存中**！因为字符串难以预估容量，移入堆中方便 GC 及时回收。 |
+| **JDK 8 及以后** | **元空间 (Metaspace)** | **操作系统本地内存 (Native Memory)** | 类元信息、方法字节码、运行时常量池 | **彻底废除永久代**！改用物理机本地内存。默认只受系统物理内存限制，可通过 `-XX:MaxMetaspaceSize` 设定硬顶。从根源上极大缓解了元空间 OOM 问题。 |
+
+```mermaid
+flowchart LR
+    subgraph JDK6["JDK 6 (永久代在堆内)"]
+        H1["JVM 堆内存"]
+        H1 --> P1["永久代 PermGen\n(类信息 + StringTable + 静态变量)"]
+        H1 --> Y1["新生代 / 老年代"]
+    end
+
+    subgraph JDK7["JDK 7 (过渡期)"]
+        H2["JVM 堆内存"]
+        H2 --> P2["永久代 PermGen (仅剩类信息)"]
+        H2 --> S2["StringTable + 静态变量 (挪入堆)"]
+    end
+
+    subgraph JDK8["JDK 8+ (元空间在堆外)"]
+        H3["JVM 堆内存\n(含 StringTable + 静态变量)"]
+        OS["操作系统本地内存 (Native Memory)"]
+        OS --> M3["元空间 Metaspace\n(Class 元数据、方法字节码)"]
+    end
 ```
 
-内存排查时先画账本：`RSS = Java Heap + Metaspace + Direct Memory + Thread Stacks + Code Cache + GC/JIT/JNI/native malloc`。如果 RSS 持续增长但堆 dump 很小，方向通常不在 Java 堆。
+---
 
-## ✅ 精通检查清单
+### 2. 直接内存（Direct Memory）与零拷贝
 
-- 能用自己的话讲清本主题解决的问题和适用边界。
-- 能指出至少 2 个源码入口或底层机制。
-- 能给出一个最小代码示例或一组线上排查命令。
-- 能回答本页列出的高频面试题，并补充项目中的真实取舍。
+通过 Java 的 `ByteBuffer.allocateDirect()` 或者 Netty 的 `ByteBuf` 申请的内存，属于堆外直接内存。
 
-## 🔗 关联笔记
+```mermaid
+flowchart TD
+    subgraph 传统堆内存IO复制["传统堆内存 I/O（存在二次数据拷贝与内核态切换）"]
+        D1["底层网卡 / 磁盘"] -->|"1. DMA 拷贝"| K1["操作系统内核缓冲区 (Kernel Buffer)"]
+        K1 -->|"2. CPU 拷贝 (消耗CPU与带宽)"| H_BUF["JVM 堆内 byte 数组"]
+        H_BUF -->|"3. 业务代码处理"| APP1["Java 业务逻辑"]
+    end
 
-- [[_index]]
+    subgraph 直接内存零拷贝["直接内存 Direct Memory（零拷贝通道）"]
+        D2["底层网卡 / 磁盘"] -->|"1. DMA 拷贝"| DM["直接内存 (DirectByteBuffer / 堆外共享)"]
+        DM <-->|"2. 用户态与JNI直接通过物理指针读写"| APP2["Java 业务逻辑 (零二次拷贝)"]
+    end
+```
 
-## 📚 参考资料
+- **第一性原理**：如果用普通的堆内存 `byte[]` 接收网卡数据，操作系统内核先把网络包拷贝到内核缓冲区，然后再必须通过 CPU 把内核缓冲区数据拷贝一份到 JVM 堆内内存。**直接内存让 Java 代码通过 JNI 本地指针直接操作这块物理内存，避免了昂贵的二次内存拷贝！**
+- **直接内存如何回收？**
+  - 它不受 JVM GC 的直接管辖，如果疯狂分配而不主动释放，会直接引发 `java.lang.OutOfMemoryError: Direct buffer memory`。
+  - **回收机制**：HotSpot 在创建 `DirectByteBuffer` 时，会在堆内伴生一个轻量的虚引用对象 `sun.misc.Cleaner`。当堆内的 `DirectByteBuffer` 没有人引用被 GC 回收时，GC 会将 `Cleaner` 放入引用队列，进而触发底层的 `Unsafe.freeMemory()` 释放堆外物理内存。
 
-- [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se21/html/)
-- [Oracle Java Documentation](https://docs.oracle.com/en/java/)
+---
+
+## ⚡ 一分钟面试必杀卡
+
+> [!NOTE] 面试高频问题标准答题套路
+> 
+> **Q1：JVM 内存模型中，堆和栈有什么核心区别？**
+> - **A**：
+>   1. **功能不同**：堆解决的是**数据存储**问题（存几乎所有对象实例与数组）；栈解决的是**逻辑执行**问题（记录线程的方法调用链与局部变量）。
+>   2. **共享性不同**：堆是全进程**线程共享**的，存在并发竞争与垃圾回收；栈是**线程私有**的，随线程生死，执行完自动弹栈，无需 GC。
+>   3. **异常类型不同**：堆空间不足会抛出 `OutOfMemoryError: Java heap space`；栈深度超限抛出 `StackOverflowError`，线程过多内存耗尽抛出 `unable to create new native thread`。
+> 
+> **Q2：为什么新生代 Eden 和 Survivor 的比例是 8:1:1？**
+> - **A**：基于**弱分代假说**的大量实验统计，Java 对象在经历第一次 Minor GC 时，死亡率高达 90% 以上，只有不到 10% 的对象能存活。为了使用没有任何内存碎片的**复制算法**，将存活区分为两块交替使用（S0 和 S1），所以 8:1:1 既保证了 90% 的可用空间利用率（80% Eden + 10% S0），又恰好能容纳下存活的幸存者。
+> 
+> **Q3：JDK 8 为什么用元空间（Metaspace）替换了永久代（PermGen）？**
+> - **A**：
+>   1. **避免 OOM**：永久代设置在 JVM 堆内，有硬性的初始和最大大小上限（`-XX:MaxPermSize`），而在微服务、动态代理、反射、Groovy 脚本大量使用的现代架构中，类加载数量很难精准估算，极易发生 `OOM: PermGen space`。元空间移至操作系统的本地内存，默认只受物理内存限制。
+>   2. **简化 GC 与融合 JRockit**：Oracle 收购 BEA 后，为了合并 HotSpot 和 JRockit 虚拟机（JRockit 本来就没有永久代），统一了虚拟机架构。

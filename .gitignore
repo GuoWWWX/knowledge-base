@@ -1,0 +1,36 @@
+# Obsidian 本机状态
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace*.json
+.trash/
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 编辑器与临时文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 本地环境与敏感配置
+.env
+.env.*
+!.env.example
+*.local
+
+# Java / Node / Python 构建产物
+target/
+build/
+out/
+node_modules/
+__pycache__/
+*.class
+
+# 临时目录
+tmp/
+temp/
+*.tmp

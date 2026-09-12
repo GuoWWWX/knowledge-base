@@ -6,125 +6,157 @@ tags:
   - 主题/JVM
   - 阶段/02
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-12
 status: 已完成
-mastery: ⭐⭐⭐☆☆
+mastery: ⭐⭐⭐⭐⭐
 ---
 
-# OOM问题排查
+# OOM 问题排查
 
-> [!abstract] 一句话总结
-> OOM 排查要先识别错误类型，再保留现场，用 dump、GC 日志、NMT 和引用链判断是泄漏、容量不足还是本地内存问题。
+> [!abstract] 一句话心智模型
+> 如果把 JVM 比作一栋大厦，`OutOfMemoryError`（OOM）不是简单的“地方不够用了”，而是**六种完全不同楼层的挤爆灾难**：
+> 1. **车间仓库堆满（Java heap space）**：成品物料堆积如山，要么是真泄漏（垃圾占着不走），要么是假泄漏（一口气塞入百万级大集合）；
+> 2. **图纸室塞爆（Metaspace）**：动态生成了成千上万份新图纸（CGLIB 动态代理或 Groovy 脚本未复用类加载器）；
+> 3. **保税区码头瘫痪（Direct buffer memory）**：Netty 堆外缓冲区用完未调用 `release()` 释放；
+> 4. **保安队编制超标（unable to create new native thread）**：招募了成千上万个线程，不仅耗尽内存，还触发了操作系统 `ulimit` 上限；
+> 5. **清洁工累死罢工（GC overhead limit exceeded）**：清洁工花了 98% 的精力扫地，却只清出不到 2% 的空间，系统绝望断气。
 
-## 📌 这是什么
+---
 
-- OutOfMemoryError 不是只有 Java heap space，还包括 Metaspace、Direct buffer memory、unable to create native thread、GC overhead limit exceeded。
-- 不同 OOM 类型对应不同证据和修复方向。
-- 排查目标不是简单加内存，而是找出增长来源和是否合理。
-
-## 🤔 解决什么问题 / 为什么需要
-
-- OOM 会导致请求失败、实例重启、缓存丢失甚至雪崩。
-- 错误修复可能把堆加大后让 GC 停顿更长。
-- 面试常要求给出线上 OOM 的完整处理流程。
-
-## 🧩 核心概念
-
-| 概念 | 含义 | 精通要点 |
-| ---- | ---- | -------- |
-| Heap OOM | 堆对象无法分配。 | 看 heap dump 和 dominator tree。 |
-| Metaspace OOM | 类元数据占用过高。 | 看类加载数量和加载器泄漏。 |
-| Direct Memory OOM | 堆外直接内存不足。 | 常见于 NIO/Netty。 |
-| Native Thread OOM | 无法创建本地线程。 | 看线程数、Xss、系统 ulimit、容器限制。 |
-
-## ⚙️ 工作原理 / 流程
+## 🗺️ 生产环境 OOM 六大死法全景地图
 
 ```mermaid
 flowchart TD
-    A[发现OOM] --> B[确认错误类型]
-    B --> C[保留日志/dump/指标]
-    C --> D{内存区域}
-    D --> E[Heap: MAT看引用链]
-    D --> F[Metaspace: 类加载器]
-    D --> G[Direct: NMT/Netty]
-    D --> H[Thread: jstack/线程数]
-    E --> I[修复泄漏或调整容量]
+    OOM["JVM 抛出致命内存错误 (OutOfMemoryError)"]
+    
+    OOM --> T1["1. Java heap space\n(堆内存溢出: 最常见)"]
+    OOM --> T2["2. Metaspace\n(元空间溢出: 堆外本地内存)"]
+    OOM --> T3["3. Direct buffer memory\n(直接内存溢出: NIO/Netty)"]
+    OOM --> T4["4. unable to create new native thread\n(线程数爆炸 / OS 限制)"]
+    OOM --> T5["5. GC overhead limit exceeded\n(GC 濒死挣扎: 回收不足 2%)"]
+    OOM --> T6["6. StackOverflowError\n(方法调用栈溢出: 递归无终止)"]
+
+    classDef danger fill:#ffebee,stroke:#c62828,stroke-width:2px;
+    class T1,T2,T3,T4,T5,T6 danger;
 ```
 
-## 🔍 源码 / 原理深挖
+---
 
-- -XX:+HeapDumpOnOutOfMemoryError 可在堆 OOM 时自动导出 dump。
-- jcmd <pid> GC.heap_dump 可手动导出，jcmd VM.native_memory summary 需要开启 NMT。
-- MAT Dominator Tree、Leak Suspects、Path to GC Roots 是堆 dump 分析常用入口。
+## 🔬 六大 OOM 场景靶向剖析与根因
 
-## 💻 代码实践 / 排查命令
+### 1. `java.lang.OutOfMemoryError: Java heap space`（堆内存溢出）
 
-```java
-java -XX:+HeapDumpOnOutOfMemoryError \
-  -XX:HeapDumpPath=/data/dumps \
-  -XX:NativeMemoryTracking=summary \
-  -jar app.jar
+这是开发中最常碰到的 OOM，排查时第一件事是**分清是“真内存泄漏”还是“假内存泄漏（突发大对象）”**！
 
-# 现场命令
-jcmd <pid> GC.heap_dump /data/dumps/heap.hprof
-jcmd <pid> VM.native_memory summary
-jcmd <pid> Thread.print
+| 判定分类 | 现象与根因 | 典型排查案例 | 解决方案 |
+| :--- | :--- | :--- | :--- |
+| **真内存泄漏 (Memory Leak)** | 对象已经不再使用，但由于错误的强引用链，导致 GC 永远不敢回收它，内存呈阶梯状持续攀升直至暴毙。 | 1. `static Map` 长期作为全局缓存，只放不删。<br/>2. `ThreadLocal` 用完未调用 `remove()`。<br/>3. 事件监听器 / 观察者注册后未解绑。 | 找出那条通往 GC Roots 的错误强引用链，在业务完成后显式解绑或清理。 |
+| **假内存泄漏 (Memory Overflow)** | 内存并没有泄漏，但短时间内业务瞬时分配了远超堆容量上限的巨型对象。 | 1. 运营后台导出报表，SQL 忘记加 `LIMIT`，一次性把全表 200 万条数据 `select *` 查进内存 List！<br/>2. 批量上传超大 Excel，解析时全量载入内存。 | 1. 强制分页分批查询。<br/>2. 针对 Excel 使用基于流式 SAX 解析的框架（如阿里的 EasyExcel）。 |
+
+---
+
+### 2. `java.lang.OutOfMemoryError: Metaspace`（元空间溢出）
+
+- **报错根因**：JDK 8 以后，类的元数据（Class 元数据、方法描述符、常量池）存放在操作系统本地内存的 Metaspace 中。当加载的 Class 数量无节制膨胀，突破了 `-XX:MaxMetaspaceSize` 时抛出。
+- **典型作案现场**：
+  1. **动态代理框架狂欢**：使用 Spring AOP、CGLIB、Javassist 时，配置不当导致每次请求都动态生成全新的代理类，而没有利用代理类缓存。
+  2. **Groovy / 动态脚本引擎滥用**：在规则引擎或计算表达式中，每次解析脚本都 `new GroovyClassLoader().parseClass(script)`，导致产生海量同名匿名类，迅速撑爆元空间！
+- **排查命令**：`jcmd <pid> VM.classloader_stats` 查看类加载器数量；查看 GC 日志中是否伴随大量的 Full GC。
+
+---
+
+### 3. `java.lang.OutOfMemoryError: Direct buffer memory`（直接内存溢出）
+
+- **报错根因**：Java NIO 的 `ByteBuffer.allocateDirect()` 或 Netty 申请的堆外直接内存超出了 `-XX:MaxDirectMemorySize`（默认等于堆最大值 `-Xmx`）。
+- **底层暗坑**：
+  - 直接内存的释放依赖于堆内 `DirectByteBuffer` 对象的被动 GC（通过虚引用 Cleaner 触发底层 `Unsafe.freeMemory()`）。
+  - **致命时序错位**：如果此时堆内存非常宽裕，JVM 迟迟不触发 GC，那么堆外的物理直接内存哪怕已经爆满，GC 依然纹丝不动，直到直接内存彻底耗尽当场抛出 OOM！
+- **Netty 工业避坑**：
+  - Netty 采用了引用计数机制（`ReferenceCounted`）。每次将 `ByteBuf` 传递到 ChannelPipeline 的终点，如果自己消费了而没有向后传递，必须显式调用 `ReferenceCountUtil.release(msg)`！否则必发生直接内存泄漏。
+
+---
+
+### 4. `java.lang.OutOfMemoryError: unable to create new native thread`
+
+- **报错根因**：Java 无法向底层操作系统申请创建新的物理线程。
+- **两大元凶排查**：
+  1. **元凶 A：内存被瓜分耗尽**
+     - 一个线程在 Linux 上对应一个轻量级进程（LWP），默认每个线程分配 `-Xss1m` 的栈空间。
+     - 如果系统物理内存仅剩 100MB，你却试图创建 200 个新线程，需要 200MB 物理内存，操作系统直接拒绝。
+  2. **元凶 B：操作系统限制（ulimit / pid_max）**
+     - Linux 操作系统为了防范 fork 炸弹，对每个用户能创建的最大进程/线程数有严格限制：
+       - `ulimit -u`（max user processes）：默认通常是 1024 或 4096。
+       - `/proc/sys/kernel/pid_max`：全局最大 PID 数。
+     - 如果业务代码里滥用 `new Thread()` 而不使用线程池，并发一上来瞬间创建几千个线程，当场被操作系统限流拒绝！
+
+---
+
+### 5. `java.lang.OutOfMemoryError: GC overhead limit exceeded`
+
+- **报错根因**：这是 JVM 自带的**安乐死保护机制**！
+- **触发硬性判定条件（同时满足）**：
+  - JVM 耗费了超过 **98% 的 CPU 时间**用于执行垃圾回收；
+  - 并且回收释放出来的堆内存空间 **不足全堆的 2%**；
+  - 这种情况连续发生了 5 次以上。
+- **第一性原理**：JVM 发现自己几乎把所有算力都耗在垃圾回收上了，用户业务线程全被 STW 冻结，而且每次 GC 拼了命也只能腾出丁点儿空间，再撑下去整个系统也是卡死假死。JVM 决定主动抛出此异常自尽，让外界监控系统及时发现并重启！
+
+---
+
+## 🚨 生产环境 OOM 黄金救援 4 步 SOP
+
+```mermaid
+flowchart TD
+    subgraph 第一步["第一步：紧急隔离与止血 (恢复业务)"]
+        S1["将告警节点从注册中心/负载均衡 (Nginx/Gateway) 摘除下线"]
+        S2["严禁直接 kill -9 盲目重启！必须确认现场已保留"]
+    end
+
+    subgraph 第二步["第二步：保全证据链 (留存罪证)"]
+        D1["确认是否已自动生成 Heap Dump 文件 (.hprof)"]
+        D2["导出 GC 滚动日志与最近 10 分钟监控指标截图"]
+    end
+
+    subgraph 第三步["第三步：离线深度开箱 (MAT 破案)"]
+        M1["将 .hprof 文件拉取到离线分析机器"]
+        M2["使用 Eclipse MAT 打开: 查看 Dominator Tree (支配树)"]
+        M3["查看 Leak Suspects (泄漏嫌疑犯) 自动诊断报告"]
+        M4["右键寻找 Path to GC Roots (排除软/弱引用，锁定强引用真凶)"]
+    end
+
+    subgraph 第四步["第四步：根因修复与发布上线"]
+        F1["修改业务代码 (消除泄漏、修正循环、加分页限制)"]
+        F2["补充单元测试与全链路压测复现"]
+        F3["合并发布，并在灰度节点监控老年代水位稳定性"]
+    end
+
+    第一步 --> 第二步 --> 第三步 --> 第四步
 ```
 
-## 🛠️ 排查 / 实践要点
+### 实战：如何用 MAT（Memory Analyzer Tool）一分钟抓出真凶？
 
-- 堆 OOM：看最大对象、集合大小、缓存策略、ThreadLocal、监听器和静态 Map。
-- Metaspace OOM：查动态代理、脚本引擎、热部署、重复创建 ClassLoader。
-- Direct OOM：查 DirectByteBuffer、Netty ByteBuf 是否释放，比较 RSS 与 Xmx。
-- 线程 OOM：统计线程数、线程栈大小、线程池创建位置和系统限制。
+1. **看 Dominator Tree（支配树）**：
+   - 支配树展示了“谁支配了谁的生死”。如果一个对象被销毁，被它支配的对象也会全部被销毁。
+   - 打开 Dominator Tree，按照 **Retained Heap（保留内存大小）** 倒序排序，排在第一行的往往就是吃掉了 80% 内存的“大胃王”！
+2. **看 Leak Suspects（疑似泄漏报告）**：
+   - MAT 会自动运行启发式算法，直接在首页为你生成一份人类可读的报告：`Problem Suspect 1: One instance of "com.example.OrderCache" loaded by "..." occupies 75.3% of the memory.`
+3. **右键 -> Path to GC Roots -> Exclude all phantom/weak/soft references**：
+   - 这个操作能瞬间剔除那些无关痛痒的虚引用、弱引用干扰，**只保留死不撒手的“强引用链”**。
+   - 沿着链条层层展开，你会精准看到是哪个类中的哪个 `static List` 或者哪个 Spring Bean 字段牢牢抓着这批对象不放！
 
-## ⚠️ 踩坑与注意事项
+---
 
-- OOM 后实例自动重启但没有 dump，现场丢失。
-- 看到 Java heap space 就直接加 Xmx，不分析对象引用链。
-- 容器内只看 JVM 参数，忽略 cgroup memory limit。
+## ⚡ 一分钟面试必杀卡
 
-## 🎯 面试问题
-
-> [!question] 高频问题
-> - Q: 线上 OOM 怎么排查？
->   - A: 先确认 OOM 类型，保留 GC 日志、dump、线程栈和监控；堆 OOM 用 MAT 看 dominator 和 GC Roots，非堆看 NMT、类加载器或线程数；最后区分泄漏和容量不足。
-> - Q: 内存泄漏和内存溢出区别？
->   - A: 泄漏是对象不再需要但仍被引用，长期增长；溢出是可用内存不足，可能是泄漏，也可能是业务峰值或容量配置不足。
-> - Q: ThreadLocal 为什么可能导致泄漏？
->   - A: 线程池线程长期存活，ThreadLocalMap 中 value 可能持续被线程引用；使用后要 remove。
-
-## 🧭 源码入口速查
-
-- 堆 OOM：`-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/data/dump`，MAT 看 Dominator Tree 和 GC Roots。
-- 元空间 OOM：`jcmd <pid> VM.classloader_stats`、`jcmd <pid> GC.class_histogram`，重点看 ClassLoader 是否增长。
-- 直接内存 OOM：对比 `jcmd VM.native_memory summary`、RSS、`-XX:MaxDirectMemorySize`，Netty 看 ByteBuf 泄漏日志。
-- 线程 OOM：`jcmd <pid> Thread.print`、`ps -eLf | grep <pid> | wc -l`、`ulimit -u`、`-Xss`。
-- GC overhead：看 GC 日志里 Full GC 后堆是否几乎不下降，通常是泄漏或堆太小。
-
-## 🧪 最小验证
-
-```bash
-jcmd <pid> GC.heap_info
-jcmd <pid> GC.class_histogram | head -40
-jcmd <pid> VM.native_memory summary
-jcmd <pid> Thread.print > thread.txt
-```
-
-OOM 现场优先保全：错误日志、启动参数、GC 日志、dump、线程栈、容器事件和最近发布记录。自动重启能恢复服务，但会丢失增长曲线；至少要把 dump 路径挂到持久盘，并确认磁盘空间足够。
-
-## ✅ 精通检查清单
-
-- 能用自己的话讲清本主题解决的问题和适用边界。
-- 能指出至少 2 个源码入口或底层机制。
-- 能给出一个最小代码示例或一组线上排查命令。
-- 能回答本页列出的高频面试题，并补充项目中的真实取舍。
-
-## 🔗 关联笔记
-
-- [[_index]]
-
-## 📚 参考资料
-
-- [JVM Specification](https://docs.oracle.com/javase/specs/jvms/se21/html/)
-- [Oracle Java Documentation](https://docs.oracle.com/en/java/)
+> [!NOTE] 面试高频问题标准答题套路
+> 
+> **Q1：线上突然发生了 OOM，你的第一反应和排查排障步骤是什么？**
+> - **A**：
+>   1. **优先保障线上可用性（止血）**：第一时间将发生 OOM 的实例从网关或注册中心摘流下线，防止流量持续涌入导致雪崩；拉起备用节点或扩容节点保障用户访问。
+>   2. **保留犯罪现场**：检查由 `-XX:+HeapDumpOnOutOfMemoryError` 自动生成的 `.hprof` 堆快照文件是否完整保存在持久盘上，同时保留 GC 日志与监控指标。
+>   3. **离线工具剖析**：把 Dump 文件下载到离线环境，使用 Eclipse MAT 工具打开。先看 Dominator Tree 找出保留内存最大的对象；再通过 Path to GC Roots 顺藤摸瓜排查强引用链，判断是静态集合泄漏、ThreadLocal 泄漏还是瞬时批量查询引发的大对象膨胀。
+>   4. **代码级修复**：修改业务逻辑（修复集合清理、增加分页深分页限制等），经压测验证后上线复盘。
+> 
+> **Q2：内存泄漏（Memory Leak）和内存溢出（Memory Overflow）有什么本质区别？**
+> - **A**：
+>   - **内存泄漏**是“因”：指程序申请了内存后，由于代码疏忽导致对象失去了继续使用的业务价值，但到 GC Roots 的引用链没有切断，GC 无法回收它。泄漏的对象越积越多，最终必然导致内存溢出。
+>   - **内存溢出**是“果”：指程序在申请内存时，可用物理内存不足以满足此次分配需求。引起内存溢出的原因既可能是长期的**内存泄漏**导致的温水煮青蛙，也可能是没有内存泄漏但瞬时业务并发冲顶、查询全表等导致的**容量不足**。

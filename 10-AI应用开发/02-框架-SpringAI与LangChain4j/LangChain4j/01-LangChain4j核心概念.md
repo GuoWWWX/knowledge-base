@@ -39,16 +39,16 @@ ChatLanguageModel
 
 ## 🧩 核心抽象
 
-| 概念 | 作用 | Spring AI 对照 |
-| ---- | ---- | ---- |
-| `ChatLanguageModel` | 同步聊天模型 | `ChatModel` |
-| `StreamingChatLanguageModel` | 流式聊天模型 | `ChatClient.stream()` |
-| `AiServices` | 用接口声明 AI 服务 | `ChatClient` + 业务 Service |
-| `ChatMemory` | 对话记忆 | `ChatMemory` |
-| `@Tool` | 工具调用 | `@Tool` / Tool Calling |
-| `EmbeddingModel` | 文本向量化 | `EmbeddingModel` |
-| `EmbeddingStore` | 向量存储 | `VectorStore` |
-| `ContentRetriever` | RAG 检索器 | Advisor / Retriever |
+| 概念                           | 作用          | Spring AI 对照              |
+| ---------------------------- | ----------- | ------------------------- |
+| `ChatLanguageModel`          | 同步聊天模型      | `ChatModel`               |
+| `StreamingChatLanguageModel` | 流式聊天模型      | `ChatClient.stream()`     |
+| `AiServices`                 | 用接口声明 AI 服务 | `ChatClient` + 业务 Service |
+| `ChatMemory`                 | 对话记忆        | `ChatMemory`              |
+| `@Tool`                      | 工具调用        | `@Tool` / Tool Calling    |
+| `EmbeddingModel`             | 文本向量化       | `EmbeddingModel`          |
+| `EmbeddingStore`             | 向量存储        | `VectorStore`             |
+| `ContentRetriever`           | RAG 检索器     | Advisor / Retriever       |
 
 ---
 

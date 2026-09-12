@@ -6,337 +6,151 @@ tags:
   - 主题/Spring
   - 阶段/04
 created: 2026-07-04
-updated: 2026-07-06
+updated: 2026-09-11
 status: 已完成
-mastery: ⭐⭐⭐☆☆
+mastery: ⭐⭐⭐⭐⭐
 ---
 
-# SpringCloud组件概览
+# 🌐 08 · SpringCloud 组件概览（微服务联邦共和国的治理艺术）
 
-> [!abstract] 一句话总结
-> Spring Cloud 不是单个中间件，而是一套把注册发现、配置管理、服务调用、负载均衡、网关、熔断限流和链路观测接成统一微服务基础设施的工程化体系；面试真正拉开差距的点，在于你能否讲清组件边界、替代关系、版本约束和生产落地方式。
+> **一句话导读**：单体系统拆成上百个独立服务后，服务去哪找？流量怎么分？网络崩了怎么自救？Spring Cloud 就像一套**“现代联邦共和国的中央行政机构”**。看懂 6 大核心支柱的分工协作，分布式微服务的全景地图便一览无余。
 
-## 📌 精准定位
+---
 
-- Spring Cloud 负责把常见微服务基础设施能力以 Spring 生态方式接起来，降低接入成本。
-- 它解决的是“基础设施集成和治理方式”，不替代服务拆分、领域建模、数据库设计和容量规划。
-- 组件选择并非越多越好，很多系统只需要注册发现、配置中心、Feign/LoadBalancer、Gateway、Tracing 就能跑起来。
-- 关键边界：Spring Cloud、Spring Boot、Spring Cloud Alibaba、底层中间件版本必须匹配，否则兼容性问题非常多。
-- 面试重点：不只要会背组件名，更要能说清 Spring Cloud Alibaba 组件边界、何时选 Sentinel、何时只是用 Resilience4j、Nacos Config 和 Discovery 是什么关系，以及常见故障图谱。
+## 🏛️ 核心心智模型：从单体商铺到联邦共和国
 
-## 🧩 核心概念
+很多初学者容易盲目崇拜微服务。用一个商业演进的故事就能看清本质：
 
-| 概念 | 具体含义 | 工程要点 |
-| ---- | -------- | -------- |
-| Discovery | 注册发现，维护实例列表与健康状态。 | 解决“服务在哪”，不解决“是否要打”。 |
-| Config | 配置中心，统一管理动态配置。 | 解决“配置从哪来”，不保证所有配置都能热更新。 |
-| OpenFeign | 声明式 HTTP 客户端。 | 只是调用方式，不自带完整治理策略。 |
-| LoadBalancer | 客户端实例选择。 | 轮询、权重、同机房优先等策略在此体现。 |
-| Gateway | 统一入口，做认证、限流、灰度、路由。 | 解决南北向治理，不替代服务间治理。 |
-| CircuitBreaker | 失败快速保护机制。 | 解决“下游不稳时如何止损”。 |
-| Tracing | 链路观测。 | 没有观测，治理策略很难调优。 |
-| Release Train / BOM | Spring Cloud 版本列车与依赖管理。 | 版本错配是生产接入的高频坑。 |
+```mermaid
+flowchart TD
+    subgraph S1["单体架构时代：全能大百货商店"]
+        A1["订单、库存、商品、支付全挤在同一个 JVM 进程里<br/>- 优势：调用极快 (纯内存方法调用)，事务好管 (本地数据库事务)<br/>- 致命伤：只要订单模块内存溢出崩溃，整座商场全部陪葬瘫痪！"]
+    end
 
-## 🏗️ 组件全景图
+    subgraph S2["微服务时代：联邦共和国 (各自治城市)"]
+        B1["各服务独立拆分为微服务进程，拥有独立的数据库<br/>- 优势：按需弹性伸缩，故障彼此隔离，独立迭代部署<br/>- 新灾难：跨越不可靠的物理网络！通信怎么搞？容灾怎么防？"]
+    end
+
+    S1 --> S2
+```
+
+> 💡 **Spring Cloud 的本质使命**：
+> 它不是某一个具体的软件，而是一套**微服务架构治理的全套规范与标准全家桶**。
+
+---
+
+## 🏛️ 微服务联邦共和国的六大中央机构
+
+在由上百个微服务组成的分布式网络中，每个组件都承担着不可替代的国家职能：
+
+```mermaid
+flowchart TD
+    Client["📱 外部公网用户请求"] --> GW["1. 海关边防大闸：API 网关 (Spring Cloud Gateway)<br/>👉 统一入口，安全鉴权，流量调度，路径路由"]
+    
+    subgraph Internal["微服务联邦内部网络"]
+        GW --> Order["订单微服务 (Order Service)"]
+        
+        Order <--> Reg["2. 户籍登记处：注册中心 (Nacos / Eureka)<br/>👉 登记服务实例 IP 端口，实时心跳健康检测"]
+        
+        Order -->|3. 外交信使：远程声明式调用 (OpenFeign)| Stock["库存微服务 (Stock Service)"]
+        
+        Order -.->|4. 交通交警：客户端负载均衡 (LoadBalancer)| Stock
+        
+        Order & Stock <--> Config["5. 政策下发中心：分布式配置中心 (Nacos Config)<br/>👉 统一配置发布，无需重启动态热更新"]
+        
+        Order -.-> Protect["6. 应急防卫军：熔断限流防护 (Sentinel / Resilience4j)<br/>👉 接口慢了立刻熔断降级，防止系统发生雪崩！"]
+    end
+```
+
+---
+
+## 🔍 六大核心组件人话大白话速查
+
+| 核心职能 | 核心技术选型 | 现实生活比喻 | 核心解决什么痛点？ |
+| :--- | :--- | :--- | :--- |
+| **服务注册与发现** | **Nacos** *(当前主流首选)* / Eureka | **全国统一户籍与通讯录** | 以前写死 IP 地址，服务扩容缩容每次都要手动改配置文件；现在服务一启动自动去 Nacos 报到登记，下线自动注销！ |
+| **声明式远程调用** | **OpenFeign** | **万能外交信使公文** | 告别手动拼接 HTTP URL 和解析 JSON 的恶梦；只要写一个 Java 接口，Feign 自动把方法调用变成 HTTP 请求发给对方！ |
+| **客户端负载均衡** | **Spring Cloud LoadBalancer** | **路口交通警察** | 当库存服务有 3 台服务器提供服务时，交警负责按**轮询（Round Robin）**或**随机权重**把流量平摊到各个节点。 |
+| **服务容错与熔断降级** | **Sentinel** / Resilience4j | **电路总闸保险丝** | 当库存服务宕机或变慢时，**立刻熔断切断调用**，秒级返回兜底降级数据，**防止把订单服务的线程池活活拖死引发全站雪崩**！ |
+| **统一 API 网关** | **Spring Cloud Gateway** | **国家海关边检总关闸** | 外部流量统一入口；集中式处理 **跨域 CORS、JWT 登录验真、全链路日志 TraceId 染色、API 防刷黑白名单**。 |
+| **分布式配置中心** | **Nacos Config** | **中央政策无线电广播** | 数十台微服务的参数全部集中管理；在控制台点一下“发布”，所有机器**秒级热更新，无需重新打包重启**！ |
+
+---
+
+## 💥 为什么微服务最怕“雪崩效应”？（熔断器的救命哲学）
+
+面试高频必问：“什么是服务雪崩？Sentinel / Hystrix 的工作机制是什么？”
+
+### 😱 恐怖的雪崩连锁反应：
 
 ```mermaid
 flowchart LR
-A[客户端/前端] --> B[Spring Cloud Gateway]
-B --> C[order-service]
-C --> D[OpenFeign + LoadBalancer]
-D --> E[inventory-service]
-D --> F[payment-service]
-C --> G[Micrometer/Tracing]
-E --> G
-F --> G
-C --> H[Nacos Discovery]
-E --> H
-F --> H
-C --> I[Nacos Config]
-E --> I
-F --> I
-C --> J[Resilience4j / Sentinel]
-E --> J
-F --> J
-C --> K[RocketMQ / Stream Binder]
+    A["用户大量请求"] --> B["订单服务 (tomcat 200 线程)"]
+    B -->|远程调用| C["积分服务 (突然慢到 10 秒返回)"]
+    
+    Note over B: 订单服务的 200 个线程全卡在等待积分服务返回上！<br/>此时新来的创建订单请求再也进不来了！<br/>订单服务内存打爆，彻底宕机！
+    
+    D["前端所有业务全部卡死瘫痪！<br/>💥 全站雪崩！"]
 ```
 
-如何理解这张图：
-
-- Gateway 是入口治理层。
-- Discovery 和 Config 是基础设施底座。
-- OpenFeign + LoadBalancer 是服务间调用主链路。
-- Sentinel/Resilience4j 提供稳定性保护。
-- Tracing/Metric/Log 提供可观测性闭环。
-- RocketMQ Binder、Seata 这类组件不是每个系统都必须有，属于按场景补充。
-
-## ⚙️ 工作原理 / 主流程
+### 🛡️ 熔断器（Circuit Breaker）的救命三态：
 
 ```mermaid
-flowchart TD
-A[服务启动] --> B[加载本地配置]
-B --> C[连接 Nacos Config 拉取远端配置]
-C --> D[创建 Spring Context]
-D --> E[注册到 Nacos Discovery]
-E --> F[服务对外提供能力]
-G[外部请求进入 Gateway] --> H[认证/限流/灰度/路由]
-H --> I[order-service]
-I --> J[OpenFeign 代理方法调用]
-J --> K[LoadBalancer 选择实例]
-K --> L[inventory-service]
-L --> M[熔断/限流/超时/重试生效]
-M --> N[Trace/Metric/Log 上报]
+stateDiagram-v2
+    direction LR
+    [*] --> Closed: 正常运行状态
+    Closed --> Open: 慢调用比例或错误率超过阈值 (立刻熔断拉闸！)
+    Open --> HalfOpen: 熔断时间窗口结束 (尝试性放行少量请求探路)
+    HalfOpen --> Closed: 探路请求全部成功 (全线恢复！)
+    HalfOpen --> Open: 探路请求依然失败 (继续熔断休眠！)
 ```
 
-主流程说明：
+1. **Closed（闭合正常态）**：所有请求正常放行通过。
+2. **Open（断开熔断态）**：监控到下游接口错误率超过 50% 或平均耗时超过 2 秒，**保险丝瞬间熔断！后续所有请求不再发往远程网络，直接就地返回降级托底数据（Fallback）！**
+3. **Half-Open（半开试探态）**：熔断一段时间（比如 5 秒）后，小心翼翼放行 2 个请求试探；如果下游已经修好了，熔断器自动复位闭合！
 
-1. 服务先从配置中心拉配置，再初始化 Spring 容器。
-2. 启动成功后注册到注册中心，供其他服务发现。
-3. 外部请求先过 Gateway，再进入具体业务服务。
-4. 服务内部用 Feign 发起 HTTP 调用，LoadBalancer 负责选实例。
-5. 稳定性组件在调用周围做超时、重试、熔断、限流、隔离。
-6. 全链路通过 trace 和 metrics 做观测与回放。
+---
 
-## 🧱 Spring Cloud 常见组件职责边界
+## 💻 极简体验：OpenFeign 声明式调用有多优雅？
 
-| 能力 | 常见组件 | 解决什么 | 不解决什么 |
-| ---- | -------- | -------- | ---------- |
-| 注册发现 | Nacos Discovery、Eureka、Consul | 服务注册、心跳、实例发现 | 失败熔断、限流、灰度全链路策略 |
-| 配置中心 | Nacos Config、Apollo、Spring Cloud Config | 集中配置、动态推送、版本回滚 | 任意资源无风险热更新 |
-| 服务调用 | OpenFeign、RestTemplate、WebClient | 接口化调用、编码简化 | 自动选好超时、重试和连接池 |
-| 负载均衡 | Spring Cloud LoadBalancer | 候选实例选择 | 入口层统一流量治理 |
-| API 网关 | Spring Cloud Gateway | 路由、认证、限流、灰度、统一入口 | 复杂业务编排、服务内细权限 |
-| 稳定性 | Resilience4j、Sentinel | 限流、熔断、降级、隔离 | 根因修复、容量凭空提升 |
-| 分布式事务 | Seata | 多服务事务协调 | 高性能强一致万能解 |
-| 消息集成 | Spring Cloud Stream / RocketMQ Binder | 统一消息编程模型 | 消息中间件本身的治理运维 |
-| 可观测性 | Micrometer、OpenTelemetry | 指标、Trace、日志关联 | 自动修复故障 |
-
-## 🌐 Spring Cloud Alibaba 组件边界
-
-这是面试高频点，必须讲清“它们分别做什么，不做什么”。
-
-### 1. Nacos Discovery
-
-- 负责服务注册与发现。
-- 提供实例列表、健康状态、metadata、权重等信息。
-- 不负责熔断、限流和调用失败快速止损。
-- 典型误用：把“能发现实例”误当成“服务就稳定可用”。
-
-### 2. Nacos Config
-
-- 负责配置托管、版本发布、动态推送。
-- 常见维度是 `namespace + group + dataId`。
-- 不保证所有 Bean 都能安全热刷新，连接池、线程池、客户端对象常常要重建。
-- 典型误用：把数据库连接数、线程池参数、灰度开关都当成同一类热更新配置。
-
-### 3. Sentinel
-
-- 提供流量控制、熔断降级、系统自适应保护、热点参数限流等能力。
-- 常用接入点包括 Web、Gateway、Feign、RestTemplate、Dubbo。
-- 更偏“实时流量治理和规则管理”。
-- 典型误用：只配规则不压测，不理解阈值来自哪里。
-
-### 4. Seata
-
-- 解决跨服务分布式事务协调问题。
-- 常见模式 AT、TCC、SAGA、XA，各有代价。
-- 不适合滥用在所有链路，尤其高并发核心链路要谨慎评估性能与锁影响。
-- 典型误用：把本来可以用最终一致和消息补偿解决的问题，强行套成分布式事务。
-
-### 5. RocketMQ Binder
-
-- 让 Spring Cloud Stream 能以统一编程模型接 RocketMQ。
-- 适合做消息收发的应用层集成。
-- 不替代 RocketMQ 的 Topic 规划、重试策略、死信队列、顺序消息治理。
-- 典型误用：以为引入 Binder 就等于把消息治理问题都解决了。
-
-## 🆚 Sentinel 与 Resilience4j 怎么看
-
-| 维度 | Sentinel | Resilience4j |
-| ---- | -------- | ------------ |
-| 核心优势 | 流量治理能力强，规则体系丰富，热点参数、系统保护、控制台能力突出 | 与 Spring/Java 集成轻量，组合灵活，超时/重试/熔断/Bulkhead 清晰 |
-| 常见场景 | 网关限流、接口流控、系统保护、规则动态治理 | 服务内调用保护、Feign/WebClient 包装、精细化超时重试熔断 |
-| 控制台/规则 | 更强调规则配置和可视化治理 | 更偏代码和配置式集成 |
-| 面试表达 | 偏“流量调度与保护体系” | 偏“调用级容错组件” |
-
-回答建议：
-
-- 如果公司是 Spring Cloud Alibaba 体系，Sentinel 很常见。
-- 如果只需要轻量的调用保护，Resilience4j 往往更简洁。
-- 两者不是完全互斥，但要避免重复治理、重复统计、重复拦截。
-
-## 💻 代码 / 配置 / 伪代码
-
-```yaml
-spring:
-  cloud:
-    nacos:
-      discovery:
-        server-addr: nacos:8848
-      config:
-        server-addr: nacos:8848
-    openfeign:
-      client:
-        config:
-          default:
-            connectTimeout: 100
-            readTimeout: 500
-```
+在订单服务里调用远程库存微服务，代码就像在本地调用一样自然：
 
 ```java
-@FeignClient(name = "inventory-service")
-public interface InventoryClient {
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-    @GetMapping("/inventory/stock")
-    StockDTO query(@RequestParam("skuId") String skuId);
+// 声明调用的微服务名称 (与 Nacos 注册的名字一致)
+@FeignClient(name = "stock-service", fallback = StockClientFallback.class)
+public interface StockClient {
+
+    @GetMapping("/api/stock/deduct")
+    Boolean deductStock(@RequestParam("skuId") Long skuId, @RequestParam("count") Integer count);
+}
+
+// 降级兜底方案：当下游库存服务挂了或者超时，自动执行这里的备用逻辑！
+@Component
+class StockClientFallback implements StockClient {
+    @Override
+    public Boolean deductStock(Long skuId, Integer count) {
+        System.err.println("⚠️ 库存服务目前不可用，触发降级兜底！");
+        return false;
+    }
 }
 ```
 
-```text
-一次典型链路：
-Gateway -> order-service -> Feign -> LoadBalancer -> inventory-service
-                       -> Resilience4j/Sentinel -> Trace/Metric/Log
-```
+---
 
-## 🛠️ 工程案例：订单系统微服务基础设施组合
+## 🧠 一分钟复盘核心记忆卡
 
-一个典型订单系统可能会这样选型：
+1. **微服务核心痛点**：跨网络调用不可靠、服务定位难、故障容易雪崩。
+2. **黄金三角**：**Nacos（注册+配置） + OpenFeign（RPC 声明调用） + Gateway（网关入口）**。
+3. **安全防线**：必须为每一个远程接口配置严格的**连接超时（ConnectTimeout）**与**读取超时（ReadTimeout）**，配合 **Sentinel 熔断降级** 守住系统可用性底线。
 
-- Nacos Discovery：服务注册发现。
-- Nacos Config：多环境配置、开关、灰度参数。
-- Spring Cloud Gateway：统一入口、JWT 校验、限流、灰度。
-- OpenFeign + LoadBalancer：订单调库存、支付、用户。
-- Resilience4j：对库存、支付调用做 timeout/retry/circuit breaker/bulkhead。
-- Sentinel：如果需要更强的流量控制和规则治理，可放在网关或核心接口前。
-- RocketMQ Binder：对接订单创建、支付成功、发货通知等异步消息。
-- Micrometer + OpenTelemetry：做指标和链路追踪。
+---
 
-为什么这样组合：
+## 🧭 下一步
 
-- Discovery/Config 是底座。
-- Gateway 管入口，Feign/LoadBalancer 管服务间调用。
-- Sentinel/Resilience4j 管稳定性，Tracing 管观测。
-- 事务和消息是按业务复杂度追加，不是默认全开。
-
-## 🧨 常见故障图谱
-
-```mermaid
-flowchart TD
-A[微服务调用异常/配置异常/流量异常] --> B{先分层定位}
-B --> C[服务发现问题]
-B --> D[配置中心问题]
-B --> E[Feign/调用链问题]
-B --> F[网关问题]
-B --> G[稳定性策略问题]
-C --> C1[查namespace/group/serviceName]
-C --> C2[查实例健康与本地缓存]
-C --> C3[查注册IP和metadata]
-D --> D1[查dataId/group/namespace/profile]
-D --> D2[查动态刷新是否生效]
-D --> D3[查配置覆盖顺序]
-E --> E1[查timeout/retry/连接池]
-E --> E2[查LoadBalancer策略]
-E --> E3[查下游RT和错误率]
-F --> F1[查route/filter/auth/rate limit]
-F --> F2[查灰度标签透传]
-F --> F3[查event loop阻塞]
-G --> G1[查熔断阈值]
-G --> G2[查限流规则]
-G --> G3[查是否重试风暴]
-```
-
-## ⚠️ 生产坑与注意事项
-
-- Spring Boot、Spring Cloud、Spring Cloud Alibaba 版本不匹配，启动或运行期兼容问题频发。
-- 以为 OpenFeign 引进来就有完善治理，结果 timeout、retry、连接池都没显式配置。
-- 注册中心和配置中心都用 Nacos，就误以为两者完全等价；实际上 Naming 和 Config 是两套职责。
-- 只做注册发现，不做超时、熔断、限流，服务仍会在故障时相互拖垮。
-- Gateway 过滤器里做阻塞 IO，入口层延迟飙升。
-- 多层重试叠加，最终形成重试风暴。
-- 配置热刷新误改线程池、连接池等资源参数，引发实例抖动。
-- Sentinel 和 Resilience4j 同时包裹同一调用，但没人说清楚顺序和边界，导致观测混乱。
-
-## 🧭 排查路径
-
-### 1. 服务为什么调不通
-
-- 查注册中心是否有实例，namespace/group/serviceName 是否一致。
-- 查客户端本地缓存是否还持有旧实例。
-- 查 Feign timeout、DNS、连接池和下游 RT。
-- 看是否被网关、限流或熔断策略拦截。
-
-### 2. 配置为什么不生效
-
-- 查 `namespace/group/dataId/profile` 是否对应正确环境。
-- 查配置优先级，是否被本地配置或环境变量覆盖。
-- 查该配置是否支持热更新，是否只是值变了但 Bean 没重建。
-- 查变更是否只在部分实例生效。
-
-### 3. 流量为什么异常
-
-- 查 Gateway 路由、鉴权、限流、灰度标签。
-- 查 LoadBalancer 策略是否导致倾斜。
-- 查 Sentinel/Resilience4j 阈值是否过严或重复保护。
-- 查是否有重试风暴或热点 key。
-
-### 4. 为什么故障扩散这么快
-
-- 看有没有超时预算和隔离。
-- 看重试是否多层叠加。
-- 看熔断是否打开太晚。
-- 看是否缺少 trace 和指标，导致问题发现太迟。
-
-## 🎯 面试问题
-
-> [!question] 高频问题
-> - Q: Spring Cloud 解决什么问题？
->   - A: 它把注册发现、配置管理、服务调用、网关、稳定性和可观测性这些微服务基础设施能力整合成统一的工程接入方式。
-> - Q: Nacos Config 和 Nacos Discovery 有什么区别？
->   - A: Discovery 管实例和健康状态，解决“服务在哪”；Config 管配置发布和动态推送，解决“配置从哪来”。
-> - Q: OpenFeign 本质是什么？
->   - A: 是声明式 HTTP 客户端，把接口方法调用转成 HTTP 请求，本身不等于完整治理方案。
-> - Q: Sentinel 和 Resilience4j 怎么选？
->   - A: Sentinel 更强在流量治理和规则体系，Resilience4j 更轻量、偏调用级容错；看团队生态和场景选择。
-> - Q: Spring Cloud Alibaba 里哪些组件不是必选？
->   - A: Seata、RocketMQ Binder、Sentinel 都是按场景选；很多系统只用 Nacos + Gateway + Feign/LoadBalancer + 观测也够。
-
-## 🎤 面试 3 层回答
-
-### 30 秒版
-
-Spring Cloud 是微服务基础设施集成层，把注册发现、配置中心、服务调用、网关、限流熔断和观测串起来。真正要讲好的不是组件名，而是各组件职责边界和生产如何组合。
-
-### 2 分钟版
-
-一个典型 Spring Cloud 体系里，服务启动先从配置中心拉配置，再注册到注册中心；请求从 Gateway 进入，服务内部通过 OpenFeign 发起调用，LoadBalancer 选实例，Resilience4j 或 Sentinel 做超时、重试、熔断、限流，最后通过 Trace 和 Metrics 建立观测闭环。Spring Cloud Alibaba 常见的是 Nacos、Sentinel、Seata、RocketMQ Binder，但它们边界要讲清：Nacos Discovery 和 Config 不同，Sentinel 是流量治理，不是根因修复；Seata 是事务协调，不是所有链路都该用。生产最常见的问题则是版本错配、超时重试没配好和重复治理。
-
-### 项目版
-
-在订单系统里，我一般会用 Nacos Discovery 做注册发现，Nacos Config 管配置，Gateway 承接 JWT、限流和灰度，OpenFeign + LoadBalancer 做服务间调用，核心下游用 Resilience4j 包 timeout/retry/circuit breaker。如果有网关级流控和热点参数保护需求，再加 Sentinel。排障时我会按层拆：先看 Gateway，再看 Feign/LoadBalancer，再看注册配置层，最后看稳定性组件阈值和 trace。这样能快速判断问题是基础设施层、下游服务层，还是治理规则本身。
-
-## ✅ 精通检查清单
-
-- 能画出 Spring Cloud 典型调用链和组件全景图。
-- 能区分 Discovery、Config、Feign、LoadBalancer、Gateway、CircuitBreaker 各自职责。
-- 能说清 Spring Cloud Alibaba 里 Nacos、Sentinel、Seata、RocketMQ Binder 的边界。
-- 能解释 Sentinel 与 Resilience4j 的差异和组合风险。
-- 能从版本、配置、发现、调用、治理五层拆解故障。
-
-## 🔗 关联笔记
-
-- [[_index]]
-- [[20-Java后端/00-总览/学习仪表盘]]
-- [[../06-中间件/04-注册中心-Nacos]]
-- [[../06-中间件/05-配置中心]]
-- [[../06-中间件/06-API网关]]
-- [[../07-分布式与微服务/07-服务治理与负载均衡]]
-- [[../07-分布式与微服务/06-限流-熔断-降级]]
-- [[../07-分布式与微服务/08-链路追踪]]
-
-## 📚 参考资料
-
-- Spring Cloud Reference
-- Spring Cloud OpenFeign Reference
-- Spring Cloud Gateway Reference
-- Spring Cloud CircuitBreaker Reference
-- Spring Cloud Alibaba Reference
+在处理千万级高并发请求时，除了传统的 Servlet 多线程阻塞模型，还有一种基于事件循环的高性能非阻塞范式——**响应式编程（Reactive Programming）与 WebFlux**。
+它与 Java 21 虚拟线程各自适用什么场景？
+请进入下一篇：[[09-WebFlux与响应式编程]]！
