@@ -159,11 +159,11 @@ flowchart LR
    - 此时存在一条顽固的强引用链：
      `Thread (常驻核心线程) -> ThreadLocalMap -> Entry -> Value (业务大对象)`
    - **结果**：Key 已经成了 null，你再也无法通过代码拿到这个 Value；但 GC 又因为强引用链的存在绝对不敢回收它！随着请求成千上万次涌入，这些无家可归的 Value 越堆越多，最终直接引爆 **`OutOfMemoryError`（OOM 内存溢出）！**
-3. **灵魂追问：既然如此，为什么不干脆把 Value 也设计成弱引用？**
-   - **致命灾难**：在业务代码中，当我们在拦截器或前置方法执行 `threadLocal.set(user)` 后，临时变量 `user` 随着方法出栈就会销毁。此时在整个堆内存中，**唯有当前线程的 `ThreadLocalMap` 还在引用这个 `user` 对象**！
-   - 如果 Value 也是弱引用，后续业务逻辑还在执行期间，只要 JVM 发生了一次垃圾回收（GC），**GC 会直接把没有任何强引用的 Value 当场扬了（回收成 `null`）**！
-   - 后续业务代码调 `threadLocal.get()` 就会凭空拿到 `null`，引发大量随机、无法复现的 `NullPointerException`！
-   - **设计结论**：为了履行业务契约（“只要线程在跑，数据绝不能凭空消失”），**Value 必须是强引用**；消除泄漏的唯一可靠方案是**在 `finally` 中显式调用 `remove()`**。
+> [!question]- 灵魂追问：既然 Key 设为弱引用会导致内存泄漏，为什么不干脆把 Value 也设计成弱引用？
+> **致命灾难**：在业务代码中，当我们在拦截器或前置方法执行 `threadLocal.set(user)` 后，局部变量 `user` 随着方法出栈立即被销毁。此时在整个 JVM 堆内存中，**唯有当前线程的 `ThreadLocalMap` 还在引用这个 `user` 对象**！
+> - 如果 Value 也是弱引用，后续业务逻辑还在执行期间，只要 JVM 发生了一次垃圾回收（GC），**GC 会直接把没有任何强引用的 Value 当场回收为 `null`**！
+> - 后续业务代码调用 `threadLocal.get()` 就会凭空拿到 `null`，引发大量随机、难以复现的 `NullPointerException`！
+> - **设计结论**：为了履行业务契约（“只要当前线程在执行，存入的数据绝不能凭空消失”），**Value 必须是强引用**；消除泄漏的唯一可靠方案是**在 `finally` 中显式调用 `remove()`**。
 
 ---
 
