@@ -17,7 +17,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 ---
 
-## 🛋️ 核心心智模型：毛坯房配置地狱 vs 全屋智能精装房
+## ⚙️ 为什么需要自动配置？（约定优于配置）
 
 回顾早期的 Spring MVC 时代，被称为“配置工程师的折寿年代”：
 想在项目里连个 MySQL 数据库，你必须在 `applicationContext.xml` 里写几十行繁琐的标签：
@@ -117,9 +117,9 @@ public class RedisAutoConfiguration {
 
 ---
 
-## 🛡️ @Conditional 家族常用兵器谱
+## 🛡️ @Conditional 常用条件注解矩阵
 
-| 条件注解 | 触发条件（大白话翻译） | 经典场景 |
+| 条件注解 | 判定生效规则 | 典型应用场景 |
 | :--- | :--- | :--- |
 | **`@ConditionalOnClass`** | 类路径下**必须存在**指定的 class 文件，才生效。 | 只要你没引入对应 starter 的 jar 包，该组件自动静默关闭。 |
 | **`@ConditionalOnMissingClass`** | 类路径下**不存在**指定 class 文件才生效。 | 降级替代方案。 |

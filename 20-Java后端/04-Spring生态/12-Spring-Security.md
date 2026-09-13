@@ -11,13 +11,13 @@ status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
 
-# 🛂 12 · Spring Security（机场多道安检门与无状态 JWT 实战）
+# 🛂 12 · Spring Security（安全过滤器链架构与 JWT 实战）
 
 > **一句话导读**：觉得 Spring Security 像天书般复杂？那是因为你被几十个长相相似的英文单词吓退了。它的本质就是一套**“国际机场的多道安检过滤流水线”**。搞懂“认证（你是谁）”与“授权（你能干什么）”，现代前后端分离安全架构便可手到擒来。
 
 ---
 
-## ✈️ 核心心智模型：国际机场登机全流程
+## 🛂 认证（Authentication）与授权（Authorization）核心概念
 
 所有的系统安全，剥离到最底层其实就解决两个灵魂拷问：
 
@@ -66,14 +66,14 @@ flowchart LR
 
 ---
 
-## 🔐 核心三剑客大白话对照表
+## 🔐 核心认证与鉴权组件速查
 
-| 核心组件 | 现实生活比喻 | 职责与功能 |
+| 核心组件 | 技术职责与接口规范 | 角色场景类比（辅助说明） |
 | :--- | :--- | :--- |
-| **`UserDetailsService`** | **公安部全国户籍数据库** | 只有一个核心方法 `loadUserByUsername(String)`，负责根据用户名去数据库查出真实的密码密文和权限列表。 |
-| **`UserDetails`** | **你的户籍档案卡** | 封装了用户的核心信息（用户名、加密后的密码、角色权限列表、账号是否被冻结）。 |
-| **`PasswordEncoder`** | **高科技指纹/虹膜验真机** | 负责密码的加盐哈希加密与比对（**`BCryptPasswordEncoder`**），绝不存明文！ |
-| **`AuthenticationManager`** | **机场安检大队长** | 统筹整个认证过程，委派具体的 Provider 进行密码核验。 |
+| **`UserDetailsService`** | 用户信息检索核心接口。定义了唯一方法 `UserDetails loadUserByUsername(String username)`，负责从数据库或外部服务加载指定用户的密码密文与权限集。 | 类比为用户身份与凭证的数据查询接口 |
+| **`UserDetails`** | 安全主体（Principal）的数据载体接口。封装了用户的核心安全信息：用户名、哈希密码、权限集合（`GrantedAuthority`）以及账号是否过期、锁定、启用等状态布尔值。 | 类比为标准化的用户安全凭证档案模型 |
+| **`PasswordEncoder`** | 服务端密码加密与校验接口。核心方法为 `encode()` 与 `matches()`，生产环境强制使用自适应单向慢哈希算法（**`BCryptPasswordEncoder`**），杜绝明文与普通 MD5 存储。 | 类比为带动态盐值的密码安全验真器 |
+| **`AuthenticationManager`** | 认证流程的核心调度中枢接口。定义 `Authentication authenticate(Authentication authentication)`，负责协调下挂的各 `AuthenticationProvider` 执行具体的账号密码或 Token 校验。 | 类比为多渠道认证核验的总协调调度器 |
 
 ---
 

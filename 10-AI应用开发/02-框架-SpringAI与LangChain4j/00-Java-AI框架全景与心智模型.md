@@ -133,17 +133,17 @@ flowchart TD
 
 ---
 
-## 🧩 核心名词概念大白话对照表
+## 🧩 核心抽象概念与架构映射全景
 
-| 核心概念 | 传统 Web 开发对应物 | 大模型生态实际含义 |
+| 框架核心抽象 | 技术定义与职责规范 | 传统 Web 开发类比（架构映射） |
 | :--- | :--- | :--- |
-| **ChatModel** | `DataSource` / 底层数据库驱动 | 代表某一家特定大模型的基础通信驱动器，负责底层的序列化与网络请求 |
-| **ChatClient** | `JdbcTemplate` / `RestClient` | 业务开发直接使用的流式门面工具类，支持 Prompt 编排、Advisor 链挂载 |
-| **Advisor** | Spring AOP 切面 / Web 过滤器 | 在大模型请求发出前、响应返回后执行的环绕拦截链，用于记忆注入、日志脱敏与审计 |
-| **Function Calling** | 依赖注入调用本地 Bean 方法 | 大模型发现回答需要外部数据时，生成包含参数的 JSON 结构，由框架自动反射调用本地 Java 方法并回填 |
-| **EmbeddingModel** | 字符编码转换器（如 UTF-8 编码器） | 把人类自然语言文本转换成高维浮点数向量（如 1536 维数组）的数学转化器 |
-| **VectorStore** | MySQL / Elasticsearch 搜索引擎 | 专门存储与检索高维浮点数向量的数据库驱动抽象（如 PGVector、Milvus） |
-| **ChatMemory** | `HttpSession` / 购物车缓存 | 维护用户多轮会话上下文的存储介质，支持内存、Redis、MySQL 持久化 |
+| **`ChatModel`** | 底层模型通信驱动接口。负责与特定供应商大模型 API 进行低级 HTTP 通信、输入结构序列化与响应反序列化。 | 类比为底层数据源驱动层（如 JDBC Driver / Connection） |
+| **`ChatClient`** | 面向业务的高阶 Fluent API 门面。支持链式编排 Prompt、挂载 Advisor 拦截链、动态绑定 Tools 并优雅处理流式/阻塞输出。 | 类比为业务层操作模板工具（如 `JdbcTemplate` / `RestClient`） |
+| **`Advisor`** | 环绕拦截器机制（AOP 思想）。在请求提交给模型前后执行的责任链，用于会话记忆追加、敏感词脱敏、审计与上下文增强。 | 类比为 Spring AOP 切面 / Web Filter 过滤器 |
+| **`Function Calling (Tools)`** | 外部工具调用抽象。模型基于注意力决定工具并输出结构化 JSON 参数，框架通过反射自动执行本地 Java 方法并回传结果。 | 类比为基于约定协议的本地方法反射路由与回调分发 |
+| **`EmbeddingModel`** | 文本嵌入向量化接口。将非结构化自然语言文本转换为高维稠密浮点数向量（Dense Vector），为语义相似度计算提供数学基础。 | 类比为高维语义特征提取与编码转换器 |
+| **`VectorStore`** | 向量数据库操作抽象接口。封装了向量的增删改查、Top-K 相似度检索（Cosine/IP）以及元数据标量过滤语法。 | 类比为专用的向量搜索引擎数据访问层（如 DAO / Repository） |
+| **`ChatMemory`** | 会话上下文记忆存储接口。维护指定 SessionId 的多轮交互历史（Messages 列表），支持内存、Redis 与 MySQL 持久化。 | 类比为分布式会话状态管理（如 `HttpSession` / 会话缓存） |
 
 ---
 

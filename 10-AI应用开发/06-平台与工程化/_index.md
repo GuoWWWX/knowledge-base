@@ -85,6 +85,6 @@ flowchart TD
 
 ## 🔗 相关链接
 
-- 上级总览：[[10-AI应用开发/00-总览/学习仪表盘]]
-- 前置章节：[[10-AI应用开发/05-Agent-MCP-Skills/_index|05 · Agent · MCP · Skills]]
-- 下一章节：[[10-AI应用开发/07-辅助语言/_index|07 · 辅助语言 Python 与 TypeScript]]
+- 上级总览：[[../00-总览/学习仪表盘]]
+- 前置章节：[[../05-Agent-MCP-Skills/_index|05 · Agent · MCP · Skills]]
+- 下一章节：[[../07-辅助语言/_index|07 · 辅助语言 Python 与 TypeScript]]

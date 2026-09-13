@@ -192,7 +192,7 @@ flowchart TD
 
 ## 🔗 关联笔记
 
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/00-Java-AI框架全景与心智模型]] - 全局心智桥梁
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/02-ChatClient与ChatModel]] - 深入 Spring AI 调用体系
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]] - 深入 LangChain4j 声明式黑科技
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]] - 返回本章索引
+- [[00-Java-AI框架全景与心智模型]] - 全局心智桥梁
+- [[SpringAI/02-ChatClient与ChatModel]] - 深入 Spring AI 调用体系
+- [[LangChain4j/02-AiServices声明式AI服务]] - 深入 LangChain4j 声明式黑科技
+- [[_index]] - 返回本章索引

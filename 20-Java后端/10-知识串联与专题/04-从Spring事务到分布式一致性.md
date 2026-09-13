@@ -14,7 +14,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 # 从 Spring 事务到分布式一致性：从单机 ACID 到分布式 BASE 的终极演进
 
-> **关联基础**：[[20-Java后端/04-Spring生态/03-Spring事务管理|Spring事务]]、[[20-Java后端/07-分布式与微服务/01-CAP定理与BASE理论|CAP与BASE]]、[[20-Java后端/07-分布式与微服务/03-分布式事务-2PC-TCC-Saga|分布式事务2PC-TCC-Saga]]、[[20-Java后端/07-分布式与微服务/04-分布式事务Seata与最终一致性|Seata与最终一致性]]
+> **关联基础**：[[../04-Spring生态/03-Spring事务管理|Spring事务]]、[[../07-分布式与微服务/01-CAP与BASE理论|CAP与BASE]]、[[../07-分布式与微服务/03-分布式事务-2PC-TCC-Saga|分布式事务2PC-TCC-Saga]]、[[../07-分布式与微服务/03-分布式事务-2PC-TCC-Saga|Seata与最终一致性]]
 
 ---
 

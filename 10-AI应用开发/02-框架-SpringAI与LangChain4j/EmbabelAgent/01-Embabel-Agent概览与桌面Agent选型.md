@@ -228,9 +228,9 @@ flowchart TD
 
 - [[02-环境搭建与第一个Agent]] — 从选型判断进入可运行的 `1.5.0` Java Agent。
 - [[../SpringAI/_index|Spring AI 子区]] — 模型、工具、记忆和 RAG 基础能力。
-- [[10-AI应用开发/05-Agent-MCP-Skills/01-Agent设计模式详解|Agent 设计模式详解]] — 对比 ReAct、Plan-and-Execute 与动态规划。
-- [[10-AI应用开发/05-Agent-MCP-Skills/03-ReAct-Spring-AI实现|ReAct：Spring AI 实现]] — 理解细粒度工具调用循环。
-- [[10-AI应用开发/09-标杆产品拆解/02-编程Agent通用架构图|编程 Agent 通用架构图]] — 查看桌面编码 Agent 的完整产品分层。
+- [[../../05-Agent-MCP-Skills/01-Agent设计模式详解|Agent 设计模式详解]] — 对比 ReAct、Plan-and-Execute 与动态规划。
+- [[../../05-Agent-MCP-Skills/03-ReAct-Spring-AI实现|ReAct：Spring AI 实现]] — 理解细粒度工具调用循环。
+- [[../../09-标杆产品拆解/02-编程Agent通用架构图|编程 Agent 通用架构图]] — 查看桌面编码 Agent 的完整产品分层。
 - [[_index|Embabel Agent 子区索引]]
 
 ## 参考资料

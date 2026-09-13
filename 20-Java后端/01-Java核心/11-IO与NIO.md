@@ -159,7 +159,7 @@ flowchart LR
 
 #### 4. 几个相关坑（面试加分）
 
-- **worker 里也不能做阻塞 IO**：worker 线程的 select 循环如果被 DB/锁/大计算卡住，它负责的那些连接全部超时。**select 线程和 worker 线程都不能阻塞**（这跟 [[09-WebFlux与响应式编程|WebFlux 事件循环]] 的道理一模一样）。
+- **worker 里也不能做阻塞 IO**：worker 线程的 select 循环如果被 DB/锁/大计算卡住，它负责的那些连接全部超时。**select 线程和 worker 线程都不能阻塞**（这跟 [[../04-Spring生态/09-WebFlux与响应式编程|WebFlux 事件循环]] 的道理一模一样）。
 - **epoll 的惊群**：多线程同时 `select()` 同一个 Selector 时，内核可能唤醒多个线程处理同一个连接（惊群）。Netty 的解法是**每个线程独立 Selector**（主从 Reactor），而不是多线程共享一个 Selector。
 - **主从 Reactor**：Netty 里 Boss 线程组 + Worker 线程组，Boss 把新连接注册给某个 Worker 的 Selector，之后该连接的所有事件都由那个 Worker 处理——**连接与 worker 绑定**，天然免锁。
 
@@ -261,7 +261,7 @@ for (int i = 0; i < 100000; i++) {
 ## 🔗 关联笔记
 
 - 本课内：上一课 [[10-Lambda与Stream]]；下一课 [[12-反射与动态代理/_index|12-反射与动态代理]]
-- 延伸：[[20-Java后端/02-JVM/08-常用工具-jstat-jmap-jstack-Arthas|JVM 排查工具]]（jstack 定位 IO 阻塞）；Netty 网络层属于中间件章节
+- 延伸：[[../02-JVM/08-常用工具-jstat-jmap-jstack-Arthas|JVM 排查工具]]（jstack 定位 IO 阻塞）；Netty 网络层属于中间件章节
 
 ## 📚 参考资料
 

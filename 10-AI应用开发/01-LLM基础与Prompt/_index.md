@@ -91,5 +91,5 @@ flowchart TD
 
 ## 🔗 关联指引
 
-- **下一章**：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index|02 · 框架：Spring AI 与 LangChain4j]]
-- **全栈总览**：[[10-AI应用开发/00-总览/学习仪表盘]]
+- **下一章**：[[../02-框架-SpringAI与LangChain4j/_index|02 · 框架：Spring AI 与 LangChain4j]]
+- **全栈总览**：[[../00-总览/学习仪表盘]]

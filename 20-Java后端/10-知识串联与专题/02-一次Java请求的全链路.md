@@ -14,7 +14,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 # 一次 Java 请求的全链路：从用户指尖到磁盘磁道的全景透视
 
-> **关联基础**：[[20-Java后端/04-Spring生态/06-SpringMVC请求处理流程|SpringMVC流程]]、[[20-Java后端/04-Spring生态/04-AOP实现机制|Spring AOP]]、[[20-Java后端/05-数据库与存储/03-MySQL事务与MVCC|MySQL事务]]
+> **关联基础**：[[../04-Spring生态/06-SpringMVC请求处理流程|SpringMVC流程]]、[[../04-Spring生态/02-AOP原理与应用|Spring AOP]]、[[../05-数据库与存储/02-事务与隔离级别|MySQL事务]]
 
 ---
 

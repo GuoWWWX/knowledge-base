@@ -291,5 +291,5 @@ flowchart TD
 
 - [[02-ChatClient与ChatModel]] - ChatClient 的 Fluent API 与工具挂载语法
 - [[07-Advisor拦截器]] - 在工具调用前后实现审计与安全熔断切面
-- [[10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解]] - 从进程内工具调用跨越到进程间标准协议
+- [[../../05-Agent-MCP-Skills/09-MCP协议详解]] - 从进程内工具调用跨越到进程间标准协议
 - [[_index]] - 返回 Spring AI 专题索引

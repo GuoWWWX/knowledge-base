@@ -14,7 +14,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 # 线程池、CompletableFuture 与 MQ 异步链路：从进程内并发编排到跨服务异步削峰
 
-> **关联基础**：[[20-Java后端/03-并发编程/07-线程池核心实现与最佳实践|线程池架构]]、[[20-Java后端/03-并发编程/09-CompletableFuture异步编程|CompletableFuture]]、[[20-Java后端/06-中间件/01-Kafka核心架构与高吞吐基石|Kafka核心]]
+> **关联基础**：[[../03-并发编程/07-线程池原理与参数|线程池架构]]、[[../03-并发编程/09-CompletableFuture异步编程|CompletableFuture]]、[[../06-中间件/01-Kafka原理与应用|Kafka核心]]
 
 ---
 
@@ -124,7 +124,7 @@ public class ProductDetailAggregationService {
                 .orTimeout(200, TimeUnit.MILLISECONDS)
                 .exceptionally(ex -> Collections.emptyList());
 
-        // 5. 等待所有任务完成（非阻塞聚合栅栏）
+        // 5. 创建多任务聚合栅栏（非阻塞编排，瞬间返回聚合 Future）
         CompletableFuture<Void> allOfFuture = CompletableFuture.allOf(
                 productFuture, stockFuture, couponFuture, recommendFuture
         );

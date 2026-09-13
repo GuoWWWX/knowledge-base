@@ -18,7 +18,7 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **LangChain4j 子区第 2 课**。前置：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]]（框架定位与核心抽象）。
+- **LangChain4j 子区第 2 课**。前置：[[01-LangChain4j核心概念]]（框架定位与核心抽象）。
 - 对照：Spring AI 的 `ChatClient` 是"链式风格"（`prompt().user().call()`），LangChain4j 的 `AiServices` 是"**声明式接口**"风格——两者是 Java AI 框架的两种心智模型，本课重点讲清这个差异。
 - 延伸：工具方法（`@Tool`）的完整语义见 05-Agent-MCP-Skills 章。
 
@@ -130,9 +130,9 @@ System.out.println(greeter.greet("小明"));   // 一个普通接口方法，背
 
 ## 🔗 关联笔记
 
-- 本子区：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/03-记忆与RAG]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/04-与Spring生态集成]]
-- 对照：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用|Spring AI 工具调用]]
-- 选型：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比|两框架对比]]
+- 本子区：[[01-LangChain4j核心概念]] · [[03-记忆与RAG]] · [[04-与Spring生态集成]]
+- 对照：[[../SpringAI/06-Function-Calling工具调用|Spring AI 工具调用]]
+- 选型：[[../01-SpringAI与LangChain4j对比|两框架对比]]
 
 ## 📚 参考资料
 

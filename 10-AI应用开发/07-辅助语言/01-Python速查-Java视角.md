@@ -186,7 +186,7 @@ uv run ruff check .
 - [[03-asyncio异步基础]]
 - [[04-FastAPI起服务]]
 - [[05-LangChain-Python读代码笔记]]
-- [[10-AI应用开发/03-知识库技术-RAG/_index]]
+- [[../03-知识库技术-RAG/_index]]
 
 ## 📚 参考资料
 

@@ -139,7 +139,7 @@ class SupervisorAgent {
 - [[_index]]
 - [[04-Plan-and-Execute-实现]]
 - [[22-Agent成本控制与降级]]
-- [[10-AI应用开发/00-总览/学习仪表盘]]
+- [[../00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 

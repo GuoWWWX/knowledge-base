@@ -8,7 +8,7 @@ updated: 2026-08-08
 # 🪞 12 · 反射与动态代理
 
 > [!info] 本区说明
-> 运行期机制（上）：框架凭什么"看见"你没写完的类、凭什么"增强"你没改过的方法。按**原理一篇 + 实战一篇**组织：原理篇建立机制模型与排错认知，实战篇 12 个可运行案例把手感练出来。对应全章第 12 课，接在 [[20-Java后端/01-Java核心/11-IO与NIO|11 · IO 与 NIO]] 之后，衔接 [[20-Java后端/01-Java核心/13-注解与注解处理器|13 · 注解与注解处理器]]。
+> 运行期机制（上）：框架凭什么"看见"你没写完的类、凭什么"增强"你没改过的方法。按**原理一篇 + 实战一篇**组织：原理篇建立机制模型与排错认知，实战篇 12 个可运行案例把手感练出来。对应全章第 12 课，接在 [[../11-IO与NIO|11 · IO 与 NIO]] 之后，衔接 [[../13-注解与注解处理器|13 · 注解与注解处理器]]。
 
 ## 📚 笔记清单（按学习顺序）
 
@@ -39,7 +39,7 @@ updated: 2026-08-08
 
 ## 🔗 相关
 
-- 上级：[[20-Java后端/01-Java核心/_index|01 · Java 核心]]
-- 前置：[[20-Java后端/01-Java核心/01-泛型与类型擦除|泛型与类型擦除]]（`getGenericReturnType` 读回擦除信息）· [[20-Java后端/01-Java核心/02-异常处理最佳实践|异常处理]]（cause 链排查）
-- 后续：[[20-Java后端/01-Java核心/13-注解与注解处理器|13 · 注解与注解处理器]]（搭档课：注解靠反射读取，`@Retention(RUNTIME)` 是前提）
-- 延伸：[[20-Java后端/02-JVM/05-类加载机制与双亲委派|类加载机制]]（`Class` 对象的来源）· [[20-Java后端/01-Java核心/10-Lambda与Stream|Lambda 与 Stream]]（invokedynamic 与 `LambdaMetafactory`）· [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务|AiServices 声明式 AI 服务]]（案例 9 就是它的机制）；Spring AOP 完整体系在 04-Spring 生态章节
+- 上级：[[../_index|01 · Java 核心]]
+- 前置：[[../01-泛型与类型擦除|泛型与类型擦除]]（`getGenericReturnType` 读回擦除信息）· [[../02-异常处理最佳实践|异常处理]]（cause 链排查）
+- 后续：[[../13-注解与注解处理器|13 · 注解与注解处理器]]（搭档课：注解靠反射读取，`@Retention(RUNTIME)` 是前提）
+- 延伸：[[../../02-JVM/05-类加载机制与双亲委派|类加载机制]]（`Class` 对象的来源）· [[../10-Lambda与Stream|Lambda 与 Stream]]（invokedynamic 与 `LambdaMetafactory`）· [[../../../10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务|AiServices 声明式 AI 服务]]（案例 9 就是它的机制）；Spring AOP 完整体系在 04-Spring 生态章节

@@ -17,7 +17,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 ---
 
-## 🏥 核心心智模型：大型三甲医院的就医大厅
+## 🏛️ SpringMVC 请求处理核心架构与组件划分
 
 如果把整个 SpringMVC 架构比作一家**现代化的三甲综合医院**，各个组件的分工立刻一目了然：
 
@@ -73,25 +73,25 @@ sequenceDiagram
 
 ---
 
-## 🔍 核心四大法宝大白话拆解
+## 🔍 核心四大组件职责与协作机制
 
-### 1. 核心总调度：`DispatcherServlet`
-- 它是一个标准的 Servlet，配置了拦截根路径 `/`。
-- **所有进出 SpringMVC 的请求，必须经过它的统一接管与派发**。
+### 1. 前端控制器：`DispatcherServlet`
+- 继承自标准 `HttpServlet`，配置拦截根路径 `/`。
+- **所有进出 SpringMVC 的 HTTP 请求均由其统一调度、分发与收尾**，遵循典型的 Front Controller 架构模式。
 
-### 2. 探路雷达：`HandlerMapping`
-- 负责建立并保存 **“URL 路径 ⇄ 具体的 Controller 及其 Method”** 的映射字典。
-- 最常用的是 `RequestMappingHandlerMapping`（扫描 `@RequestMapping`、`@PostMapping` 等注解建立索引）。
+### 2. 处理器映射器：`HandlerMapping`
+- 负责建立并维护 **“URL 请求路径 ⇄ 具体的 Controller 及其 Method 执行链（HandlerExecutionChain）”** 的映射索引。
+- 生产中最常用的实现是 `RequestMappingHandlerMapping`（扫描并解析 `@RequestMapping`、`@PostMapping` 等注解建立元数据映射）。
 
-### 3. 万能翻译官与协调者：`HandlerAdapter`
-- **为什么需要适配器？为什么不直接调用 Controller？**
-  - 因为 SpringMVC 历经多年发展，支持多种风格的 Handler（注解版的 `@Controller`、老古董实现 `Controller` 接口的、实现 `HttpRequestHandler` 的）。
-  - 通过**适配器模式**，抹平不同实现风格的调用差异；
-  - 并且内部集成了强大的 **`HandlerMethodArgumentResolver`（参数解析器）**，自动帮你注入 `@PathVariable`、`@RequestParam`、`@RequestBody`！
+### 3. 处理器适配器：`HandlerAdapter`
+- **为什么不直接调用 Controller，而需要适配器？**
+  - SpringMVC 支持多种异构的 Handler 实现（注解式 `@Controller`、老版本的 `Controller` 接口、底层 `HttpRequestHandler` 等）。
+  - 通过**适配器模式（Adapter Pattern）**抹平不同 Handler 接口的调用差异；
+  - 核心职责还包含绑定并调用 **`HandlerMethodArgumentResolver`（参数解析器）**，自动完成 `@PathVariable`、`@RequestParam`、`@RequestBody` 等参数的校验与类型绑定。
 
-### 4. 数据变形金刚：`HttpMessageConverter`
-- 基于 HTTP 头部的 `Content-Type` 和 `Accept`，负责在“HTTP 字节流”和“Java 对象”之间完成格式转换。
-- 最核心的实现是 **`MappingJackson2HttpMessageConverter`**，全权负责把 JSON 字符串反序列化为 Java 实体，以及把返回实体序列化为 JSON。
+### 4. HTTP 消息转换器：`HttpMessageConverter`
+- 基于 HTTP 请求头部的 `Content-Type` 与响应头部的 `Accept`，负责在“HTTP 底层网络字节流”和“Java 内存对象”之间完成双向序列化与反序列化。
+- 最核心的实现为 **`MappingJackson2HttpMessageConverter`**，全权负责将前端 JSON 字节流反序列化为 Java DTO，以及将方法返回值序列化为 JSON 字符串。
 
 ---
 

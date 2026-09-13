@@ -385,10 +385,10 @@ for (int i = 0; i < 1000; i++) doWork();     // 此时已是 C2 编译后的机�
 
 - [[02-对象创建与内存布局]] —— 标量替换让对象不进堆，改变了对象分配位置
 - [[01-JVM内存区域]] —— Code Cache 属于本地内存，计入 RSS 账本
-- [[10-字节码与执行引擎]] —— JIT 编译的输入就是字节码，栈帧结构决定了 OSR 怎么替换
+- `10-字节码与执行引擎（待建设）` —— JIT 编译的输入就是字节码，栈帧结构决定了 OSR 怎么替换
 - [[06-JVM调优实战]] —— JIT 参数调优（TieredStopAtLevel / Code Cache）
-- [[20-Java后端/01-Java核心/10-Lambda与Stream|Lambda 与 Stream]] —— invokedynamic 与 Lambda 的 JIT 内联
-- [[20-Java后端/03-并发编程/03-volatile与synchronized|volatile 与 synchronized]] —— 锁消除、锁粗化是 JIT 层面的锁优化
+- [[../01-Java核心/10-Lambda与Stream|Lambda 与 Stream]] —— invokedynamic 与 Lambda 的 JIT 内联
+- [[../03-并发编程/03-volatile与synchronized|volatile 与 synchronized]] —— 锁消除、锁粗化是 JIT 层面的锁优化
 - [[_index]]
 
 ## 📚 参考资料

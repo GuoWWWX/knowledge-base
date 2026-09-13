@@ -39,5 +39,5 @@ mastery: ⭐☆☆☆☆
 
 ## 🔗 相关
 
-- 上级：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index|02 · 框架总览]]
-- 对照：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/_index|LangChain4j 子区]]
+- 上级：[[../_index|02 · 框架总览]]
+- 对照：[[../LangChain4j/_index|LangChain4j 子区]]

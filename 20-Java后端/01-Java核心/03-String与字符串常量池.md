@@ -19,8 +19,8 @@ mastery: ⭐⭐⭐☆☆
 ## 🎯 本节定位
 
 - **本章第 3 课，语言地基收尾**。前置：[[02-异常处理最佳实践]]（字符串转换异常属于运行期异常）。
-- 本课为下一课 [[20-Java后端/01-Java核心/04-集合框架/01-核心机制与选型]] 铺垫：String 是集合最常见的元素与 key，它的 `equals/hashCode` 实现和不可变性是"为什么 String 适合作 HashMap key"的答案（[[20-Java后端/01-Java核心/04-集合框架/04-HashMap原理与扩容]] 会用到）。
-- **延伸阅读（本课不展开）**：字符编码（Charset）在 [[11-IO与NIO]] 中结合读写讲；String 常量池的 JVM 存储细节（堆/元空间、JDK 7 前后变化）在 [[20-Java后端/02-JVM/01-JVM内存区域|02-JVM 章节]]。
+- 本课为下一课 [[04-集合框架/01-核心机制与选型]] 铺垫：String 是集合最常见的元素与 key，它的 `equals/hashCode` 实现和不可变性是"为什么 String 适合作 HashMap key"的答案（[[04-集合框架/04-HashMap原理与扩容]] 会用到）。
+- **延伸阅读（本课不展开）**：字符编码（Charset）在 [[11-IO与NIO]] 中结合读写讲；String 常量池的 JVM 存储细节（堆/元空间、JDK 7 前后变化）在 [[../02-JVM/01-JVM内存区域|02-JVM 章节]]。
 
 ## 📌 这是什么
 
@@ -87,7 +87,7 @@ JDK 9 引入 **Compact Strings**：纯 ASCII 字符串用 `byte[]`（Latin-1，1
 
 ### 为什么 String 是完美的 HashMap key
 
-HashMap 的 key 要求（见 [[20-Java后端/01-Java核心/04-集合框架/04-HashMap原理与扩容]]）：**hashCode 稳定 + equals 语义正确 + 不可变**。String 三点全占：
+HashMap 的 key 要求（见 [[04-集合框架/04-HashMap原理与扩容]]）：**hashCode 稳定 + equals 语义正确 + 不可变**。String 三点全占：
 1. 不可变 ⇒ put 之后内容不会变 ⇒ 桶位不会错乱；
 2. hashCode 缓存 ⇒ 重复 get 不重复计算；
 3. equals/hashCode 实现正确且配套 ⇒ 去重、查找可靠。
@@ -196,8 +196,8 @@ for (int i = 0; i < 100_000; i++) bad += i;   // O(N²)，明显更慢
 
 ## 🔗 关联笔记
 
-- 本课内：上一课 [[02-异常处理最佳实践]]；应用见 [[20-Java后端/01-Java核心/04-集合框架/01-核心机制与选型]]、[[20-Java后端/01-Java核心/04-集合框架/04-HashMap原理与扩容]]（String 作 key）
-- 延伸：[[11-IO与NIO]]（Charset 编码）；[[20-Java后端/02-JVM/01-JVM内存区域|JVM 内存区域]]（常量池存放位置）
+- 本课内：上一课 [[02-异常处理最佳实践]]；应用见 [[04-集合框架/01-核心机制与选型]]、[[04-集合框架/04-HashMap原理与扩容]]（String 作 key）
+- 延伸：[[11-IO与NIO]]（Charset 编码）；[[../02-JVM/01-JVM内存区域|JVM 内存区域]]（常量池存放位置）
 
 ## 📚 参考资料
 

@@ -355,7 +355,7 @@ public class LearningPlanAgent {
 
 - 上一篇：[[03-领域对象与Blackboard状态模型]]
 - 下一篇：[[05-规划器与三种执行模式]]
-- Agent 模式：[[10-AI应用开发/05-Agent-MCP-Skills/01-Agent设计模式详解]]
+- Agent 模式：[[../../05-Agent-MCP-Skills/01-Agent设计模式详解]]
 - 子区索引：[[_index]]
 
 ## 参考资料

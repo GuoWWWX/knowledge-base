@@ -79,6 +79,6 @@ flowchart TD
 
 ## 🔗 相关链接
 
-- 上级总览：[[10-AI应用开发/00-总览/学习仪表盘]]
-- 前置章节：[[10-AI应用开发/03-知识库技术-RAG/_index|03 · 知识库技术：RAG]]
-- 下一章节：[[10-AI应用开发/05-Agent-MCP-Skills/_index|05 · Agent · MCP · Skills]]
+- 上级总览：[[../00-总览/学习仪表盘]]
+- 前置章节：[[../03-知识库技术-RAG/_index|03 · 知识库技术：RAG]]
+- 下一章节：[[../05-Agent-MCP-Skills/_index|05 · Agent · MCP · Skills]]

@@ -19,7 +19,7 @@ mastery: ⭐☆☆☆☆
 ## 🎯 本节定位
 
 - **本章第 10 课，LangChain4j 对照**。前置：前 9 课建立的 Spring AI 心智；本节以对照视角看 LangChain4j 的核心抽象（`ChatLanguageModel`、`AiServices` 等）。
-- **延伸**：选型结论在下一课 [[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比]]。
+- **延伸**：选型结论在下一课 [[../01-SpringAI与LangChain4j对比]]。
 
 > [!info] 版本现状（2026-08）
 > LangChain4j 当前 **1.18.1**（2026-07 发布），1.x 持续稳定迭代；`OpenAiChatModel.builder()`、`AiServices`、`@Tool` 等核心 API 自 1.0 GA 起保持稳定，本课示例可直接使用。
@@ -150,10 +150,10 @@ Document
 
 ## 🔗 关联阅读
 
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/02-ChatClient与ChatModel]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/09-VectorStore向量存储]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
+- [[../01-SpringAI与LangChain4j对比]]
+- [[../SpringAI/02-ChatClient与ChatModel]]
+- [[../SpringAI/09-VectorStore向量存储]]
+- [[../_index]]
 
 ## 📚 参考资料
 

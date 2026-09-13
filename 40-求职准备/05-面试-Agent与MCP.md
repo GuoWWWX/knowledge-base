@@ -234,4 +234,4 @@ graph TD
 - [[../10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解|Model Context Protocol 规范落地]]
 - [[../10-AI应用开发/05-Agent-MCP-Skills/21-Agent权限治理与分级自治|Agent 权限治理与分级自治]]
 - [[../10-AI应用开发/06-平台与工程化/06-Langfuse接入|Langfuse 可观测性与链路追踪]]
-- [[40-求职准备/_index|求职准备全景导航]]
+- [[_index|求职准备全景导航]]

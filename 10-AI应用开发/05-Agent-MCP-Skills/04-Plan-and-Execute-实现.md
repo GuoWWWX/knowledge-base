@@ -120,7 +120,7 @@ for (PlanStep step : plan.steps()) {
 - [[_index]]
 - [[03-ReAct-Spring-AI实现]]
 - [[19-Agent评估]]
-- [[10-AI应用开发/00-总览/学习仪表盘]]
+- [[../00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 

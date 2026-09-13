@@ -18,8 +18,8 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **LangChain4j 子区第 4 课（收尾）**。前置：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]]、[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]]、[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/03-记忆与RAG]]。
-- 收尾后读 [[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比|两框架对比]] 做最终选型。
+- **LangChain4j 子区第 4 课（收尾）**。前置：[[01-LangChain4j核心概念]]、[[02-AiServices声明式AI服务]]、[[03-记忆与RAG]]。
+- 收尾后读 [[../01-SpringAI与LangChain4j对比|两框架对比]] 做最终选型。
 - 延伸：非 Spring 环境（Quarkus、纯 Java）的用法只做概念了解。
 
 ## 📌 这是什么
@@ -135,9 +135,9 @@ class AssistantConfig {
 
 ## 🔗 关联笔记
 
-- 本子区：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/03-记忆与RAG]]
-- 选型：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/01-SpringAI与LangChain4j对比|两框架对比]]
-- 项目落地：[[10-AI应用开发/08-项目实战/_index|08-项目实战]]
+- 本子区：[[01-LangChain4j核心概念]] · [[02-AiServices声明式AI服务]] · [[03-记忆与RAG]]
+- 选型：[[../01-SpringAI与LangChain4j对比|两框架对比]]
+- 项目落地：[[../../08-项目实战/_index|08-项目实战]]
 
 ## 📚 参考资料
 

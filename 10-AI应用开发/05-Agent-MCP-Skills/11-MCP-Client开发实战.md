@@ -129,7 +129,7 @@ String answer = orderAgent.prompt()
 - [[_index]]
 - [[09-MCP协议详解]]
 - [[10-MCP-Server开发-Java实战]]
-- [[10-AI应用开发/00-总览/学习仪表盘]]
+- [[../00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 

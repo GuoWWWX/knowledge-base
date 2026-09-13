@@ -18,8 +18,8 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **LangChain4j 子区第 3 课**。前置：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]]、[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]]（本课组件都是往 `AiServices` 里装配的"插槽"）。
-- 对照：Spring AI 的 [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/08-ChatMemory记忆|ChatMemory]] 与 [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/09-VectorStore向量存储|VectorStore]]——两边概念同源，API 不同。
+- **LangChain4j 子区第 3 课**。前置：[[01-LangChain4j核心概念]]、[[02-AiServices声明式AI服务]]（本课组件都是往 `AiServices` 里装配的"插槽"）。
+- 对照：Spring AI 的 [[../SpringAI/08-ChatMemory记忆|ChatMemory]] 与 [[../SpringAI/09-VectorStore向量存储|VectorStore]]——两边概念同源，API 不同。
 - 延伸：RAG 全链路（切分/向量化/检索/重排）详见 03-知识库技术-RAG 章，本课只讲框架侧组件。
 
 ## 📌 这是什么
@@ -109,7 +109,7 @@ String answer = assistant.chat("根据知识库回答：什么是 CAG？");
 ```
 
 - 检索结果太少 → 调大 `maxResults` / 换更好的 embedding 模型；太多 → 调小或加 rerank（见 RAG 章）。
-- 向量库选型（Redis/Milvus/PGVector）见 [[10-AI应用开发/03-知识库技术-RAG/15-向量库选型对比|RAG 章选型]]。
+- 向量库选型（Redis/Milvus/PGVector）见 [[../../03-知识库技术-RAG/15-向量库选型对比|RAG 章选型]]。
 - 记忆"记不住" → 检查 `maxMessages` 是否太小、`chatMemoryId` 是否每次都不同。
 
 ## ⚠️ 踩坑与注意事项
@@ -135,9 +135,9 @@ String answer = assistant.chat("根据知识库回答：什么是 CAG？");
 
 ## 🔗 关联笔记
 
-- 本子区：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/01-LangChain4j核心概念]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/02-AiServices声明式AI服务]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/04-与Spring生态集成]]
-- 对照：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/08-ChatMemory记忆|Spring AI 记忆]] · [[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/09-VectorStore向量存储|Spring AI 向量库]]
-- 深化：[[10-AI应用开发/03-知识库技术-RAG/_index|03-知识库技术-RAG]]
+- 本子区：[[01-LangChain4j核心概念]] · [[02-AiServices声明式AI服务]] · [[04-与Spring生态集成]]
+- 对照：[[../SpringAI/08-ChatMemory记忆|Spring AI 记忆]] · [[../SpringAI/09-VectorStore向量存储|Spring AI 向量库]]
+- 深化：[[../../03-知识库技术-RAG/_index|03-知识库技术-RAG]]
 
 ## 📚 参考资料
 

@@ -176,7 +176,7 @@ flowchart TD
 > 2. **MCP 完全可用**：Spring AI 已原生支持 MCP Server/Client
 > 3. **混合架构**：Java 后端做 MCP Server，Claude/Cursor 做 Agent + Skills 消费
 
-> 完整项目见：[[10-AI应用开发/08-项目实战/07-项目-业务Agent系统]]
+> 完整项目见：[[../08-项目实战/07-项目-业务Agent系统]]
 
 ---
 
@@ -184,8 +184,8 @@ flowchart TD
 
 - [ ] **不要过度组合**：简单任务别硬上三层，徒增复杂度和成本
 - [ ] **Skill 依赖 MCP 时要处理 Server 不可用**：降级策略
-- [ ] **Token 成本**：三层都带上下文，注意预算（见 [[10-AI应用开发/04-多轮对话与上下文工程/_index]]）
-- [ ] **可观测**：用 Langfuse 追踪 Agent→Skill→MCP 的完整链路（见 [[10-AI应用开发/06-平台与工程化/06-Langfuse接入]]）
+- [ ] **Token 成本**：三层都带上下文，注意预算（见 [[../04-多轮对话与上下文工程/_index]]）
+- [ ] **可观测**：用 Langfuse 追踪 Agent→Skill→MCP 的完整链路（见 [[../06-平台与工程化/06-Langfuse接入]]）
 
 ---
 
@@ -207,7 +207,7 @@ flowchart TD
 - [[09-MCP协议详解]]
 - [[13-Skills详解]]
 - [[16-AGENTS规范详解]]
-- [[10-AI应用开发/08-项目实战/07-项目-业务Agent系统]]
+- [[../08-项目实战/07-项目-业务Agent系统]]
 - [[_index]]
 
 ## 📚 参考资料

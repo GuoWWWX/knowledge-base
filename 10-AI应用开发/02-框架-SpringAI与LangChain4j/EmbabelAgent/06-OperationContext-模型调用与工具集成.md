@@ -379,7 +379,7 @@ Embabel Tool API 负责“如何暴露和调用”，不会替你完成桌面 Ag
 - 上一篇：[[05-规划器与三种执行模式]]
 - 下一篇：[[07-AgentInvocation与Process生命周期]]
 - Spring AI 工具：[[../SpringAI/06-Function-Calling工具调用]]
-- MCP 协议：[[10-AI应用开发/05-Agent-MCP-Skills/09-MCP协议详解]]
+- MCP 协议：[[../../05-Agent-MCP-Skills/09-MCP协议详解]]
 - 子区索引：[[_index]]
 
 ## 参考资料

@@ -17,7 +17,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 ---
 
-## 👔 核心心智模型：打工人的专属私密小口袋
+## 👔 ThreadLocal 核心设计思想与线程数据隔离
 
 在企业级 Web 开发中，我们经常遇到这种需求：
 > 用户发起一个 HTTP 请求。在 Controller 层拦截器拿到了用户的 `UserContext`（用户 ID、租户编码、链路跟踪 `TraceId`）。
@@ -47,9 +47,11 @@ flowchart TD
 
 ## 🔍 底层真相大揭秘：数据到底存在哪里？
 
-很多初学者直觉上以为：`ThreadLocal` 内部维护了一个巨大的全局 `ConcurrentHashMap<Thread, Object>`，以线程作为 Key 存数据。
+很多初学者看着 `threadLocal.set(user)`，直觉上以为数据是存在 `ThreadLocal` 实例里的，或者以为它内部维护了一个全局大 Map。
 
-**大错特错！现实恰恰完全相反！**
+**这是最大的认知误区！现实恰恰完全相反！**
+
+### 1. 核心架构关系
 
 ```mermaid
 classDiagram
@@ -67,9 +69,50 @@ classDiagram
     ThreadLocalMap --> Entry : 存放多份数据
 ```
 
-> 💡 **核心真相**：
-> 1. 数据根本不在 `ThreadLocal` 对象里，而是在**每个 `Thread` 线程对象自己的属性 `threadLocals` 里**！
-> 2. `ThreadLocal` 仅仅是一把**“钥匙（Key）”**，用来告诉当前线程：“请从你自己的口袋里，根据我这把钥匙把属于你的那份数据掏出来”。
+### 2. 源码级真相：`threadLocal.set(value)` 到底在干嘛？
+
+我们直接看 JDK 中 `ThreadLocal.java` 的底层源码，只有短短几行：
+
+```java
+// ThreadLocal.java 核心源码
+public void set(T value) {
+    // ① 获取当前正在执行这行代码的线程对象！
+    Thread t = Thread.currentThread();
+    
+    // ② 拿到这个线程对象自己肚子里私有的 Map (即 t.threadLocals 属性)
+    ThreadLocalMap map = getMap(t);
+    
+    // ③ 往该线程自己的私有 Map 里面存入：
+    //    Key   -> this（就是当前调用的 ThreadLocal 对象自己！）
+    //    Value -> 你传进来的业务大对象 value！
+    if (map != null) {
+        map.set(this, value);
+    } else {
+        createMap(t, value);
+    }
+}
+```
+
+再看 `get()` 是如何取回的：
+
+```java
+public T get() {
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null) {
+        // 以自己 (this) 为 Key，去当前线程的 Map 里查出 Entry
+        ThreadLocalMap.Entry e = map.getEntry(this);
+        if (e != null) {
+            return (T)e.value; // 取出关联的 Value！
+        }
+    }
+    return setInitialValue();
+}
+```
+
+> 💡 **核心总结**：
+> - **存储宿主**：数据根本不在 `ThreadLocal` 里，而是在**当前线程自己的 `Thread.currentThread().threadLocals` 成员变量中**（去中心化，每个人背自己的背包）；
+> - **角色分工**：`ThreadLocal` 实例自身只是一把**“钥匙（Key）”**，负责在调用 `set` / `get` 时走过去拉开当前线程自己的背包，按钥匙匹配读写对应格子的 Value。
 
 ---
 
@@ -95,9 +138,14 @@ flowchart LR
     Ref ==>|强引用| TLObj
     CurThread ==>|强引用| MapObj
     MapObj --> EntryObj
-    EntryObj -.->|🚨 弱引用 (WeakReference)| TLObj
+    EntryObj -.->|"🚨 弱引用 (WeakReference)"| TLObj
     EntryObj ==>|🚨 强引用| ValObj
 ```
+
+> 📌 **图中的变量名词通俗解读（扫清代码对照盲区）**：
+> - **`ThreadLocalRef`**：就是你在业务代码中声明的**变量名**（例如 `public static final ThreadLocal<User> HOLDER = new ThreadLocal<>()` 中的 `HOLDER`，或者方法内部的局部变量引用）。它是外部强引用的根（GC Root）。
+> - **`CurrentThreadRef`**：代表当前正在运行这段代码的线程实例（`Thread.currentThread()`）。
+> - **`t.threadLocals` 属性归属**：该属性 100% 属于 `Thread` 实例自身；`new ThreadLocal<>()` 时根本不会给线程赋值，而是在线程**第一次调用 `set()` 时才懒加载（按需分配）**创建出专属的 `ThreadLocalMap`。
 
 ### 🔬 逐帧慢动作分析：
 
@@ -111,6 +159,11 @@ flowchart LR
    - 此时存在一条顽固的强引用链：
      `Thread (常驻核心线程) -> ThreadLocalMap -> Entry -> Value (业务大对象)`
    - **结果**：Key 已经成了 null，你再也无法通过代码拿到这个 Value；但 GC 又因为强引用链的存在绝对不敢回收它！随着请求成千上万次涌入，这些无家可归的 Value 越堆越多，最终直接引爆 **`OutOfMemoryError`（OOM 内存溢出）！**
+3. **灵魂追问：既然如此，为什么不干脆把 Value 也设计成弱引用？**
+   - **致命灾难**：在业务代码中，当我们在拦截器或前置方法执行 `threadLocal.set(user)` 后，临时变量 `user` 随着方法出栈就会销毁。此时在整个堆内存中，**唯有当前线程的 `ThreadLocalMap` 还在引用这个 `user` 对象**！
+   - 如果 Value 也是弱引用，后续业务逻辑还在执行期间，只要 JVM 发生了一次垃圾回收（GC），**GC 会直接把没有任何强引用的 Value 当场扬了（回收成 `null`）**！
+   - 后续业务代码调 `threadLocal.get()` 就会凭空拿到 `null`，引发大量随机、无法复现的 `NullPointerException`！
+   - **设计结论**：为了履行业务契约（“只要线程在跑，数据绝不能凭空消失”），**Value 必须是强引用**；消除泄漏的唯一可靠方案是**在 `finally` 中显式调用 `remove()`**。
 
 ---
 
@@ -160,6 +213,27 @@ public class WebRequestInterceptor {
     }
 }
 ```
+
+### 🔬 源码解密：`remove()` 底层究竟做了什么？
+
+为什么只要调了 `remove()` 就能彻底根治内存泄漏？看 JDK 底层源码的“外科手术式”清理过程：
+
+```java
+// ThreadLocal.java
+public void remove() {
+    ThreadLocalMap m = getMap(Thread.currentThread());
+    if (m != null) {
+        m.remove(this); // 驱动当前线程自己的 Map 移除自身
+    }
+}
+
+// ThreadLocalMap 核心清理源码 (expungeStaleEntry)
+tab[i].value = null; // 💥 关键第 1 步：将 Entry 对业务大对象（Value）的强引用彻底剪断！
+tab[i] = null;       // 💥 关键第 2 步：将数组槽位里的 Entry 自身置为 null！
+size--;
+```
+
+- **结论**：`remove()` 物理切断了 `Entry -> Value` 的强引用链，使业务大对象沦为可被 GC 回收的垃圾，下一次 GC 即可彻底清场，从源头上消除了线程池长寿线程引发的内存泄漏！
 
 ---
 

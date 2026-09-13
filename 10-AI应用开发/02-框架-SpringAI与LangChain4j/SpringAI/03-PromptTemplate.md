@@ -18,7 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 3 课，输入组织**。前置：[[02-ChatClient与ChatModel]] 的调用方式；上一章 [[10-AI应用开发/01-LLM基础与Prompt/07-Prompt工程基础|Prompt 工程基础]] 讲“怎么写提示词”，本节讲“怎么在代码里模板化”。
+- **本章第 3 课，输入组织**。前置：[[02-ChatClient与ChatModel]] 的调用方式；上一章 [[../../01-LLM基础与Prompt/07-Prompt工程基础|Prompt 工程基础]] 讲“怎么写提示词”，本节讲“怎么在代码里模板化”。
 - **延伸**：把 RAG 检索结果注入模板见 [[09-VectorStore向量存储]]。
 
 ## 📌 这是什么
@@ -200,7 +200,7 @@ Prompt prompt = new PromptTemplate(template).create(vars);
 - [[02-ChatClient与ChatModel]]
 - [[09-VectorStore向量存储]]
 - [[07-Advisor拦截器]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
+- [[../_index]]
 
 ## 📚 参考资料
 

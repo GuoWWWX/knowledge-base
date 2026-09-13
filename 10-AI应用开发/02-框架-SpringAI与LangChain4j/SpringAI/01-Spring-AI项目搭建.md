@@ -18,7 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 1 课，Spring AI 的入门课**。前置：上一章 [[10-AI应用开发/01-LLM基础与Prompt/_index|LLM 基础与 Prompt]] 的模型、Token、Prompt 概念；本节目标是跑通“Spring Boot + Starter + 配置 + 调用”的最小链路。
+- **本章第 1 课，Spring AI 的入门课**。前置：上一章 [[../../01-LLM基础与Prompt/_index|LLM 基础与 Prompt]] 的模型、Token、Prompt 概念；本节目标是跑通“Spring Boot + Starter + 配置 + 调用”的最小链路。
 - **延伸**：调用入口的细节在下一课 [[02-ChatClient与ChatModel]]；多 Provider 接入在 [[05-多模型接入与切换]]。
 
 ## 📌 这是什么
@@ -161,7 +161,7 @@ curl "http://localhost:8080/chat?message=用一句话解释Spring AI"
 - [[02-ChatClient与ChatModel]]
 - [[05-多模型接入与切换]]
 - [[06-Function-Calling工具调用]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
+- [[../_index]]
 
 ## 📚 参考资料
 

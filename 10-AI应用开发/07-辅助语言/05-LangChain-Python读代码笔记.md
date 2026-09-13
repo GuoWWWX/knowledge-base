@@ -121,7 +121,7 @@ print(result.content)
 - [[01-Python速查-Java视角]]
 - [[02-uv包管理与环境]]
 - [[04-FastAPI起服务]]
-- [[10-AI应用开发/03-知识库技术-RAG/_index]]
+- [[../03-知识库技术-RAG/_index]]
 
 ## 📚 参考资料
 

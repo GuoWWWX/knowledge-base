@@ -22,7 +22,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 4 课，输出体验**。前置：[[02-ChatClient与ChatModel]] 的同步调用；本节把它升级为流式输出，会用到 Spring WebFlux 的 `Flux` 响应式流类型（只需基本用法；想深入理解事件循环、背压、为什么不能阻塞 IO，见 [[20-Java后端/04-Spring生态/09-WebFlux与响应式编程|WebFlux 与响应式编程]]）。
+- **本章第 4 课，输出体验**。前置：[[02-ChatClient与ChatModel]] 的同步调用；本节把它升级为流式输出，会用到 Spring WebFlux 的 `Flux` 响应式流类型（只需基本用法；想深入理解事件循环、背压、为什么不能阻塞 IO，见 [[../../../20-Java后端/04-Spring生态/09-WebFlux与响应式编程|WebFlux 与响应式编程]]）。
 - **延伸**：流式响应的工程注意点见本节“工程注意点”；前端消费方式见“EventSource”示例。
 
 ## 📌 这是什么
@@ -139,8 +139,8 @@ AI 聊天的“模型往前端吐字”优先选 SSE；如果需要用户中途�
 
 - [[02-ChatClient与ChatModel]]
 - [[01-Spring-AI项目搭建]]
-- [[20-Java后端/04-Spring生态/09-WebFlux与响应式编程]] —— Flux/事件循环/背压的原理篇
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
+- [[../../../20-Java后端/04-Spring生态/09-WebFlux与响应式编程]] —— Flux/事件循环/背压的原理篇
+- [[../_index]]
 
 ## 📚 参考资料
 

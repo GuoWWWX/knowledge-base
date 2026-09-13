@@ -6,202 +6,240 @@ tags:
   - 主题/并发
   - 阶段/03
 created: 2026-07-04
-updated: 2026-09-11
+updated: 2026-09-12
 status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
 
-# ⚡ 04 · CAS 与原子类（乐观派的智慧与高性能无锁方案）
+# 04 · CAS 原理与 JUC 原子类架构
 
-> **一句话导读**：嫌 `synchronized` 排队锁门太慢？CAS 带着“电影院选座抢票”的乐观思想登场，不用阻塞线程也能实现原子安全更新，更是整个 JUC 并发包的动力引擎。
+> **导读**：在高并发场景下，传统的悲观互斥锁（如 `synchronized`）因线程上下文切换及内核态开销，在读多写少或短临界区操作中往往成为性能瓶颈。CAS（Compare-And-Swap）作为现代多核 CPU 架构直接支持的硬件级原子原语，为 Java 提供了无锁（Lock-Free）并发编程的基石。本文深入拆解 CAS 硬件指令、JDK `Unsafe` 机制、ABA 问题的内存级危害与版本号解法，以及高性能分段累加器 `LongAdder` 应对缓存伪共享（False Sharing）的底层设计。
 
 ---
 
-## 🎟️ 核心心智模型：电影院选座抢票
+## 一、CAS 核心定义与运行模型
 
-面对“多人修改同一个共享数据”的难题，技术界分化出了两大哲学门派：
+### 1. 技术定义与三元操作数
+CAS（Compare-And-Swap，比较并交换）是一种基于乐观并发策略的原子操作。它包含三个核心操作数：
+- **`V`（Variable / Memory Offset）**：待操作的内存变量物理地址（内存偏移量）。
+- **`E`（Expected / Expected Value）**：操作执行前线程读取到的预期原始值。
+- **`U`（Update / New Value）**：校验成功后拟写入该内存地址的目标新值。
+
+**原子执行语义**：
+当且仅当内存地址 `V` 处的当前实时物理值等于预期值 `E` 时，处理器以不可中断的原子方式将该内存地址的值更新为 `U` 并返回 `true`；若内存值已被其他线程篡改导致不等于 `E`，则操作放弃更新并返回 `false`，由调用方自主决定是否重试（自旋）。
 
 ```mermaid
 flowchart TD
-    subgraph S1["悲观派：synchronized 互斥锁"]
-        A1["先锁大门，谁都不准进！<br/>我一个人挑完座位、付完款开门，<br/>下一个人才能进。"]
-        A2["优点：万无一失<br/>缺点：并发高时大家被堵在门外，极度卡顿"]
-    end
-
-    subgraph S2["乐观派：CAS 无锁机制"]
-        B1["大门敞开，大家一起挑座位！<br/>我看准 5 排 6 座是空的（预期值），提交支付；<br/>如果提交瞬间它还是空的，立刻占座成功；<br/>如果被别人抢先了 0.01 秒，本次失败，我立刻刷新重试！"]
-        B2["优点：不阻塞线程，极速响应<br/>缺点：竞争极惨烈时有人会一直重试消耗 CPU"]
-    end
+    Start["发起原子更新操作"] --> Read["1. 通过内存偏移量读取当前值作为 Expected"]
+    Read --> Calc["2. 计算目标新值 Update (如 Expected + 1)"]
+    Calc --> CAS{"3. 硬件级原子指令校验<br/>内存当前值 == Expected ?"}
+    CAS -- "是 (无并发冲突)" --> Write["原子写入 Update，返回 true"]
+    CAS -- "否 (已被并发篡改)" --> Fail["放弃写入，返回 false"]
+    Fail --> SpinCheck{"4. 是否继续自旋重试？"}
+    SpinCheck -- "自旋 (Spin)" --> Read
+    SpinCheck -- "退出" --> Done["返回失败状态"]
+    Write --> Done
 ```
 
----
+### 2. 乐观并发 vs 悲观互斥机制比对
 
-## 🔍 CAS 到底是什么？
-
-CAS 的全称是 **Compare And Swap（比较并交换）**，或者叫 **Compare And Set**。
-它由三个核心操作数构成：
-- **`V`（Variable）**：要修改的内存变量地址。
-- **`E`（Expected）**：我之前读到的预期旧值。
-- **`U`（Update）**：我准备写入的新值。
-
-### 核心运作逻辑：
-> **“我认为现在的数值是 E。如果是，请帮我改成 U；如果不是，说明别人趁我不注意改过了，请不要修改，并告诉我失败了，我再决定怎么做。”**
-
-```mermaid
-flowchart TD
-    Start["开始更新变量"] --> Read["1. 读取当前值，作为预期值 Expected"]
-    Read --> Calc["2. 本地计算新值 Update = Expected + 1"]
-    Calc --> CAS{"3. 执行硬件级原子 CAS 操作<br/>内存当前值 == Expected ?"}
-    CAS -- "是（无人篡改）" --> Success["写入 Update，返回 true（成功！）"]
-    CAS -- "否（被别人抢先了）" --> Fail["不写入，返回 false（失败！）"]
-    Fail --> Retry{"4. 是否自旋重试？"}
-    Retry -- "重试" --> Read
-    Retry -- "放弃" --> End["退出本次操作"]
-    Success --> End
-```
-
-### 💻 极简代码初体验
-
-```java
-import java.util.concurrent.atomic.AtomicInteger;
-
-public class CasBasicsDemo {
-    public static void main(String[] args) {
-        AtomicInteger ticket = new AtomicInteger(100);
-
-        // 尝试把 100 改为 101（成功，因为当前确实是 100）
-        boolean success1 = ticket.compareAndSet(100, 101);
-        System.out.println("第一次抢占结果：" + success1 + "，当前值：" + ticket.get()); // true, 101
-
-        // 再次尝试把 100 改为 102（失败！因为当前已经是 101 了，不符合预期 100）
-        boolean success2 = ticket.compareAndSet(100, 102);
-        System.out.println("第二次抢占结果：" + success2 + "，当前值：" + ticket.get()); // false, 101
-    }
-}
-```
-
----
-
-## 🔬 底层探秘：为什么 CAS 能做到“比对 + 赋值”不可分割？
-
-有同学会问：“你先比对再赋值，这不又是两步操作吗？难道中间不会被其他线程横插一脚？”
-
-**答案是：这是 CPU 硬件指令直接支持的原子操作！**
-- 在 Java 源码中，`AtomicInteger` 调用的是底层 `Unsafe` 类中的本地方法（native method）。
-- 在现代 x86 CPU 架构下，JVM 会把 CAS 方法直接翻译为汇编指令：`lock cmpxchg`。
-- **`lock` 前缀会锁住 CPU 缓存行（或总线）**，确保在比较和写入这微秒级的一瞬间，其他任何 CPU 核心绝对无法访问该内存地址！这是纯硬件层面的原子性承诺。
-
----
-
-## ⚠️ CAS 的三大软肋（大厂面试高频必考）
-
-天下没有免费的午餐，CAS 带来了无锁的高性能，但也伴随着三大天然缺陷：
-
-### 1. 循环开销大（高并发下 CPU 飙高 100%）
-- 如果 1000 个线程同时去 CAS 抢同一个计数器，只有 1 个能成功，其余 999 个全在 `while` 循环里不断自旋重试。
-- 这会导致 CPU 在空转中被疯狂消耗，甚至把服务器 CPU 跑满到 100%！
-
-### 2. 只能保证“单变量”的原子性
-- CAS 只能针对一个内存地址进行原子比对。
-- 如果你的业务逻辑需要**同时更新账户余额和扣减优惠券**（涉及两个独立变量），普通的 CAS 就无能为力了，必须借助锁或者把多个字段打包封装成一个复合对象。
-
-### 3. 经典的“ABA 问题”（偷梁换柱）
-
-#### 🎭 生活人话比喻：
-> 1. 你把一个装有 1000 元现金的保险箱（状态 A）锁在桌上出门了；
-> 2. 你的室友趁你不在，开箱把 1000 元拿去赌博输光，借高利贷换成了伪钞放回箱子里（状态 B）；
-> 3. 室友良心发现，又赚了 1000 元真钞换回来放好（状态 A）；
-> 4. 你回家打开箱子一看，里面还是 1000 元真钞（当前值依然是预期值 A），你欣喜地以为“什么都没发生过”！
-> 5. 但实际上，**过程已经被篡改过了，潜藏着巨大的隐患！**
-
-#### 💥 技术危害：
-在并发无锁栈/单向链表中，如果节点 A 被弹栈，B 成为栈顶，接着又有人把 A 放回栈顶。此时另一个线程以为 A 还是原来的 A，继续用它保存的旧 `next` 指针修改链表，会导致整个链表结构彻底错乱！
-
-#### 🛡️ 终极解药：带版本号的邮戳（`AtomicStampedReference`）
-不仅仅比对“数值对不对”，还要比对**“版本号（时间戳）对不对”**！
-
-```java
-import java.util.concurrent.atomic.AtomicStampedReference;
-
-public class AbaSolveDemo {
-    public static void main(String[] args) {
-        String initialRef = "A";
-        int initialStamp = 1; // 初始版本号 1
-
-        AtomicStampedReference<String> asr = new AtomicStampedReference<>(initialRef, initialStamp);
-
-        // 模拟别人把 A -> B (版本号+1 变为 2)
-        asr.compareAndSet("A", "B", 1, 2);
-        // 模拟别人又把 B -> A (版本号+1 变为 3)
-        asr.compareAndSet("B", "A", 2, 3);
-
-        // 此时数值虽然变回了 A，但版本号已经变成了 3！
-        // 偷懒的线程依然拿着旧版本号 1 来更新，必然失败！
-        boolean result = asr.compareAndSet("A", "C", 1, 4);
-        System.out.println("更新是否成功：" + result); // false！完美避坑！
-    }
-}
-```
-
----
-
-## 🚀 性能怪兽：LongAdder 为什么能吊打 AtomicLong？
-
-在超高并发场景下（例如双十一每秒几十万笔订单统计），`AtomicLong` 会因为多线程疯狂争抢同一个变量自旋重试而性能断崖式下跌。
-
-Java 8 为此祭出了一款性能怪兽：**`LongAdder`**。它的底层设计体现了极度精妙的架构哲学——**空间换时间，分段累加！**
-
-```mermaid
-flowchart TD
-    subgraph S1["AtomicLong：单窗口排队（大家挤爆打架）"]
-        T1["线程1"] & T2["线程2"] & T3["线程3"] & T4["线程4"] -->|狂抢同一个地址 CAS| AL["单一 volatile long value"]
-    end
-
-    subgraph S2["LongAdder：多窗口分流（分段 Cell 数组）"]
-        TA["线程 A"] --> CA["Cell[0] 计数器"]
-        TB["线程 B"] --> CB["Cell[1] 计数器"]
-        TC["线程 C"] --> CC["Cell[2] 计数器"]
-        TD["线程 D"] --> CD["Base 基础值"]
-        
-        CA & CB & CC & CD -->|最终调用 sum 汇总| SUM["总和 Result"]
-    end
-```
-
-### 核心运作机理：
-1. **低竞争时**：直接通过 CAS 修改基础值 `base`；
-2. **高竞争时**：检测到 CAS 冲突，立刻将压力分散到一个 `Cell[]` 数组中。每个线程通过自己的哈希值找到专属的 `Cell[i]` 独立累加，互不打扰！
-3. **统计结果时**：调用 `longAdder.sum()`，把 `base` 和各个 `Cell` 的数值加在一起即可。
-
-> 💡 **选型建议**：
-> - 纯累加统计类场景（PV、UV、请求量）：**无脑首选 `LongAdder`**，性能高出一个数量级！
-> - 需要精准保证当前值并依赖当前值做业务判断（如库存扣减、序号生成）：选择 `AtomicLong`。
-
----
-
-## 🧰 JUC 原子类家族全景图谱
-
-Java 在 `java.util.concurrent.atomic` 包下为我们备齐了全套开箱即用的原子工具：
-
-| 分类 | 核心类名 | 适用场景 |
+| 对比维度 | 悲观互斥锁（如 `synchronized` / `ReentrantLock`） | 乐观无锁机制（CAS / 原子类） |
 | :--- | :--- | :--- |
-| **基本类型** | `AtomicInteger`、`AtomicLong`、`AtomicBoolean` | 单个数值的原子加减、布尔开关翻转 |
-| **引用类型** | `AtomicReference`、`AtomicStampedReference` | 多个字段打包对象的原子替换、解决 ABA 问题 |
-| **数组类型** | `AtomicIntegerArray`、`AtomicReferenceArray` | 原子更新数组中的指定索引元素 |
-| **高性能累加** | `LongAdder`、`DoubleAdder`、`LongAccumulator` | 极高并发下的吞吐量压榨与分散统计 |
+| **核心假设** | 假设并发冲突概率极高，每次访问资源前必须先加锁独占。 | 假设并发冲突概率较低，先尝试无锁操作，发生冲突后再自旋重试。 |
+| **线程状态** | 未获取到锁的线程进入阻塞状态（`BLOCKED`/`WAITING`），涉及操作系统内核态切换与线程上下文切换（Context Switch）。 | 线程始终处于运行状态（`RUNNABLE`），在用户态执行自旋循环（Spin-Wait），零上下文切换成本。 |
+| **适用场景** | 临界区业务耗时长、并发竞争极度激烈的大粒度同步场景。 | 临界区极短（如单纯数值累加、引用交换）、读多写少的轻量级同步场景。 |
+| **性能瓶颈** | 线程挂起与唤醒的内核调用开销。 | 竞争极端激烈时持续自旋空转导致的 CPU 资源耗尽。 |
 
 ---
 
-## 🧠 一分钟复盘与思考题
+## 二、CAS 硬件级底层实现原理
 
-1. **问：为什么说 CAS 是一种“乐观锁”？**
-   - **答**：因为它假设每次去拿数据的时候别人都不会修改，所以不上锁直接干；只有在最后写回时才比对是否有人改过，冲突了就自旋重试。
-2. **问：ABA 问题在所有场景下都有害吗？**
-   - **答**：不是。如果只是纯数值运算（如只要账户余额还是 100 块就允许扣费），A 变 B 再变 A 通常不影响结果；但在**依赖节点版本轨迹、指针引用的链表/栈结构**中，ABA 会引发致命的死锁或结构断裂。
+### 1. `sun.misc.Unsafe` 与内存偏移量寻址
+在 Java 虚拟机中，原子类并不能直接访问物理内存指针，而是借助 `Unsafe` 类中的本地方法（Native Method）实现对内存数据的直接操作：
+
+```java
+// 以 AtomicInteger 源码为例
+public class AtomicInteger extends Number implements java.io.Serializable {
+    private static final Unsafe unsafe = Unsafe.getUnsafe();
+    private static final long valueOffset; // 字段在对象内存中的物理偏移量
+
+    static {
+        try {
+            // 在 JVM 类加载时，计算出 value 字段在对象堆内存中的相对起始偏移地址
+            valueOffset = unsafe.objectFieldOffset
+                (AtomicInteger.class.getDeclaredField("value"));
+        } catch (Exception ex) { throw new Error(ex); }
+    }
+
+    private volatile int value; // volatile 保证可见性
+
+    public final boolean compareAndSet(int expect, int update) {
+        // 调用 native 方法，直接通过对象基地址与偏移量进行内存 CAS
+        return unsafe.compareAndSwapInt(this, valueOffset, expect, update);
+    }
+}
+```
+
+### 2. CPU 指令集：`LOCK CMPXCHG`
+在 x86 多核处理器架构下，HotSpot 虚拟机的 `unsafe.cpp` 最终将 CAS 调用编译为一条汇编指令：**`lock cmpxchg`**。
+- **`cmpxchg` 指令**：单核 CPU 下，该指令本身即是原子性的，比较目标操作数与寄存器值，相等则写入新值。
+- **`lock` 前缀**：在多核（SMP）架构下，单纯的 `cmpxchg` 无法防御多个 CPU 核心同时访问同一内存地址。汇编指令添加 `lock` 前缀会触发硬件级总线仲裁：
+  1. **总线锁定（Bus Lock）**：早期处理器通过在系统总线上发出 `LOCK#` 信号，独占共享总线，阻塞其他核心的所有内存访问。
+  2. **缓存行锁定（Cache Line Lock）**：现代 CPU 普遍基于 **MESI 缓存一致性协议**，如果目标内存已被缓存在处理器的 Cache Line 中，`lock` 指令仅锁定该特定缓存行并强制写回主存，其他核心通过总线嗅探（Bus Snooping）使本地缓存行失效，大幅降低多核争用损耗。
+
+---
+
+## 三、CAS 的三大天然缺陷与工业级解决方案
+
+### 1. 缺陷一：高并发下自旋导致的 CPU 空转消耗
+- **技术现象**：当多线程对同一个变量发生激烈争用时，大量的 CAS 操作失败并陷入 `while (true)` 自旋重试。
+- **底层影响**：CPU 核心持续处于计算满载状态，引发 CPU 利用率飙高甚至占满 100%，挤占正常业务线程的算力。
+- **解决策略**：引入退避算法（如指数退避加自旋阈值），或改用分段锁/分段累加机制（如 `LongAdder`）。
+
+### 2. 缺陷二：只能保证单个共享变量的原子操作
+- **技术局限**：单个 CAS 操作只能作用于一个内存地址（4 字节或 8 字节字长），无法同时原子更新两个或多个独立变量（如同时扣减账户余额与记录流水号）。
+- **解决策略**：
+  1. 将多个变量封装到一个复合数据对象中，使用 **`AtomicReference`** 进行整个对象引用的原子 CAS 替换；
+  2. 退回到锁机制（`synchronized` 或 `ReentrantLock`）构建复合临界区。
+
+### 3. 缺陷三：经典的 ABA 问题（内存级深度分析）
+
+#### ① 什么是 ABA 问题？
+线程 T1 读取内存变量值为 A；在 T1 准备执行 CAS 之前，线程 T2 先后将变量修改为 B，随后又修改回 A。当 T1 发起 CAS 校验时，发现内存值依然是预期中的 A，校验通过并成功执行写入。但该变量在这段间隔期内实际经历了状态跃迁。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant RAM as 共享内存变量
+    participant T1 as 线程 T1 (慢速执行)
+    participant T2 as 线程 T2 (极速执行)
+
+    T1->>RAM: 1. 初始读取变量值 (得到 A)
+    Note over T1: 被系统挂起 / 执行复杂业务计算...
+    T2->>RAM: 2. 将变量由 A 原子修改为 B
+    T2->>RAM: 3. 再次将变量由 B 原子修改回 A
+    T1->>RAM: 4. 唤醒并执行 CAS(A, C)
+    RAM-->>T1: 5. 校验当前值仍为 A，更新成功！(但隐藏了中间变动)
+```
+
+#### ② 内存级破坏实战：无锁栈（Treiber Stack）节点丢失
+纯数值计算场景下 ABA 可能影响有限，但在**指针引用链表/栈数据结构**中，ABA 会导致毁灭性的拓扑结构崩塌：
+
+```mermaid
+flowchart TD
+    subgraph 初始状态
+        Top1["Top -> A"] --> B1["Node B"] --> C1["Node C"]
+    end
+    
+    subgraph 并发破坏过程
+        Action1["1. 线程1 准备弹出 A，记录 target=A, next=B"]
+        Action2["2. 线程2 介入，连续弹出 A 和 B，Top 指向 C"]
+        Action3["3. 线程2 重新将 A 压入栈顶，此时 Top->A，A.next->C"]
+        Action4["4. 线程1 恢复执行 CAS(Top, A, B) 成功！"]
+    end
+
+    subgraph 破坏后果
+        TopBroken["Top 错误指向脱节节点 B"] --> B_Broken["B.next = 已失效野指针"]
+        C_Lost["节点 C 彻底从链表断裂丢失，引发内存泄露与数据异常！"]
+    end
+```
+
+#### ③ 工业级解决方案：`AtomicStampedReference`
+不仅比对目标引用对象本身，还必须同时比对**整数版本号/时间戳（Stamp）**：
+```java
+// 内部封装一个包含引用对象与整型版本号的不可变 Pair 节点
+private static class Pair<T> {
+    final T reference;
+    final int stamp;
+    private Pair(T reference, int stamp) {
+        this.reference = reference;
+        this.stamp = stamp;
+    }
+    static <T> Pair<T> of(T reference, int stamp) {
+        return new Pair<T>(reference, stamp);
+    }
+}
+
+// 只有当 reference == expectedReference 且 stamp == expectedStamp 时才允许更新
+public boolean compareAndSet(V expectedReference, V newReference,
+                             int expectedStamp, int newStamp) {
+    Pair<V> current = pair;
+    return
+        expectedReference == current.reference &&
+        expectedStamp == current.stamp &&
+        ((newReference == current.reference &&
+          newStamp == current.stamp) ||
+         casPair(current, Pair.of(newReference, newStamp)));
+}
+```
+
+---
+
+## 四、超高性能分段累加器：LongAdder 底层机制
+
+在双十一等超高并发统计场景下，`AtomicLong` 会因为全网线程强抢同一个内存地址的 CAS 而导致吞吐量急剧下滑。JDK 8 引入的 `LongAdder` 采用**空间换时间、分段累加（Striped 64）**的思想，将单一竞争点拆分为多个分段。
+
+### 1. 架构拓扑与动态分流
+
+```mermaid
+flowchart TD
+    subgraph AtomicLong单一热点
+        T1["线程 1"] & T2["线程 2"] & T3["线程 3"] & T4["线程 4"] -->|"高并发竞争同一内存地址 CAS"| AL["volatile long value"]
+    end
+
+    subgraph LongAdder分段条带化设计
+        ThreadA["线程 A"] -->|"低冲突更新"| Base["base 基础字段"]
+        ThreadB["线程 B"] -->|"hash 寻址"| Cell0["Cell[0]"]
+        ThreadC["线程 C"] -->|"hash 寻址"| Cell1["Cell[1]"]
+        ThreadD["线程 D"] -->|"hash 寻址"| CellN["Cell[n]"]
+        
+        Base & Cell0 & Cell1 & CellN -->|"调用 sum() 遍历累加求和"| Total["最终聚合统计值"]
+    end
+```
+
+### 2. 避免 CPU 缓存伪共享（False Sharing）
+在多核架构中，CPU 缓存是以**缓存行（Cache Line，通常为 64 字节）**为基本读取单位的。如果 `Cell[]` 数组中的多个 `Cell` 对象在堆内存中物理相邻，它们极大概率会被加载进同一个 64 字节 Cache Line。
+- **伪共享灾难**：当核心 1 修改 `Cell[0]` 时，会导致核心 2 缓存的整个 Cache Line 失效；核心 2 修改 `Cell[1]` 又导致核心 1 的缓存失效。两个核心互不操作同一个变量，却在硬件缓存层发生剧烈震荡（Cache Line Ping-Pong）。
+- **HotSpot 应对方案**：在 `Cell` 类上标记 `@jdk.internal.vm.annotation.Contended` 注解。JVM 在对象的前后自动填充 128 字节的无用空间（Padding），确保每个 `Cell` 对象独自占据独立的缓存行，彻底消除伪共享。
+
+```java
+@jdk.internal.vm.annotation.Contended
+static final class Cell {
+    volatile long value;
+    Cell(long x) { value = x; }
+    final boolean cas(long cmp, long val) {
+        return UNSAFE.compareAndSwapLong(this, valueOffset, cmp, val);
+    }
+    // ...
+}
+```
+
+---
+
+### 场景演示：影院抢座与防伪验真
+
+- **在线选座提交（CAS 比较并交换）**：看准 5 排 8 号是空的（预期值 Expected），提交请求“若仍是空的则占下（写入 Update）”；若提交瞬间已被别人抢占，校验不通过即返回失败，手机页面自动刷新最新座位图重选（用户态自旋重试）；
+- **一次性递增防伪标签（`AtomicStampedReference` 解决 ABA）**：寄递名表时若只看外观（纯对象引用比较），途中被掉包又换回原样（A $\to$ B $\to$ A）无法察觉；若包裹封口贴上递增版本号标签（`Stamp`），只要拆封变动过版本号必然从 `1` 变为 `3`，比对版本不匹配即可识破篡改；
+- **多售票窗口分散排队（`LongAdder` 分段累加）**：超高并发抢票时不把所有人堆在一个窗口（`AtomicLong` 挤占同一变量自旋），而是分散到多个分窗口（`Cell[]` 数组）各自累计，最后合并求和。
+
+---
+
+## 六、JUC 原子类家族选型指南
+
+Java 在 `java.util.concurrent.atomic` 包下提供了功能完善的原子类矩阵，生产选型建议如下：
+
+| 分类 | 核心代表类 | 关键底层特征 | 典型适用场景 |
+| :--- | :--- | :--- | :--- |
+| **基础数值类型** | `AtomicInteger`、`AtomicLong`、`AtomicBoolean` | 单变量 CAS，基于 `volatile` + `Unsafe` 内存偏移量直接修改。 | 简单计数器、序列生成器、全局并发状态标志位。 |
+| **引用类型** | `AtomicReference`、`AtomicStampedReference` | 对象指针的 CAS 替换；带版本号版本解决 ABA 问题。 | 多字段复合业务状态的无锁替换、链表/栈等复杂无锁数据结构。 |
+| **数组类型** | `AtomicIntegerArray`、`AtomicReferenceArray` | 支持按数组下标索引对特定元素执行原子更新。 | 固定长度资源槽位管理、无锁哈希表存储桶更新。 |
+| **分段高性能累加** | `LongAdder`、`DoubleAdder`、`LongAccumulator` | Striped64 架构，多 Cell 槽位分散写压力，防缓存行伪共享。 | 超高并发下的吞吐量压榨统计（如 QPS 指标统计、大促网站 PV/UV 累加）。 |
 
 ---
 
 ## 🧭 下一步
 
-学完了 Java 原生的 `synchronized` 和轻量级的 `CAS`，我们即将进入 Java 并发世界真正的**重武器军械库——JUC（java.util.concurrent）**！
-而驱动 JUC 里所有高级锁（如 `ReentrantLock`、`Semaphore`）运转的底层超级引擎，就是传说中的 **AQS**。
-让我们走进下一篇：[[05-AQS原理]]！
+无论是 `synchronized` 的轻量级锁自旋，还是 JUC 中所有并发工具的内部计数驱动，底层都深深烙印着 CAS 的印记。
+然而，单纯依赖 CAS 无法解决“线程排队、按序唤醒、公平性调度”等复杂的锁协同需求。
+为此，Doug Lea 大师将 CAS 与 CLH 双向双链表队列融合，打造出了支撑整个 JUC 体系的航空母舰级核心框架——**AQS（AbstractQueuedSynchronizer）**。
+请进入下一篇：[[05-AQS原理]]！

@@ -200,7 +200,7 @@ sub.size();   // ConcurrentModificationException
 ## 🔗 关联笔记
 
 - 本课内：总纲 [[01-核心机制与选型]]；后续 [[03-Set实现-HashSet与TreeSet]] · [[04-HashMap原理与扩容]] · [[05-Map实现-LinkedHashMap与TreeMap]] · [[06-Queue实现-ArrayDeque与PriorityQueue]]
-- 延伸：[[20-Java后端/03-并发编程/08-并发容器-ConcurrentHashMap|并发容器]]（CopyOnWriteArrayList）
+- 延伸：[[../../03-并发编程/08-并发容器-ConcurrentHashMap|并发容器]]（CopyOnWriteArrayList）
 
 ## 📚 参考资料
 

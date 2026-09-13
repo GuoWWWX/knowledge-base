@@ -40,8 +40,8 @@ flowchart TD
         S1["把一条街拆成 16 个独立商铺 (Segment 数组)<br/>每个商铺是一把 ReentrantLock 锁。<br/>买米的去 1 号店，买水的去 2 号店，实现分段并发！<br/>缺点：并发度被写死（默认 16），结构太厚重。"]
     end
 
-    subgraph G3["第三代：JDK 1.8+ 的 ConcurrentHashMap (精准货架锁)"]
-        N1["彻底废除 Segment！回归单层 Node 数组。<br/>1. 货架空着：直接用 CAS 无锁写入 (极速零竞争)<br/>2. 货架有人：仅对该货架的【头节点】加 synchronized 锁！<br/>其他几千个货架完全自由并行，锁粒度细到极致！"]
+    subgraph G3["第三代：JDK 1.8+ 的 ConcurrentHashMap (精准槽位锁)"]
+        N1["彻底废除 Segment！回归单层 Node 数组。<br/>1. 槽位为空 (tabAt == null)：直接用 CAS 无锁写入头节点<br/>2. 槽位已有数据 (链表/红黑树)：仅对该槽位的【头节点】加 synchronized 锁！<br/>其他几千个槽位完全自由并行，锁粒度细到极致！"]
     end
 
     G1 --> G2 --> G3

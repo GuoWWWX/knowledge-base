@@ -7,28 +7,36 @@ status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
 
-# 📜 15 · Future 与 ForkJoin 任务模型（外卖小票与工作窃取算法）
+# 📜 15 · Future 与 ForkJoin 任务模型（异步凭证与工作窃取机制）
 
-> **一句话导读**：异步任务执行完了怎么拿结果？大任务怎么高效拆解？掌握了“外卖小票”`Future` 和“敏捷打工人偷活”`ForkJoinPool`，你就掌握了任务并行分治的核心思想。
+> **一句话导读**：异步任务如何获取计算结果？超大计算任务如何高效并行拆解？掌握 Future 异步凭证模型与 ForkJoinPool 的分治及工作窃取（Work-Stealing）算法，深入理解现代任务并发体系。
 
 ---
 
-## 🎟️ 心智模型 1：Future——外卖小票的爱与恨
+## 📜 核心概念：Future 异步结果模型
+ 
+在并发编程中，不同任务提交接口遵循不同的返回值契约：
+- **`Runnable`**：无返回值（`void run()`），仅负责异步触发执行，调用端无法直接拿到计算结果或捕获受检异常；
+- **`Callable<V>`**：具备返回值（`V call() throws Exception`），允许异步计算并抛出受检异常；
+- **`Future<V>`**：异步计算结果的占位凭证（Placeholder / Promise），代表一个在未来某个时间点可供读取的计算结果。
 
-我们平时提交任务：
-- `Runnable`：就像你派跑腿小哥去给朋友送花，你只管让他去（`void run()`），不需要他给你带回什么值。
-- `Callable<V>`：就像你去奶茶店点了一杯波霸奶茶，店员收了钱，会交给你一张**取餐小票（`Future<V>`）**。
+### 1. 异步结果获取生命周期
 
 ```mermaid
-flowchart LR
-    Client["你 (调用方线程)"] -->|1. submit(Callable)| Kitchen["🥤 奶茶吧台 (线程池)"]
-    Kitchen -- "2. 立即给你一张取餐小票" --> Ticket["🎫 Future 结果凭证"]
-    
-    Note over Client: 你拿着小票刷手机、逛商场...<br/>(主线程不阻塞)
-    
-    Client -->|3. future.get() 凭票取茶| Ticket
-    Ticket -.->|还没做好，只能站台前死等| Client
-    Ticket -->|做好了，拿走奶茶！| Client
+sequenceDiagram
+    actor Client as 调用方线程 (Caller)
+    participant Pool as 线程池 (ExecutorService)
+    participant Future as Future 结果凭据
+
+    Client->>Pool: 1. submit(Callable)
+    Pool-->>Client: 2. 立即返回 Future 凭据对象
+    Note over Client: 调用方非阻塞继续执行其他业务...
+    Client->>Future: 3. future.get() 尝试获取结果
+    alt 计算未就绪
+        Future-->>Client: 调用方阻塞等待
+    else 计算已完成
+        Future-->>Client: 返回结果并唤醒
+    end
 ```
 
 ### 💻 极简体验代码
@@ -40,21 +48,21 @@ public class FutureBasicsDemo {
     public static void main(String[] args) throws Exception {
         ExecutorService pool = Executors.newSingleThreadExecutor();
 
-        // 提交一个带返回值的任务
+        // 提交一个带返回值的异步任务
         Future<String> future = pool.submit(() -> {
-            Thread.sleep(1000); // 模拟耗时制作
-            return "🧋 珍珠奶茶（加冰五分糖）";
+            Thread.sleep(1000); // 模拟耗时远程计算或数据聚合
+            return "SUCCESS: 异步计算结果报表";
         });
 
-        System.out.println("主线程：拿到了外卖小票，先去刷刷短视频...");
+        System.out.println("主线程：已提交异步任务并持有 Future 凭证，继续执行本地其他逻辑...");
 
-        // 1. 检查是否做好了（非阻塞）
-        System.out.println("做好了吗？" + future.isDone()); // false
+        // 1. 检查任务是否已就绪（非阻塞）
+        System.out.println("任务已执行完毕？" + future.isDone()); // false
 
-        // 2. 凭票取餐：若没做完，get() 会在此阻塞死等！
-        // 💡 生产推荐：永远使用带超时的 get(2, TimeUnit.SECONDS)！
-        String drink = future.get(2, TimeUnit.SECONDS);
-        System.out.println("主线程：成功喝到 -> " + drink);
+        // 2. 获取异步结果：若计算未完成，get() 会在此阻塞等待！
+        // 💡 生产推荐：永远使用带超时的 get(timeout, unit)，规避依赖服务卡死！
+        String result = future.get(2, TimeUnit.SECONDS);
+        System.out.println("主线程：成功获取异步返回结果 -> " + result);
 
         pool.shutdown();
     }
@@ -78,7 +86,7 @@ public class FutureBasicsDemo {
 
 ---
 
-## 🪓 心智模型 2：ForkJoinPool——大包干拆解与敏捷高手“偷活”
+## 🪓 ForkJoinPool：任务分治拆解与工作窃取算法
 
 当你面临一个**体量极其庞大的 CPU 密集型任务**（例如计算 1 亿个整数的总和、超大规模图像像素处理）时，单线程算太慢，普通线程池拆分又太繁琐。
 
@@ -97,38 +105,38 @@ flowchart TD
     Fork2 --> Leaf1["叶子任务 1"] & Leaf2["叶子任务 2"]
     Fork3 --> Leaf3["叶子任务 3"] & Leaf4["叶子任务 4"]
     
-    Leaf1 & Leaf2 -->|join() 合并| Join1["局部结果 A"]
-    Leaf3 & Leaf4 -->|join() 合并| Join2["局部结果 B"]
-    Join1 & Join2 -->|最终 join() 汇总| Final["🏆 最终总和"]
+    Leaf1 & Leaf2 -->|"join() 合并"| Join1["局部结果 A"]
+    Leaf3 & Leaf4 -->|"join() 合并"| Join2["局部结果 B"]
+    Join1 & Join2 -->|"最终 join() 汇总"| Final["🏆 最终总和"]
 ```
 
 ---
 
-## 🥷 核心精髓：工作窃取算法（Work-Stealing）
+## ⚙️ 核心机制：工作窃取算法（Work-Stealing）
 
-很多团队总会有这种现象：活分下去之后，有的员工干得快，提前收工在摸鱼；有的员工分到的任务特别重，累死累活干不完。
+在递归分治场景下，不同子任务的计算复杂度或数据量可能存在差异，容易导致**线程负载失衡**：部分线程已执行完所有任务陷入空闲，而其他线程的队列中仍积压着大量未处理任务。
 
-`ForkJoinPool` 用极度精妙的机制杜绝了这种算力浪费：
+`ForkJoinPool` 通过**工作窃取算法（Work-Stealing）**充分压榨多核 CPU 算力：
 
 ```mermaid
 flowchart LR
-    subgraph W1["👨‍💻 敏捷员工 A (动作极快)"]
-        D1[("双端队列 A<br/>[空了！干完了！]")]
+    subgraph W1["工作线程 Worker 1 (私有队列已空)"]
+        D1[("双端队列 Deque 1<br/>[任务已清空]")]
     end
 
-    subgraph W2["👨‍💻 慢吞吞员工 B (任务沉重)"]
-        D2[("双端队列 B<br/>[任务1] [任务2] [任务3] [任务4]")]
+    subgraph W2["工作线程 Worker 2 (任务积压)"]
+        D2[("双端队列 Deque 2<br/>[头部: 任务1] [任务2] [任务3] [尾部: 任务4]")]
     end
 
-    W2 -->|1. 正常从队列头部取任务干| D2
-    W1 -.->|2. 发现自己队列空了，<br/>悄悄溜到 B 的尾部偷走任务4！| D2
+    W2 -->|"1. 正常从头部 (Top) LIFO 弹出任务执行"| D2
+    W1 -.->|"2. 自身队列为空，主动从 Worker 2 尾部 (Base) FIFO 窃取任务4"| D2
 ```
 
-1. 每个工作线程内部都有一个私有的**双端队列（Deque）**；
-2. 线程自己干活时，从自己队列的**头部（Head）**拿任务；
-3. 当一个敏捷线程把自己的队列全清空后，他绝不摸鱼休眠，而是主动去其他繁忙线程的队列**尾部（Tail）“窃取”一个任务**帮他执行！
-4. **为什么一个从头拿，一个从尾偷？**
-   - **完全避免冲突！** 两个线程访问队列的两端，几乎不需要加互斥大锁，极大降低了 CAS 竞争，将多核 CPU 的吞吐量压榨到了物理极致！
+### 底层运行规则与设计优势：
+1. **独立双端队列（WorkQueue）**：每个工作线程都维护一个私有的双端队列（基于数组循环队列实现的 Deque）；
+2. **本地 LIFO 访问**：工作线程在处理自己生成的子任务时，从私有队列的**头部（Top）压入和弹出**任务（后进先出），能够最大化利用 CPU 缓存局部性（Cache Locality）；
+3. **窃取端 FIFO 访问**：当空闲工作线程的队列为空时，它会作为“窃取者（Stealer）”随机选择另一个工作队列，从其**尾部（Base）窃取**任务（先进先出）；
+4. **两端操作消除竞争**：拥有者从头部存取，窃取者从尾部窃取，**访问队列两端天然隔离**，绝大部分情况下无需加全局互斥锁，仅在队列仅剩最后一个元素时通过 CAS 协同，极大降低了线程间争抢的开销。
 
 ---
 

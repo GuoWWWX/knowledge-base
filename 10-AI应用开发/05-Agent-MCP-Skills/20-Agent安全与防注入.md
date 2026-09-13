@@ -131,7 +131,7 @@ String answer = chatClient.prompt()
 - [[_index]]
 - [[16-AGENTS规范详解]]
 - [[17-Agent-MCP-Skills组合实战]]
-- [[10-AI应用开发/00-总览/学习仪表盘]]
+- [[../00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 

@@ -54,7 +54,7 @@ mastery: ⭐☆☆☆☆
 
 ## 相关
 
-- 上级：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index|02 · Java AI 框架总览]]
-- 基础能力：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/SpringAI/_index|Spring AI 子区]]
-- 对照框架：[[10-AI应用开发/02-框架-SpringAI与LangChain4j/LangChain4j/_index|LangChain4j 子区]]
-- 后续生产化：[[10-AI应用开发/05-Agent-MCP-Skills/_index|Agent、MCP 与 Skills]]
+- 上级：[[../_index|02 · Java AI 框架总览]]
+- 基础能力：[[../SpringAI/_index|Spring AI 子区]]
+- 对照框架：[[../LangChain4j/_index|LangChain4j 子区]]
+- 后续生产化：[[../../05-Agent-MCP-Skills/_index|Agent、MCP 与 Skills]]

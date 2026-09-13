@@ -19,7 +19,7 @@ mastery: ⭐☆☆☆☆
 ## 🎯 本节定位
 
 - **本章第 9 课，RAG 检索底座**。前置：[[03-PromptTemplate]]、[[07-Advisor拦截器]]；本节讲 `VectorStore` 的写入、相似度检索与注入 Prompt。
-- **延伸**：完整 RAG 工程（文档解析、切分、Embedding、召回、评估）在下一章 [[10-AI应用开发/03-知识库技术-RAG/_index|知识库技术 RAG]]。
+- **延伸**：完整 RAG 工程（文档解析、切分、Embedding、召回、评估）在下一章 [[../../03-知识库技术-RAG/_index|知识库技术 RAG]]。
 
 ## 📌 这是什么
 
@@ -59,7 +59,7 @@ flowchart LR
 | `QuestionAnswerAdvisor` | 把检索结果自动注入 Prompt |
 
 > [!info] 版本说明（2026-08）
-> Spring AI 2.0 精简了向量库实现清单（移除 SAP HANA / Infinispan 模块），当前主流实现为 pgvector、Redis、Milvus、Chroma、MongoDB Atlas、Elasticsearch、Qdrant 等；本课讲的是与实现无关的抽象层（`VectorStore` 接口），选型见 [[10-AI应用开发/03-知识库技术-RAG/15-向量库选型对比|RAG 章向量库选型]]。
+> Spring AI 2.0 精简了向量库实现清单（移除 SAP HANA / Infinispan 模块），当前主流实现为 pgvector、Redis、Milvus、Chroma、MongoDB Atlas、Elasticsearch、Qdrant 等；本课讲的是与实现无关的抽象层（`VectorStore` 接口），选型见 [[../../03-知识库技术-RAG/15-向量库选型对比|RAG 章向量库选型]]。
 
 ---
 
@@ -142,8 +142,8 @@ String answer = chatClient.prompt()
 
 - [[03-PromptTemplate]]
 - [[07-Advisor拦截器]]
-- [[10-AI应用开发/03-知识库技术-RAG/_index]]
-- [[10-AI应用开发/02-框架-SpringAI与LangChain4j/_index]]
+- [[../../03-知识库技术-RAG/_index]]
+- [[../_index]]
 
 ## 📚 参考资料
 
