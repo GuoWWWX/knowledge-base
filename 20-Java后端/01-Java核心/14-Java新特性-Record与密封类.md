@@ -381,20 +381,21 @@ record 生成的 `equals` 对引用类型调用的是 `Objects.equals`，而数�
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - **Q: record 和 Lombok `@Data` 的区别？**
->   - **30 秒**：record 是语言特性，编译器保证类是 final、组件是 final、值语义方法与组件列表永久同步；`@Data` 是编译期代码生成，默认生成的是**可变** JavaBean（带 setter）。
->   - **2 分钟**：补三点。① record 能被 `Class#isRecord`/`getRecordComponents` 识别，框架可以针对它做特殊处理，Lombok 生成完就和手写类没区别；② record 不能继承类、不能加实例字段，约束更强；③ 迁移边界——JPA 实体不能换成 record（要无参构造器、setter、代理），DTO 可以。
-> - **Q: record 是不可变的吗？**
->   - **30 秒**：是浅不可变。组件字段是 `final`，但组件指向的可变对象（List、Map、数组、可变自定义类）内容照样能改。
->   - **2 分钟**：补 compact constructor 做防御性拷贝的写法，以及"外部原始引用和内部是同一对象"这个更隐蔽的泄漏路径。
-> - **Q: sealed 和 enum、final 怎么选？**
->   - **30 秒**：能列举所有取值且不带数据 → enum；类型固定但每种带不同数据 → sealed + record；不需要子类型 → final。
->   - **2 分钟**：补 sealed 的真正价值是穷尽检查——把"新增类型后漏改 switch"从线上 bug 变成编译错误；补 enum 的 `isSealed()` 是 `false`，两套机制不要混。
-> - **Q: sealed 怎么防止被绕过？**
->   - **30 秒**：`PermittedSubclasses` 属性写进 class 文件，编译期 + 类加载期双重校验，且子类必须与 sealed 类型同模块（或同包）。
->   - **2 分钟**：补类加载期抛的是 `IncompatibleClassChangeError`；补子类必须显式标 `final`/`sealed`/`non-sealed`，`non-sealed` 是主动放开这一支的继承。
+> [!question]- record 和 Lombok `@Data` 的区别？
+> - **30 秒**：record 是语言特性，编译器保证类是 final、组件是 final、值语义方法与组件列表永久同步；`@Data` 是编译期代码生成，默认生成的是**可变** JavaBean（带 setter）。
+> - **2 分钟**：补三点。① record 能被 `Class#isRecord`/`getRecordComponents` 识别，框架可以针对它做特殊处理，Lombok 生成完就和手写类没区别；② record 不能继承类、不能加实例字段，约束更强；③ 迁移边界——JPA 实体不能换成 record（要无参构造器、setter、代理），DTO 可以。
 
+> [!question]- record 是不可变的吗？
+> - **30 秒**：是浅不可变。组件字段是 `final`，但组件指向的可变对象（List、Map、数组、可变自定义类）内容照样能改。
+> - **2 分钟**：补 compact constructor 做防御性拷贝的写法，以及"外部原始引用和内部是同一对象"这个更隐蔽的泄漏路径。
+
+> [!question]- sealed 和 enum、final 怎么选？
+> - **30 秒**：能列举所有取值且不带数据 → enum；类型固定但每种带不同数据 → sealed + record；不需要子类型 → final。
+> - **2 分钟**：补 sealed 的真正价值是穷尽检查——把"新增类型后漏改 switch"从线上 bug 变成编译错误；补 enum 的 `isSealed()` 是 `false`，两套机制不要混。
+
+> [!question]- sealed 怎么防止被绕过？
+> - **30 秒**：`PermittedSubclasses` 属性写进 class 文件，编译期 + 类加载期双重校验，且子类必须与 sealed 类型同模块（或同包）。
+> - **2 分钟**：补类加载期抛的是 `IncompatibleClassChangeError`；补子类必须显式标 `final`/`sealed`/`non-sealed`，`non-sealed` 是主动放开这一支的继承。
 ## 🪝 记忆钩子
 
 - **"浅不可变 = 箱子焊死了，箱盖没锁。"** 想真锁上，compact constructor 里 `List.copyOf`。

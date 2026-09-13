@@ -240,16 +240,17 @@ java \
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - **Q: CPU 飙高怎么排查到代码行？**
->   - A: `top -H -p <pid>` 找 CPU 高的线程 TID，转十六进制，`jstack -l <pid>` 找对应 `nid` 的栈帧；精确场景用 JFR 或 async-profiler 生成火焰图定位热点方法。
-> - **Q: jmap -histo:live 和 -histo 有什么区别？风险在哪？**
->   - A: `-histo:live` 先触发一次 Full GC 再统计，结果更准确但会 STW 并产生停顿，大堆风险大；`-histo` 直接统计当前堆，包含部分待回收对象，生产优先用后者或 `jcmd GC.class_histogram`。
-> - **Q: 什么情况下才 dump 堆？**
->   - A: 确定是内存泄漏且 jstat/histo 无法定位时。dump 前要确认：①从节点或低峰期执行 ②磁盘空间足够（大堆 dump 几个 G）③做好回滚预案。平时应配置 `-XX:+HeapDumpOnOutOfMemoryError` 让 OOM 自动触发。
-> - **Q: Arthas trace 和 watch 的区别？**
->   - A: `trace` 展示方法内部的调用树和每层耗时（适合定位慢在哪一步）；`watch` 观察指定方法的入参、返回值、异常和耗时（适合调试参数/返回是否正确）。两者都要加条件避免高频刷入打垮服务。
+> [!question]- CPU 飙高怎么排查到代码行？
+> `top -H -p <pid>` 找 CPU 高的线程 TID，转十六进制，`jstack -l <pid>` 找对应 `nid` 的栈帧；精确场景用 JFR 或 async-profiler 生成火焰图定位热点方法。
 
+> [!question]- jmap -histo:live 和 -histo 有什么区别？风险在哪？
+> `-histo:live` 先触发一次 Full GC 再统计，结果更准确但会 STW 并产生停顿，大堆风险大；`-histo` 直接统计当前堆，包含部分待回收对象，生产优先用后者或 `jcmd GC.class_histogram`。
+
+> [!question]- 什么情况下才 dump 堆？
+> 确定是内存泄漏且 jstat/histo 无法定位时。dump 前要确认：①从节点或低峰期执行 ②磁盘空间足够（大堆 dump 几个 G）③做好回滚预案。平时应配置 `-XX:+HeapDumpOnOutOfMemoryError` 让 OOM 自动触发。
+
+> [!question]- Arthas trace 和 watch 的区别？
+> `trace` 展示方法内部的调用树和每层耗时（适合定位慢在哪一步）；`watch` 观察指定方法的入参、返回值、异常和耗时（适合调试参数/返回是否正确）。两者都要加条件避免高频刷入打垮服务。
 ## ✅ 精通检查清单
 
 - 能说出 CPU 高、内存涨、接口慢三条完整排查链路（命令 + 关注点 + 下一步）。

@@ -136,20 +136,23 @@ void afterNodeAccess(Node<K,V> e) {
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: LinkedHashMap 怎么实现有序的？
->   - A: 在 HashMap 基础上给每个节点加 before/after 指针串成双向链表，put 后 afterNodeInsertion 把节点挂到链表尾，遍历走链表即插入序。
-> - Q: 怎么用 LinkedHashMap 实现 LRU？
->   - A: 构造传 accessOrder=true（访问序），覆写 removeEldestEntry 返回 size()>capacity。get 命中节点被移到链表尾，链表头永远最久未访问，超容量即淘汰。
-> - Q: HashMap 和 TreeMap 的区别？
->   - A: HashMap 哈希表：无序、O(1)、允许 null；TreeMap 红黑树：按 key 排序、O(log n)、不允许 null key、支持范围查询（floor/subMap）。要排序才用 TreeMap。
-> - Q: TreeMap 为什么是 O(log n)？怎么保证平衡？
->   - A: 底层红黑树，插入后 fixAfterInsertion 旋转+变色维持平衡，树高 ≤ 2·log₂(n+1)，操作都从根走树高步。旋转细节在算法章节。
-> - Q: TreeMap 为什么不允许 null key？（HashMap 却允许）
->   - A: TreeMap 插入时要调用 compareTo/compare 比较 key，null 无法比较会 NPE；HashMap 用 hash 定位桶，null 有固定位置（table[0]）所以允许。
-> - Q: subMap 返回的是什么？
->   - A: 视图（不是拷贝）：原 map 的结构修改会反映到视图，遍历视图时可能抛 ConcurrentModificationException。
+> [!question]- LinkedHashMap 怎么实现有序的？
+> 在 HashMap 基础上给每个节点加 before/after 指针串成双向链表，put 后 afterNodeInsertion 把节点挂到链表尾，遍历走链表即插入序。
 
+> [!question]- 怎么用 LinkedHashMap 实现 LRU？
+> 构造传 accessOrder=true（访问序），覆写 removeEldestEntry 返回 size()>capacity。get 命中节点被移到链表尾，链表头永远最久未访问，超容量即淘汰。
+
+> [!question]- HashMap 和 TreeMap 的区别？
+> HashMap 哈希表：无序、O(1)、允许 null；TreeMap 红黑树：按 key 排序、O(log n)、不允许 null key、支持范围查询（floor/subMap）。要排序才用 TreeMap。
+
+> [!question]- TreeMap 为什么是 O(log n)？怎么保证平衡？
+> 底层红黑树，插入后 fixAfterInsertion 旋转+变色维持平衡，树高 ≤ 2·log₂(n+1)，操作都从根走树高步。旋转细节在算法章节。
+
+> [!question]- TreeMap 为什么不允许 null key？（HashMap 却允许）
+> TreeMap 插入时要调用 compareTo/compare 比较 key，null 无法比较会 NPE；HashMap 用 hash 定位桶，null 有固定位置（table[0]）所以允许。
+
+> [!question]- subMap 返回的是什么？
+> 视图（不是拷贝）：原 map 的结构修改会反映到视图，遍历视图时可能抛 ConcurrentModificationException。
 ## 🛠️ 排查 / 实践要点
 
 - 遍历顺序敏感的业务（报表、展示顺序）用 LinkedHashMap，别依赖 HashMap 的"恰好顺序"。

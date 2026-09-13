@@ -136,18 +136,20 @@ private void siftUpComparable(int k, E x) {       // k = 新元素下标（尾�
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: ArrayDeque 和 LinkedList 都能当队列，选哪个？
->   - A: ArrayDeque：循环数组、连续内存缓存友好、头尾 O(1)、无节点开销；LinkedList：节点分散、内存 3 倍。双端队列/栈一律 ArrayDeque。
-> - Q: 为什么 ArrayDeque 不允许 null？Stack 为什么不用？
->   - A: ArrayDeque 源码用"元素是否为 null"判断槽位空/满，存 null 会破坏该逻辑（实现层面）；Stack 是 JDK 1.0 遗留、全方法 synchronized 性能差，用 ArrayDeque 替代。
-> - Q: PriorityQueue 底层是什么？复杂度？
->   - A: 二叉堆（数组实现），入队 siftUp 上浮、出队 siftDown 下沉，都是 O(log n)；默认小顶堆，传 Comparator.reverseOrder() 变大顶堆。
-> - Q: 怎么用 PriorityQueue 求 TopK？
->   - A: 求最大 K 个用大小为 K 的小顶堆：比堆顶大就替换（poll+offer），堆顶就是第 K 大；时间复杂度 O(n log K)。
-> - Q: PriorityQueue 能放 null 吗？迭代顺序是优先级顺序吗？
->   - A: 不能，插入要 compareTo，null 会 NPE。迭代顺序是数组（堆）顺序不是优先级顺序，要按序取只能 poll。
+> [!question]- ArrayDeque 和 LinkedList 都能当队列，选哪个？
+> ArrayDeque：循环数组、连续内存缓存友好、头尾 O(1)、无节点开销；LinkedList：节点分散、内存 3 倍。双端队列/栈一律 ArrayDeque。
 
+> [!question]- 为什么 ArrayDeque 不允许 null？Stack 为什么不用？
+> ArrayDeque 源码用"元素是否为 null"判断槽位空/满，存 null 会破坏该逻辑（实现层面）；Stack 是 JDK 1.0 遗留、全方法 synchronized 性能差，用 ArrayDeque 替代。
+
+> [!question]- PriorityQueue 底层是什么？复杂度？
+> 二叉堆（数组实现），入队 siftUp 上浮、出队 siftDown 下沉，都是 O(log n)；默认小顶堆，传 Comparator.reverseOrder() 变大顶堆。
+
+> [!question]- 怎么用 PriorityQueue 求 TopK？
+> 求最大 K 个用大小为 K 的小顶堆：比堆顶大就替换（poll+offer），堆顶就是第 K 大；时间复杂度 O(n log K)。
+
+> [!question]- PriorityQueue 能放 null 吗？迭代顺序是优先级顺序吗？
+> 不能，插入要 compareTo，null 会 NPE。迭代顺序是数组（堆）顺序不是优先级顺序，要按序取只能 poll。
 ## 🛠️ 排查 / 实践要点
 
 - "栈"不要用 Stack、队列不要用 LinkedList 当默认：`new ArrayDeque<>()` 一把梭。

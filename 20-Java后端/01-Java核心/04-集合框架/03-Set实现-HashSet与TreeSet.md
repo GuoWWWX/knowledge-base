@@ -163,20 +163,23 @@ Comparator<User> cmp = Comparator.comparing(User::name).thenComparing(User::id);
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: HashSet 为什么能去重？底层是什么？
->   - A: 底层是 HashMap，元素作为 key、value 是固定占位对象 PRESENT。add 时 map.put(e, PRESENT)，重复（equals 相等）时 put 只覆盖占位对象并返回旧值 → add 返回 false。去重完全依赖 key 的 equals/hashCode。
-> - Q: HashSet、LinkedHashSet、TreeSet 的区别？
->   - A: 三者都委托 Map：HashSet 用 HashMap（无序、O(1)）；LinkedHashSet 用 LinkedHashMap（保插入序、O(1)）；TreeSet 用 TreeMap（按比较器排序、O(log n)）。要保序/排序才用后两者，默认 HashSet。
-> - Q: hashCode 相同但 equals 不同会怎样？
->   - A: 两个对象散到同一桶（哈希冲突），contains 时 equals 逐个比较后返回 false——两个都保留在 Set 里，只是桶变长、性能下降（HashMap 会树化，见 07 课）。
-> - Q: Comparable 和 Comparator 的区别？
->   - A: Comparable 是元素自身实现（自然序，一个 compareTo）；Comparator 是外部策略（可多个、可 Lambda、不改类）。TreeSet/TreeMap 两者都支持，List.sort/Stream.sorted 用 Comparator。
-> - Q: TreeSet 为什么不允许 null？
->   - A: 底层红黑树插入时要调用 compareTo/compare 比较，null 无法参与比较会抛 NPE，所以 TreeSet/TreeMap 拒绝 null key。
-> - Q: 去重保序怎么做？
->   - A: `new LinkedHashSet<>(list)` 或 `new ArrayList<>(new LinkedHashSet<>(list))`——去重且保持原顺序；TreeSet 是排序序不是插入序，别混。
+> [!question]- HashSet 为什么能去重？底层是什么？
+> 底层是 HashMap，元素作为 key、value 是固定占位对象 PRESENT。add 时 map.put(e, PRESENT)，重复（equals 相等）时 put 只覆盖占位对象并返回旧值 → add 返回 false。去重完全依赖 key 的 equals/hashCode。
 
+> [!question]- HashSet、LinkedHashSet、TreeSet 的区别？
+> 三者都委托 Map：HashSet 用 HashMap（无序、O(1)）；LinkedHashSet 用 LinkedHashMap（保插入序、O(1)）；TreeSet 用 TreeMap（按比较器排序、O(log n)）。要保序/排序才用后两者，默认 HashSet。
+
+> [!question]- hashCode 相同但 equals 不同会怎样？
+> 两个对象散到同一桶（哈希冲突），contains 时 equals 逐个比较后返回 false——两个都保留在 Set 里，只是桶变长、性能下降（HashMap 会树化，见 07 课）。
+
+> [!question]- Comparable 和 Comparator 的区别？
+> Comparable 是元素自身实现（自然序，一个 compareTo）；Comparator 是外部策略（可多个、可 Lambda、不改类）。TreeSet/TreeMap 两者都支持，List.sort/Stream.sorted 用 Comparator。
+
+> [!question]- TreeSet 为什么不允许 null？
+> 底层红黑树插入时要调用 compareTo/compare 比较，null 无法参与比较会抛 NPE，所以 TreeSet/TreeMap 拒绝 null key。
+
+> [!question]- 去重保序怎么做？
+> `new LinkedHashSet<>(list)` 或 `new ArrayList<>(new LinkedHashSet<>(list))`——去重且保持原顺序；TreeSet 是排序序不是插入序，别混。
 ## 🛠️ 排查 / 实践要点
 
 - "contains 慢"：`List.contains` O(n) → `HashSet` O(1)（本课的核心价值场景）。

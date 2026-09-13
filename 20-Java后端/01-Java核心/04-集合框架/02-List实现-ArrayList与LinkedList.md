@@ -140,18 +140,20 @@ Node<E> node(int index) {
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: ArrayList 和 LinkedList 怎么选？
->   - A: ArrayList 连续数组：随机访问 O(1)、缓存友好、尾部追加平均 O(1)（偶尔扩容慢一次）；LinkedList 按下标定位 O(n)、节点开销大（约 3 倍内存）、缓存差，只有已持节点引用时的插入/删除才 O(1)。业务默认 ArrayList。
-> - Q: ArrayList 扩容机制？为什么 1.5 倍？
->   - A: 容量满时 grow：`oldCapacity + (oldCapacity >> 1)` 扩 1.5 倍，`Arrays.copyOf` 搬到新数组。1.5 倍是搬移次数与空间浪费的折中（2 倍闲置可达一半，1.5 倍约 1/3）；平均下来尾部 add 仍是 O(1)。
-> - Q: ArrayList 和 Vector 的区别？
->   - A: Vector 是 JDK 1.0 遗留类，方法全 synchronized（线程安全但慢），扩容 2 倍；ArrayList 不同步、扩容 1.5 倍。单线程用 ArrayList，多线程用并发容器（CopyOnWriteArrayList，见并发章节）。
-> - Q: ArrayList 的 remove(int) 为什么是 O(n)？
->   - A: 删除后要把后面的元素通过 System.arraycopy 整体前移一位；删尾部则无需搬移。
-> - Q: 为什么说 LinkedList 插入不一定快？
->   - A: add(index, e) 要先 node(index) 从头部或尾部遍历定位（O(n)），定位成本 + 节点分配成本往往超过 ArrayList 的数组移动；只有持有节点引用时（迭代器内）才 O(1)。
+> [!question]- ArrayList 和 LinkedList 怎么选？
+> ArrayList 连续数组：随机访问 O(1)、缓存友好、尾部追加平均 O(1)（偶尔扩容慢一次）；LinkedList 按下标定位 O(n)、节点开销大（约 3 倍内存）、缓存差，只有已持节点引用时的插入/删除才 O(1)。业务默认 ArrayList。
 
+> [!question]- ArrayList 扩容机制？为什么 1.5 倍？
+> 容量满时 grow：`oldCapacity + (oldCapacity >> 1)` 扩 1.5 倍，`Arrays.copyOf` 搬到新数组。1.5 倍是搬移次数与空间浪费的折中（2 倍闲置可达一半，1.5 倍约 1/3）；平均下来尾部 add 仍是 O(1)。
+
+> [!question]- ArrayList 和 Vector 的区别？
+> Vector 是 JDK 1.0 遗留类，方法全 synchronized（线程安全但慢），扩容 2 倍；ArrayList 不同步、扩容 1.5 倍。单线程用 ArrayList，多线程用并发容器（CopyOnWriteArrayList，见并发章节）。
+
+> [!question]- ArrayList 的 remove(int) 为什么是 O(n)？
+> 删除后要把后面的元素通过 System.arraycopy 整体前移一位；删尾部则无需搬移。
+
+> [!question]- 为什么说 LinkedList 插入不一定快？
+> add(index, e) 要先 node(index) 从头部或尾部遍历定位（O(n)），定位成本 + 节点分配成本往往超过 ArrayList 的数组移动；只有持有节点引用时（迭代器内）才 O(1)。
 ## 🛠️ 排查 / 实践要点
 
 - 大批量数据：`new ArrayList<>(n)` 预容量，避免多次扩容移动。

@@ -138,24 +138,17 @@ flowchart TD
 
 ## 4. 大厂 30 秒面试绝杀（高频追问 3 连击）
 
-### Q1：在整个请求过程中，数据库连接（Connection）到底是在哪一瞬间从连接池借出的？又是在何时归还的？
-> **答题标杆**：
+> [!question]- Q1：在整个请求过程中，数据库连接（Connection）到底是在哪一瞬间从连接池借出的？又是在何时归还的？
 > 1. **借出时机**：当执行流穿过 Controller 进入被 `@Transactional` 修饰的 Service 方法时，Spring 的 `TransactionInterceptor` 会触发 `DataSourceTransactionManager.doBegin()`。**正是在这一刻，Spring 首次向 HikariCP 发起 `dataSource.getConnection()` 借出连接**，并立即执行 `connection.setAutoCommit(false)`，随后将该连接绑定到当前线程的 `ThreadLocal` 中。
 > 2. **归还时机**：Service 方法执行结束（正常返回或抛出未捕获异常），`TransactionAspectSupport` 触发 `commitTransactionAfterReturning` 或回滚。在 `finally` 块中，Spring 调用 `DataSourceUtils.releaseConnection()`，清除 `ThreadLocal` 绑定，**将该物理连接归还（Close）回 HikariCP 连接池**。
 > 3. **生产架构警示**：绝对严禁在 `@Transactional` 方法内调用外部耗时的 HTTP 接口或远程 RPC！否则数据库连接会被该线程无意义霸占数秒，瞬间导致整个系统的数据库连接池枯竭！
 
----
-
-### Q2：为什么客户端明明收到了 HTTP 504 Gateway Timeout 超时报错，但后台数据库里订单却被神奇地创建成功了？
-> **答题标杆**：
+> [!question]- Q2：为什么客户端明明收到了 HTTP 504 Gateway Timeout 超时报错，但后台数据库里订单却被神奇地创建成功了？
 > 1. **分布式链路的超时脱节**：Nginx/网关层配置的超时阈值（如 3 秒）小于后端全链路实际执行时间（如 4 秒）。
 > 2. **异步执行脱节**：当请求在后端执行到第 3.01 秒时，网关认为后端已死，单方面向客户端斩断连接并返回 504；但此时后端的 Tomcat 线程与 MySQL 事务并没有被强行终止，它们仍然在平稳地继续执行 `insert order` 并最终成功执行了 `commit`。
 > 3. **核心启示**：在分布式系统中，**“超时不等于失败，超时只代表结果未知！”**客户端重试必须携带全局唯一的幂等键（Idempotency Key），服务端必须具备查重幂等机制，防止重复出单与重复扣款。
 
----
-
-### Q3：如果 Tomcat 线程池队列满了，新来的请求会发生什么？Spring 的 Filter 和 Controller 能感知到吗？
-> **答题标杆**：
+> [!question]- Q3：如果 Tomcat 线程池队列满了，新来的请求会发生什么？Spring 的 Filter 和 Controller 能感知到吗？
 > 1. **行为表现**：Tomcat 默认使用定制的 `TaskQueue`。当工作线程数达到 `maxThreads`（默认 200）且等待队列达到 `acceptCount`（连接排队上限）时，Tomcat 会直接拒绝新连接，底层的 TCP 连接要么被丢弃，要么被直接发送 RST 报文拒绝，客户端通常会当场收到 `Connection Refused` 或 `Broken Pipe`。
 > 2. **感知结果**：由于请求根本**未能成功进入 Servlet 容器的派发队列**，Spring 的 `ApplicationFilterChain`、`DispatcherServlet` 和 `Controller` **完全不会被触发，根本无从感知该请求的存在**！应用业务日志里不会留下任何关于这个请求的痕迹，排查只能依赖操作系统内核 `netstat -s` 观察是否有 TCP 连接溢出丢弃（TCP socket overflow）。
 

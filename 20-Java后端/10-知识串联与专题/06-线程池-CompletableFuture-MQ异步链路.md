@@ -179,25 +179,18 @@ public class ProductDetailAggregationService {
 
 ## 5. 大厂 30 秒面试绝杀（高频追问 3 连击）
 
-### Q1：既然 `CompletableFuture` 和线程池在单机上并发执行这么快，为什么架构设计中还要引入笨重的 RocketMQ / Kafka？
-> **答题标杆**：
+> [!question]- Q1：既然 `CompletableFuture` 和线程池在单机上并发执行这么快，为什么架构设计中还要引入笨重的 RocketMQ / Kafka？
 > 1. **内存易失性 vs 磁盘持久化（可靠性本质）**：线程池的任务队列是驻留在 JVM 堆内存中的。一旦云主机重启、发布升级或发生 OOM 崩溃，**内存队列中堆积的成千上万个任务瞬间灰飞烟灭**！而 MQ 消息会被 WAL 顺序刷入磁盘（甚至多副本 Raft 同步），提供金融级的容灾保障。
 > 2. **无界堆积与容量瓶颈**：单机内存有限，线程池队列一旦设大容易 OOM，设小了会触发拒绝策略（丢弃请求）。MQ Broker 具备数以亿计的消息堆积能力，是真正具备“时间换空间”的海绵蓄水池。
 > 3. **跨系统解耦与水平扩缩容**：`CompletableFuture` 无法跨越网络调用另一个微服务。MQ 能彻底切断上下游系统的网络与生命周期耦合，下游消费集群可以根据队列堆积情况随时弹性水平扩容 100 台机器，这是单机线程池绝不可能做到的。
 
----
-
-### Q2：`CompletableFuture.get()` 和 `CompletableFuture.join()` 有什么区别？为什么现代编码推荐用 `join()`？
-> **答题标杆**：
+> [!question]- Q2：`CompletableFuture.get()` 和 `CompletableFuture.join()` 有什么区别？为什么现代编码推荐用 `join()`？
 > 1. **异常抛出类型的区别**：
 >    - `get()` 声明抛出受检查异常（Checked Exception）：`InterruptedException` 和 `ExecutionException`，调用方必须强制在代码中用繁琐的 `try-catch` 包裹或在方法签名抛出，代码可读性差；
 >    - `join()` 抛出的是未受检异常（Unchecked Exception）：`CompletionException`，代码更加清爽，符合现代函数式与 Lambda 编程规范。
 > 2. **超时机制**：`get()` 提供了重载方法 `get(long timeout, TimeUnit unit)` 支持设定等待上限，而 `join()` 原生不支持传入超时时间（但可在前期结合 `orTimeout()` 链式调用优雅实现）。
 
----
-
-### Q3：`thenApply`、`thenCompose` 和 `thenCombine` 的使用场景有什么本质区别？
-> **答题标杆**：
+> [!question]- Q3：`thenApply`、`thenCompose` 和 `thenCombine` 的使用场景有什么本质区别？
 > 1. **`thenApply`（转换结果）**：接收上一步的结果，在当前流中进行函数转换并返回新值（类似 Stream 的 `map`），操作是串行的（如 `String -> Integer`）。
 > 2. **`thenCompose`（扁平化连接）**：上一步的执行结果本身用来作为参数，去触发**另一个返回新的 CompletableFuture 的异步任务**，并将其“打平”（类似 Stream 的 `flatMap`），常用于有先后因果依赖的异步流水线（如查到 userId 后，根据 userId 异步查其订单）。
 > 3. **`thenCombine`（双分支合并）**：两个**完全独立并发运行**的 CompletableFuture，在两者都执行完毕后，由一个 BiFunction 函数将两个独立结果聚合成一个新对象（如并发查用户信息和查优惠券，最后聚合成 VO）。

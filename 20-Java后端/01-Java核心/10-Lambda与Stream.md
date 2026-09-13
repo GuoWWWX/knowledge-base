@@ -297,24 +297,29 @@ Map<String, Map<String, Long>> stats = users.stream()
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: Lambda 底层是匿名内部类吗？
->   - A: 不是。现代 javac 用 `invokedynamic` + `LambdaMetafactory`：运行期生成函数对象并缓存 CallSite。无独立类文件、无捕获时单例复用、引导后直接内联调用（接近手写性能）。匿名内部类是编译期 class 文件 + 每次 new 实例。
-> - Q: invokedynamic 机制具体是什么？
->   - A: javac 把 Lambda 编译成一条 `invokedynamic` 指令 + 引导方法引用；第一次执行时调用 `LambdaMetafactory.metafactory`（用 ASM 运行期生成实现类），之后复用 CallSite 直接调用。捕获变量作为字段拷入生成的实例。
-> - Q: Stream 为什么是惰性的？中间操作到底做了什么？
->   - A: 中间操作只是在 `AbstractPipeline` 链表上追加一个新 stage（`filter` 就是 `new StatelessOp<>(this, ...)` 挂到 previousStage 上），完全不碰数据。终端操作才触发执行。
-> - Q: 终端操作触发时发生了什么？
->   - A: 从最后一个 stage 反向调用 `opWrapSink`，把 terminalSink 从尾到头逐层包装成一条 Sink 链；然后遍历数据源，每个元素从链头进、依次走完整条链（融合）。
-> - Q: findFirst 为什么能提前停？
->   - A: 短路 Sink 的 `cancellationRequested()` 满足条件后返回 true，遍历循环每轮检查该标志，true 就立即 break，不再处理剩余元素。
-> - Q: sorted 为什么打断融合？
->   - A: sorted 的 Sink 必须先把全部元素收进缓冲区（排序要全量），`end()` 时才一次性交给下游——所以 filter/map 可以融合，遇到 sorted 会断成两段。
-> - Q: 为什么 Lambda 捕获的局部变量必须是 effectively final？
->   - A: Lambda 可能延迟到其他线程执行，捕获变量是拷贝而非引用；允许修改会产生"改了但外层看不见"的语义混乱，编译器直接禁止。
-> - Q: parallelStream 有什么风险？
->   - A: 默认用全局共享的 commonPool，阻塞任务会拖累其他并行流；共享可变状态会出数据竞争；事务/线程局部变量语义会丢失。小数据量并行往往更慢。
+> [!question]- Lambda 底层是匿名内部类吗？
+> 不是。现代 javac 用 `invokedynamic` + `LambdaMetafactory`：运行期生成函数对象并缓存 CallSite。无独立类文件、无捕获时单例复用、引导后直接内联调用（接近手写性能）。匿名内部类是编译期 class 文件 + 每次 new 实例。
 
+> [!question]- invokedynamic 机制具体是什么？
+> javac 把 Lambda 编译成一条 `invokedynamic` 指令 + 引导方法引用；第一次执行时调用 `LambdaMetafactory.metafactory`（用 ASM 运行期生成实现类），之后复用 CallSite 直接调用。捕获变量作为字段拷入生成的实例。
+
+> [!question]- Stream 为什么是惰性的？中间操作到底做了什么？
+> 中间操作只是在 `AbstractPipeline` 链表上追加一个新 stage（`filter` 就是 `new StatelessOp<>(this, ...)` 挂到 previousStage 上），完全不碰数据。终端操作才触发执行。
+
+> [!question]- 终端操作触发时发生了什么？
+> 从最后一个 stage 反向调用 `opWrapSink`，把 terminalSink 从尾到头逐层包装成一条 Sink 链；然后遍历数据源，每个元素从链头进、依次走完整条链（融合）。
+
+> [!question]- findFirst 为什么能提前停？
+> 短路 Sink 的 `cancellationRequested()` 满足条件后返回 true，遍历循环每轮检查该标志，true 就立即 break，不再处理剩余元素。
+
+> [!question]- sorted 为什么打断融合？
+> sorted 的 Sink 必须先把全部元素收进缓冲区（排序要全量），`end()` 时才一次性交给下游——所以 filter/map 可以融合，遇到 sorted 会断成两段。
+
+> [!question]- 为什么 Lambda 捕获的局部变量必须是 effectively final？
+> Lambda 可能延迟到其他线程执行，捕获变量是拷贝而非引用；允许修改会产生"改了但外层看不见"的语义混乱，编译器直接禁止。
+
+> [!question]- parallelStream 有什么风险？
+> 默认用全局共享的 commonPool，阻塞任务会拖累其他并行流；共享可变状态会出数据竞争；事务/线程局部变量语义会丢失。小数据量并行往往更慢。
 ## 🧭 源码入口速查
 
 - `java.lang.invoke.LambdaMetafactory#metafactory`：Lambda 动态调用点引导入口（运行期生成实现类）。

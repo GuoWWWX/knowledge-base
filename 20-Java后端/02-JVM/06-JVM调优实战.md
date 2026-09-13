@@ -175,11 +175,8 @@ flowchart TD
 
 ## ⚡ 一分钟面试必杀卡
 
-> [!NOTE] 面试高频问题标准答题套路
-> 
-> **Q1：你们生产环境的 JVM 是怎么配置调优的？**
-> - **A**：
->   1. **参数基线**：我们在容器（K8s）环境下统一使用 JDK 17，开启 `-XX:+UseContainerSupport`，通过 `-XX:MaxRAMPercentage=75.0` 将 75% 容器内存划给堆，预留 25% 空间防范堆外内存溢出导致容器被 OOM Killer 强杀（Exit Code 137）。
->   2. **垃圾回收器**：选用 G1 收集器，配置期望停顿时间 `-XX:MaxGCPauseMillis=200`，保证 P99 延迟平稳。
->   3. **故障自愈与日志**：必配 `-XX:+HeapDumpOnOutOfMemoryError` 并在固定持久盘生成 Dump，统一开启 `-Xlog:gc*` 滚动日志以便监控告警。
->   4. **代码级优先**：在调优前，优先通过 JFR / Arthas 排查是否有慢 SQL、大集合加载或本地缓存无上限等代码级问题。
+> [!question]- Q1：你们生产环境的 JVM 是怎么配置调优的？
+> 1. **参数基线**：我们在容器（K8s）环境下统一使用 JDK 17，开启 `-XX:+UseContainerSupport`，通过 `-XX:MaxRAMPercentage=75.0` 将 75% 容器内存划给堆，预留 25% 空间防范堆外内存溢出导致容器被 OOM Killer 强杀（Exit Code 137）。
+> 2. **垃圾回收器**：选用 G1 收集器，配置期望停顿时间 `-XX:MaxGCPauseMillis=200`，保证 P99 延迟平稳。
+> 3. **故障自愈与日志**：必配 `-XX:+HeapDumpOnOutOfMemoryError` 并在固定持久盘生成 Dump，统一开启 `-Xlog:gc*` 滚动日志以便监控告警。
+> 4. **代码级优先**：在调优前，优先通过 JFR / Arthas 排查是否有慢 SQL、大集合加载或本地缓存无上限等代码级问题。

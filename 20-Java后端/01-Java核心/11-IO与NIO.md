@@ -154,8 +154,8 @@ flowchart LR
 
 #### 3. 面试怎么说（修正版）
 
-> [!question] Q: 为什么 NIO 能支撑高并发连接？
-> A: 靠 Selector 多路复用 + **多线程分工**：1~2 个 **Boss/Reactor 线程**只负责 `select()` 监听就绪事件并分发连接（不做业务），一组 **Worker 线程**（2×CPU 核数）真正读写 + 执行业务。每个 worker 只处理自己负责的那部分连接，内部串行免锁。所以线程数从 BIO 的 O(连接数) 降到 O(核数)，1 万连接只需几十个线程。
+> [!question]- 为什么 NIO 能支撑高并发连接？
+> 靠 Selector 多路复用 + **多线程分工**：1~2 个 **Boss/Reactor 线程**只负责 `select()` 监听就绪事件并分发连接（不做业务），一组 **Worker 线程**（2×CPU 核数）真正读写 + 执行业务。每个 worker 只处理自己负责的那部分连接，内部串行免锁。所以线程数从 BIO 的 O(连接数) 降到 O(核数)，1 万连接只需几十个线程。
 
 #### 4. 几个相关坑（面试加分）
 
@@ -210,15 +210,17 @@ lsof -p <pid> | awk '{print $9}' | sort | uniq -c | sort -nr | head   # 热点�
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: BIO、NIO、AIO 区别？
->   - A: BIO 同步阻塞、一连接一线程；NIO 同步非阻塞 + 多路复用、一线程多连接；AIO 异步非阻塞、完成回调。高并发网络服务选 NIO（Netty），AIO 因 Linux 实现问题很少用。
-> - Q: Buffer 的 flip 做什么？clear 和 compact 区别？
->   - A: flip 把 limit 设为当前 position、position 归零，写模式切读模式；clear 丢弃未读数据清空，compact 保留未读数据挪到头部继续写。
-> - Q: 零拷贝是什么？
->   - A: 减少数据在用户态/内核态之间的拷贝次数。FileChannel.transferTo 走 sendfile，文件数据从内核缓冲区直达网卡，用户态零拷贝。
-> - Q: 为什么 NIO 能支撑高并发连接？
->   - A: 靠 Selector 多路复用 + 多线程分工：1~2 个 Boss/Reactor 线程只负责 select() 监听就绪事件并分发连接（不做业务），一组 Worker 线程（2×CPU 核数）真正读写 + 执行业务，每个 worker 只处理自己的连接子集、内部串行免锁。线程数从 BIO 的 O(连接数) 降到 O(核数)。（详见"Selector 为什么能省线程"小节）
+> [!question]- BIO、NIO、AIO 区别？
+> BIO 同步阻塞、一连接一线程；NIO 同步非阻塞 + 多路复用、一线程多连接；AIO 异步非阻塞、完成回调。高并发网络服务选 NIO（Netty），AIO 因 Linux 实现问题很少用。
+
+> [!question]- Buffer 的 flip 做什么？clear 和 compact 区别？
+> flip 把 limit 设为当前 position、position 归零，写模式切读模式；clear 丢弃未读数据清空，compact 保留未读数据挪到头部继续写。
+
+> [!question]- 零拷贝是什么？
+> 减少数据在用户态/内核态之间的拷贝次数。FileChannel.transferTo 走 sendfile，文件数据从内核缓冲区直达网卡，用户态零拷贝。
+
+> [!question]- 为什么 NIO 能支撑高并发连接？
+> 靠 Selector 多路复用 + 多线程分工：1~2 个 Boss/Reactor 线程只负责 select() 监听就绪事件并分发连接（不做业务），一组 Worker 线程（2×CPU 核数）真正读写 + 执行业务，每个 worker 只处理自己的连接子集、内部串行免锁。线程数从 BIO 的 O(连接数) 降到 O(核数)。（详见"Selector 为什么能省线程"小节）
 
 ## 🧭 源码入口速查
 

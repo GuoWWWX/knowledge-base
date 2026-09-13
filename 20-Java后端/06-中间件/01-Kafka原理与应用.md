@@ -231,17 +231,13 @@ flowchart LR
 
 ## ⚡ 一分钟面试必杀卡
 
-> [!NOTE] 面试高频问题标准答题套路
-> 
-> **Q1：Kafka 为什么读写速度这么快？**
-> - **A**：
->   1. **顺序写磁盘**：采用单向追加写入（Append-Only Log），利用顺序 I/O 避免机械磁头寻道，写入性能堪比内存。
->   2. **PageCache 缓存加速**：充分利用操作系统的页缓存，写入和读取优先命中内存，规避了 JVM GC 停顿。
->   3. **零拷贝（Zero-Copy）技术**：底层调用 Linux 的 `sendfile()` 系统调用，数据直接从操作系统 PageCache 直传网卡，不经过 JVM 用户空间，消除了 CPU 拷贝与多余的上下文切换。
->   4. **批量操作与数据压缩**：客户端使用累加器打包分批发送，结合压缩算法大幅节省带宽与 I/O。
-> 
-> **Q2：Kafka 如何保证消息不丢失？**
-> - **A**：
->   - **生产端**：配置 `acks=all`（必须 ISR 中所有副本都确认写入才返回成功），配置 `retries=Integer.MAX_VALUE` 和 `enable.idempotence=true` 保证失败重试与幂等写入。
->   - **Broker 端**：配置 `min.insync.replicas=2`（保证至少两个存活副本写入），配置 `unclean.leader.election.enable=false`（禁止非同步副本抢当 Leader）。
->   - **消费端**：关闭自动提交 `enable.auto.commit=false`，严格在本地业务处理完全成功后再手动 `commitSync` 或异步批量提交位点。
+> [!question]- Q1：Kafka 为什么读写速度这么快？
+> 1. **顺序写磁盘**：采用单向追加写入（Append-Only Log），利用顺序 I/O 避免机械磁头寻道，写入性能堪比内存。
+> 2. **PageCache 缓存加速**：充分利用操作系统的页缓存，写入和读取优先命中内存，规避了 JVM GC 停顿。
+> 3. **零拷贝（Zero-Copy）技术**：底层调用 Linux 的 `sendfile()` 系统调用，数据直接从操作系统 PageCache 直传网卡，不经过 JVM 用户空间，消除了 CPU 拷贝与多余的上下文切换。
+> 4. **批量操作与数据压缩**：客户端使用累加器打包分批发送，结合压缩算法大幅节省带宽与 I/O。
+
+> [!question]- Q2：Kafka 如何保证消息不丢失？
+> - **生产端**：配置 `acks=all`（必须 ISR 中所有副本都确认写入才返回成功），配置 `retries=Integer.MAX_VALUE` 和 `enable.idempotence=true` 保证失败重试与幂等写入。
+> - **Broker 端**：配置 `min.insync.replicas=2`（保证至少两个存活副本写入），配置 `unclean.leader.election.enable=false`（禁止非同步副本抢当 Leader）。
+> - **消费端**：关闭自动提交 `enable.auto.commit=false`，严格在本地业务处理完全成功后再手动 `commitSync` 或异步批量提交位点。

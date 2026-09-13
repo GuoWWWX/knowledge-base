@@ -143,16 +143,17 @@ jmap -histo:live <pid> | findstr "String"
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: 为什么 String 设计成不可变的？
->   - A: 安全（参数/敏感数据不可被改）、可缓存 hashCode（HashMap 高效）、常量池共享才安全、天然线程安全。根因是 final 字段 + 无修改方法。
-> - Q: `"a" + b` 在底层怎么执行？循环拼接为什么慢？
->   - A: 变量拼接编译成 `new StringBuilder().append("a").append(b).toString()`；循环内每轮都 new StringBuilder 并复制，整体 O(N²)。应循环外建一个 StringBuilder。
-> - Q: `new String("abc")` 创建了几个对象？`intern()` 是什么？
->   - A: 若池中无 "abc"，创建 2 个：池中字面量对象 + 堆上 new 的对象；池中有则只建 1 个。`intern()` 返回常量池中内容相等的实例（没有就放入），让相同内容的字符串共享引用。
-> - Q: 为什么 String 适合作 HashMap 的 key？
->   - A: 不可变（入 map 后内容不会变，桶位稳定）+ hashCode 缓存（重复 get 快）+ equals/hashCode 正确配套（去重查找可靠）。
+> [!question]- 为什么 String 设计成不可变的？
+> 安全（参数/敏感数据不可被改）、可缓存 hashCode（HashMap 高效）、常量池共享才安全、天然线程安全。根因是 final 字段 + 无修改方法。
 
+> [!question]- `"a" + b` 在底层怎么执行？循环拼接为什么慢？
+> 变量拼接编译成 `new StringBuilder().append("a").append(b).toString()`；循环内每轮都 new StringBuilder 并复制，整体 O(N²)。应循环外建一个 StringBuilder。
+
+> [!question]- `new String("abc")` 创建了几个对象？`intern()` 是什么？
+> 若池中无 "abc"，创建 2 个：池中字面量对象 + 堆上 new 的对象；池中有则只建 1 个。`intern()` 返回常量池中内容相等的实例（没有就放入），让相同内容的字符串共享引用。
+
+> [!question]- 为什么 String 适合作 HashMap 的 key？
+> 不可变（入 map 后内容不会变，桶位稳定）+ hashCode 缓存（重复 get 快）+ equals/hashCode 正确配套（去重查找可靠）。
 ## 🧭 源码入口速查
 
 - `String#equals`：先比引用 → 比长度 → 逐字节比。
