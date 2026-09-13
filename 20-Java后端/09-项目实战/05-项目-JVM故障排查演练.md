@@ -37,20 +37,27 @@ mastery: ⭐⭐⭐⭐⭐
 ## 2. 生产四大高危故障靶场与现场还原
 
 ```mermaid
-mindmap
-  root((JVM生产故障四大战役))
-    战役1: CPU 100% 狂飙
-      真凶: 死循环 / 正则灾难性回溯 / 极端频繁GC
-      武器: top -H + jstack + Arthas thread -n
-    战役2: 堆内存 OOM (Java Heap Space)
-      真凶: ThreadLocal未清理 / 静态集合无界增长
-      武器: jmap + MAT (Dominator Tree / GC Roots)
-    战役3: 元空间 OOM (Metaspace OOM)
-      真凶: CGLIB/Spring动态代理泛滥 / 类加载器无法卸载
-      武器: jcmd VM.classloader_stats + Arthas classloader
-    战役4: 堆外直接内存泄漏 (Direct Memory OOM)
-      真凶: Netty ByteBuf 漏调 release() / JNI本地内存失控
-      武器: -XX:NativeMemoryTracking=detail + jcmd VM.native_memory
+flowchart TD
+    classDef root fill:#ffd666,stroke:#d48806,stroke-width:2px;
+    classDef battle fill:#bae7ff,stroke:#1890ff,stroke-width:1px;
+
+    JVM["JVM 生产故障四大战役"]:::root
+
+    JVM --> B1["战役1：CPU 100% 狂飙"]:::battle
+    B1 --> B11["诱因：死循环 / 正则回溯 / 极端频繁 GC"]
+    B1 --> B12["武器：top -H + jstack + Arthas thread -n"]
+
+    JVM --> B2["战役2：堆内存 OOM (Heap Space)"]:::battle
+    B2 --> B21["诱因：ThreadLocal 未清理 / 静态集合无界增长"]
+    B2 --> B22["武器：jmap + MAT (Dominator Tree / GC Roots)"]
+
+    JVM --> B3["战役3：元空间 OOM (Metaspace)"]:::battle
+    B3 --> B31["诱因：动态代理生成泛滥 / 自定义类加载器泄漏"]
+    B3 --> B32["武器：jcmd VM.classloader_stats + Arthas classloader"]
+
+    JVM --> B4["战役4：堆外直接内存泄漏 (Direct Memory)"]:::battle
+    B4 --> B41["诱因：Netty ByteBuf 漏调 release() / JNI 本地内存失控"]
+    B4 --> B42["武器：-XX:NativeMemoryTracking=detail + jcmd VM.native_memory"]
 ```
 
 ---

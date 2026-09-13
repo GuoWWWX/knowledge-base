@@ -91,13 +91,13 @@ public class ReactiveDemo {
 ```mermaid
 flowchart LR
     subgraph Bad["传统推模式：大水漫灌"]
-        P1["疯狂发送每秒 100 万条数据"] ==> C1["下游每秒只能消化 10 条<br/>💥 内存打爆，当场暴毙！"]
+        P1["疯狂发送每秒 100 万条数据"] --> C1["下游每秒只能消化 10 条<br/>💥 内存打爆，发生 OOM！"]
     end
 
     subgraph Good["响应式背压：按需拉取"]
-        C2["订阅者 Subscriber"] ==>"1. 下游反向控制：请先给我 5 个数据！ (request(5))"==> P2["发布者 Publisher"]
-        P2 -->|2. 只推送 5 个数据| C2
-        C2 -.->|3. 消化完毕，再次请求后续配额| P2
+        C2["订阅者 Subscriber"] -->|"1. 下游反向控制：request(5)"| P2["发布者 Publisher"]
+        P2 -->|"2. 只推送 5 个数据"| C2
+        C2 -.->|"3. 消化完毕，再次请求配额"| P2
     end
 ```
 

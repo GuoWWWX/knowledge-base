@@ -121,12 +121,12 @@ while (true) {
 
 ```mermaid
 flowchart LR
-    subgraph Boss/Reactor 线程（1~2 个，只做 select）
-        S[Selector.select<br/>阻塞等待就绪]
+    subgraph Boss["Boss/Reactor 线程 (1~2 个，只做 select)"]
+        S["Selector.select<br/>阻塞等待就绪"]
     end
-    S -->|就绪连接| W1[Worker 线程 1<br/>读写+业务]
-    S -->|就绪连接| W2[Worker 线程 2<br/>读写+业务]
-    S -->|就绪连接| W3[Worker 线程 N<br/>读写+业务]
+    S -->|就绪连接| W1["Worker 线程 1<br/>读写+业务"]
+    S -->|就绪连接| W2["Worker 线程 2<br/>读写+业务"]
+    S -->|就绪连接| W3["Worker 线程 N<br/>读写+业务"]
 ```
 
 分工（Netty 的 Reactor 模型）：

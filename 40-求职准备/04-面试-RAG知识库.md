@@ -19,22 +19,22 @@ mastery: ⭐⭐⭐⭐⭐
 ```mermaid
 flowchart TB
     subgraph Offline["离线数据处理流水线 (Data Pipeline)"]
-        D[企业多源文档] --> Parse[结构化解析与清洗]
-        Parse --> Chunk[高级分块: 父子块/句子窗口]
-        Chunk --> Embed[Embedding 向量化 (Bi-Encoder)]
-        Embed --> VDB[("向量库 (HNSW 索引 + 元数据索引)")]
+        D["企业多源文档"] --> Parse["结构化解析与清洗"]
+        Parse --> Chunk["高级分块: 父子块/句子窗口"]
+        Chunk --> Embed["Embedding 向量化 (Bi-Encoder)"]
+        Embed --> VDB["向量库 (HNSW 索引 + 元数据索引)"]
     end
 
     subgraph Online["在线检索生成闭环 (Online Pipeline)"]
-        Q[用户 Query] --> Rewrite[Query 改写与多路扩展]
-        Rewrite --> PreFilter[Metadata 预过滤 (租户/RBAC 权限)]
-        PreFilter --> Dense[向量密集检索 (Cosine/IP)]
-        PreFilter --> Sparse[BM25 稀疏检索 (精确关键词)]
-        Dense & Sparse --> Fusion[RRF 倒数排名融合]
-        Fusion --> Rerank[Cross-Encoder 重排模型]
-        Rerank --> ContextPack[Prompt 组装 (防中间迷失)]
-        ContextPack --> LLM[LLM 推理生成 (带溯源标注)]
-        LLM --> Eval[Ragas 指标评估与 Langfuse 观测]
+        Q["用户 Query"] --> Rewrite["Query 改写与多路扩展"]
+        Rewrite --> PreFilter["Metadata 预过滤 (租户/RBAC 权限)"]
+        PreFilter --> Dense["向量密集检索 (Cosine/IP)"]
+        PreFilter --> Sparse["BM25 稀疏检索 (精确关键词)"]
+        Dense & Sparse --> Fusion["RRF 倒数排名融合"]
+        Fusion --> Rerank["Cross-Encoder 重排模型"]
+        Rerank --> ContextPack["Prompt 组装 (防中间迷失)"]
+        ContextPack --> LLM["LLM 推理生成 (带溯源标注)"]
+        LLM --> Eval["Ragas 指标评估与 Langfuse 观测"]
     end
 
     VDB -.-> Dense
