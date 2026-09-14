@@ -33,25 +33,25 @@ Codex 和 Claude Code 都是“编程 Agent”里非常成功的产品，但它�
 
 ### Codex
 
-- [[Codex/_index|Codex 拆解索引]]
-- [[Codex/01-Codex产品定位与总体架构]]
-- [[Codex/02-Codex一次任务执行全链路]]
-- [[Codex/03-Codex执行模型-线程-沙箱-审批]]
-- [[Codex/04-Codex上下文工程-AGENTS-MCP-Skills]]
+- [ ] [[Codex/_index|Codex 拆解索引]]
+- [ ] [[Codex/01-Codex产品定位与总体架构]]
+- [ ] [[Codex/02-Codex一次任务执行全链路]]
+- [ ] [[Codex/03-Codex执行模型-线程-沙箱-审批]]
+- [ ] [[Codex/04-Codex上下文工程-AGENTS-MCP-Skills]]
 
 ### Claude Code
 
-- [[Claude-Code/_index|Claude Code 拆解索引]]
-- [[Claude-Code/01-Claude-Code产品定位与总体架构]]
-- [[Claude-Code/02-Claude-Code一次任务执行全链路]]
-- [[Claude-Code/03-Claude-Code上下文工程-CLAUDE-md-Memory]]
-- [[Claude-Code/04-Claude-Code工具系统-MCP-Hooks-Subagents-Skills]]
+- [ ] [[Claude-Code/_index|Claude Code 拆解索引]]
+- [ ] [[Claude-Code/01-Claude-Code产品定位与总体架构]]
+- [ ] [[Claude-Code/02-Claude-Code一次任务执行全链路]]
+- [ ] [[Claude-Code/03-Claude-Code上下文工程-CLAUDE-md-Memory]]
+- [ ] [[Claude-Code/04-Claude-Code工具系统-MCP-Hooks-Subagents-Skills]]
 
 ### 对比
 
-- [[01-标杆产品对比-Codex-vs-Claude-Code]]
-- [[02-编程Agent通用架构图]]
-- [[03-从Codex和Claude-Code反推企业Agent设计]]
+- [ ] [[01-标杆产品对比-Codex-vs-Claude-Code]]
+- [ ] [[02-编程Agent通用架构图]]
+- [ ] [[03-从Codex和Claude-Code反推企业Agent设计]]
 
 ## 学习顺序
 
@@ -63,9 +63,9 @@ Codex 和 Claude Code 都是“编程 Agent”里非常成功的产品，但它�
 
 ## 🧾 本章复习
 
-- [[99-本章总结与复习]]（本章整体回顾）
-- [[Codex/99-Codex总结与复习]]（Codex 部分回顾）
-- [[Claude-Code/99-Claude-Code总结与复习]]（Claude Code 部分回顾）
+- [ ] [[99-本章总结与复习]]（本章整体回顾）
+- [ ] [[Codex/99-Codex总结与复习]]（Codex 部分回顾）
+- [ ] [[Claude-Code/99-Claude-Code总结与复习]]（Claude Code 部分回顾）
 
 ## 拆解方法
 

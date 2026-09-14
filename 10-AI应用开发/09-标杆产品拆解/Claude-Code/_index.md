@@ -14,11 +14,11 @@ mastery: ⭐☆☆☆☆
 
 ## 文档清单
 
-- [[01-Claude-Code产品定位与总体架构]]
-- [[02-Claude-Code一次任务执行全链路]]
-- [[03-Claude-Code上下文工程-CLAUDE-md-Memory]]
-- [[04-Claude-Code工具系统-MCP-Hooks-Subagents-Skills]]
-- [[99-Claude-Code总结与复习]]
+- [ ] [[01-Claude-Code产品定位与总体架构]]
+- [ ] [[02-Claude-Code一次任务执行全链路]]
+- [ ] [[03-Claude-Code上下文工程-CLAUDE-md-Memory]]
+- [ ] [[04-Claude-Code工具系统-MCP-Hooks-Subagents-Skills]]
+- [ ] [[99-Claude-Code总结与复习]]
 
 ## 学习顺序
 

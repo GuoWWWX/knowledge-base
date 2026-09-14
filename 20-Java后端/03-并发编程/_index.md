@@ -18,31 +18,31 @@ updated: 2026-09-11
 请不要随意乱跳章节！按照以下五大关卡逐层通关，学习效果最佳：
 
 ### 🟢 第一关：初入江湖（基础概念与三大问题）
-- [[00-并发编程心智模型与学习路线]] — 必须先读！建立全局上帝视角与可见性/原子性/有序性核心认知
-- [[01-线程基础与生命周期]] — 操作系统线程与 JVM 线程映射、状态流转与优雅中断协作
-- [[02-Java内存模型JMM]] — 内存屏障（Memory Barrier）、可见性保证与 Happens-Before 规则深度解析
-- [[03-volatile与synchronized]] — 原生双雄：底层汇编 lock 前缀、锁升级膨胀全流程
-- [[04-CAS与原子类]] — 无锁 CAS 乐观重试、ABA 问题版本号解决与 LongAdder 分段累加
+- [ ] [[00-并发编程心智模型与学习路线]] — 必须先读！建立全局上帝视角与可见性/原子性/有序性核心认知
+- [ ] [[01-线程基础与生命周期]] — 操作系统线程与 JVM 线程映射、状态流转与优雅中断协作
+- [ ] [[02-Java内存模型JMM]] — 内存屏障（Memory Barrier）、可见性保证与 Happens-Before 规则深度解析
+- [ ] [[03-volatile与synchronized]] — 原生双雄：底层汇编 lock 前缀、锁升级膨胀全流程
+- [ ] [[04-CAS与原子类]] — 无锁 CAS 乐观重试、ABA 问题版本号解决与 LongAdder 分段累加
 
 ### 🟡 第二关：进阶利器（JUC核心锁与排队框架）
-- [[05-AQS原理]] — JUC 底座：同步状态 state 变更、CLH 双向链表与线程挂起唤醒
-- [[06-ReentrantLock与读写锁]] — 可重入锁设计、可中断/超时机制与 ReentrantReadWriteLock 读写分离
-- [[13-线程协作与阻塞队列]] — 线程等待唤醒机制：wait/notify、Condition 与 BlockingQueue 生产者消费者
-- [[12-JUC同步工具类]] — 协作同步器：CountDownLatch 倒计数、Semaphore 流量许可控制、CyclicBarrier 栅栏集结
+- [ ] [[05-AQS原理]] — JUC 底座：同步状态 state 变更、CLH 双向链表与线程挂起唤醒
+- [ ] [[06-ReentrantLock与读写锁]] — 可重入锁设计、可中断/超时机制与 ReentrantReadWriteLock 读写分离
+- [ ] [[13-线程协作与阻塞队列]] — 线程等待唤醒机制：wait/notify、Condition 与 BlockingQueue 生产者消费者
+- [ ] [[12-JUC同步工具类]] — 协作同步器：CountDownLatch 倒计数、Semaphore 流量许可控制、CyclicBarrier 栅栏集结
 
 ### 🟠 第三关：工业级主力（任务编排与并发容器）
-- [[07-线程池原理与参数]] — 任务调度流水线、7 大核心参数配置、4 大内置拒绝策略与生产调优
-- [[15-Future与ForkJoin任务模型]] — 任务分治拆解与 ForkJoinPool 工作窃取（Work-Stealing）算法
-- [[09-CompletableFuture异步编程]] — 现代反应式异步编排：多 RPC 聚合编排与异常熔断处理
-- [[10-ThreadLocal详解]] — 线程本地变量隔离原理、ThreadLocalMap 弱引用与防内存泄漏规程
+- [ ] [[07-线程池原理与参数]] — 任务调度流水线、7 大核心参数配置、4 大内置拒绝策略与生产调优
+- [ ] [[15-Future与ForkJoin任务模型]] — 任务分治拆解与 ForkJoinPool 工作窃取（Work-Stealing）算法
+- [ ] [[09-CompletableFuture异步编程]] — 现代反应式异步编排：多 RPC 聚合编排与异常熔断处理
+- [ ] [[10-ThreadLocal详解]] — 线程本地变量隔离原理、ThreadLocalMap 弱引用与防内存泄漏规程
 
 ### 🔴 第四关：高并发重器与前沿革命
-- [[08-并发容器-ConcurrentHashMap]] — 线程安全容器底层演进：从 Segment 分段锁到 CAS + synchronized 细粒度节点锁
-- [[11-虚拟线程深入]] — Java 21 轻量级协程原理、Carrier 线程调度、Pinning 规避与适用边界
+- [ ] [[08-并发容器-ConcurrentHashMap]] — 线程安全容器底层演进：从 Segment 分段锁到 CAS + synchronized 细粒度节点锁
+- [ ] [[11-虚拟线程深入]] — Java 21 轻量级协程原理、Carrier 线程调度、Pinning 规避与适用边界
 
 ### 🟣 第五关：大结局与线上救火
-- [[14-死锁与并发问题排查]] — 线上并发故障排查：死锁诊断、CPU 飙高排查与 jstack/Arthas 排查 SOP
-- [[99-本章总结与复习]] — 并发编程通关总复习、高频面试突击与全景知识卡片
+- [ ] [[14-死锁与并发问题排查]] — 线上并发故障排查：死锁诊断、CPU 飙高排查与 jstack/Arthas 排查 SOP
+- [ ] [[99-本章总结与复习]] — 并发编程通关总复习、高频面试突击与全景知识卡片
 
 ---
 

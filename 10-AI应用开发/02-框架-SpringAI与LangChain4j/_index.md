@@ -56,35 +56,35 @@ flowchart TD
 ## 📚 知识导航清单
 
 ### 00 · 全景心智
-- [[00-Java-AI框架全景与心智模型]] 🌟（大模型时代的 JDBC、Spring Data 哲学与企业级优势）
+- [ ] [[00-Java-AI框架全景与心智模型]] 🌟（大模型时代的 JDBC、Spring Data 哲学与企业级优势）
 
 ### 01 · 框架终极对比与选型
-- [[01-SpringAI与LangChain4j对比]] ⚖️（底层哲学、Fluent 链式 vs 声明式 Feign 风格硬核对比）
+- [ ] [[01-SpringAI与LangChain4j对比]] ⚖️（底层哲学、Fluent 链式 vs 声明式 Feign 风格硬核对比）
 
 ### 02 · Spring AI 专区（企业生产首选主线）
-- [[SpringAI/_index|Spring AI 体系总览索引]]
-  - [[SpringAI/01-Spring-AI项目搭建|01-Spring-AI项目搭建]]（BOM 依赖与多 Provider 接入）
-  - [[SpringAI/02-ChatClient与ChatModel|02-ChatClient与ChatModel]]（底层驱动与 Fluent API 门面）
-  - [[SpringAI/03-PromptTemplate|03-PromptTemplate]]（结构化模板与动态入参管理）
-  - [[SpringAI/04-流式输出-SSE|04-流式输出-SSE]]（响应式 Flux 与打字机长连接）
-  - [[SpringAI/05-多模型接入与切换|05-多模型接入与切换]]（@Qualifier 装配与业务动态路由）
-  - [[SpringAI/06-Function-Calling工具调用|06-Function-Calling工具调用]]（@Tool 注解与多轮反射自闭环）
-  - [[SpringAI/07-Advisor拦截器|07-Advisor拦截器]]（Spring AI 的 AOP 灵魂，脱敏与审计实战）
-  - [[SpringAI/08-ChatMemory记忆|08-ChatMemory记忆]]（滑动窗口淘汰与 Redis/JDBC 持久化）
-  - [[SpringAI/09-VectorStore向量存储|09-VectorStore向量存储]]（PGVector/Milvus 驱动与相似度检索）
+- [ ] [[SpringAI/_index|Spring AI 体系总览索引]]
+  - [ ] [[SpringAI/01-Spring-AI项目搭建|01-Spring-AI项目搭建]]（BOM 依赖与多 Provider 接入）
+  - [ ] [[SpringAI/02-ChatClient与ChatModel|02-ChatClient与ChatModel]]（底层驱动与 Fluent API 门面）
+  - [ ] [[SpringAI/03-PromptTemplate|03-PromptTemplate]]（结构化模板与动态入参管理）
+  - [ ] [[SpringAI/04-流式输出-SSE|04-流式输出-SSE]]（响应式 Flux 与打字机长连接）
+  - [ ] [[SpringAI/05-多模型接入与切换|05-多模型接入与切换]]（@Qualifier 装配与业务动态路由）
+  - [ ] [[SpringAI/06-Function-Calling工具调用|06-Function-Calling工具调用]]（@Tool 注解与多轮反射自闭环）
+  - [ ] [[SpringAI/07-Advisor拦截器|07-Advisor拦截器]]（Spring AI 的 AOP 灵魂，脱敏与审计实战）
+  - [ ] [[SpringAI/08-ChatMemory记忆|08-ChatMemory记忆]]（滑动窗口淘汰与 Redis/JDBC 持久化）
+  - [ ] [[SpringAI/09-VectorStore向量存储|09-VectorStore向量存储]]（PGVector/Milvus 驱动与相似度检索）
 
 ### 03 · LangChain4j 专区（声明式优雅对照）
-- [[LangChain4j/_index|LangChain4j 体系总览索引]]
-  - [[LangChain4j/01-LangChain4j核心概念|01-核心概念与架构]]
-  - [[LangChain4j/02-AiServices声明式AI服务|02-AiServices声明式服务]]（如同 OpenFeign 的极致接口体验）
-  - [[LangChain4j/03-记忆与RAG|03-记忆与RAG]]
-  - [[LangChain4j/04-与Spring生态集成|04-与Spring生态集成]]
+- [ ] [[LangChain4j/_index|LangChain4j 体系总览索引]]
+  - [ ] [[LangChain4j/01-LangChain4j核心概念|01-核心概念与架构]]
+  - [ ] [[LangChain4j/02-AiServices声明式AI服务|02-AiServices声明式服务]]（如同 OpenFeign 的极致接口体验）
+  - [ ] [[LangChain4j/03-记忆与RAG|03-记忆与RAG]]
+  - [ ] [[LangChain4j/04-与Spring生态集成|04-与Spring生态集成]]
 
 ### 04 · Embabel Agent 进阶专区
-- [[EmbabelAgent/_index|Embabel Agent 编排专区索引]]（面向 JVM 的强类型状态机与多 Agent 规划）
+- [ ] [[EmbabelAgent/_index|Embabel Agent 编排专区索引]]（面向 JVM 的强类型状态机与多 Agent 规划）
 
 ### 99 · 本章通关总结
-- [[99-本章总结与复习]]（全章核心拓扑、大厂 30 秒必杀 10 连问、生产落地十诫）
+- [ ] [[99-本章总结与复习]]（全章核心拓扑、大厂 30 秒必杀 10 连问、生产落地十诫）
 
 ---
 
