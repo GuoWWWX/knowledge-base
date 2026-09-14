@@ -29,13 +29,37 @@ Spring 的 IoC 容器体系由两大核心层次构成：
 
 ```mermaid
 classDiagram
-    BeanFactory <|-- HierarchicalBeanFactory : 继承
-    BeanFactory <|-- ListableBeanFactory : 继承
-    HierarchicalBeanFactory <|-- ApplicationContext : 继承
-    ListableBeanFactory <|-- ApplicationContext : 继承
-    ApplicationContext <|.. ConfigurableApplicationContext : 继承
-    ConfigurableApplicationContext <|.. AbstractApplicationContext : 抽象实现
+    class BeanFactory {
+        <<interface>>
+    }
+    class HierarchicalBeanFactory {
+        <<interface>>
+    }
+    class ListableBeanFactory {
+        <<interface>>
+    }
+    class ApplicationContext {
+        <<interface>>
+    }
+    class ConfigurableApplicationContext {
+        <<interface>>
+    }
+    class AbstractApplicationContext {
+        <<abstract>>
+    }
+
+    BeanFactory <|-- HierarchicalBeanFactory : 接口继承
+    BeanFactory <|-- ListableBeanFactory : 接口继承
+    HierarchicalBeanFactory <|-- ApplicationContext : 接口多继承
+    ListableBeanFactory <|-- ApplicationContext : 接口多继承
+    ApplicationContext <|-- ConfigurableApplicationContext : 接口继承
+    ConfigurableApplicationContext <|.. AbstractApplicationContext : 类实现接口
 ```
+
+> [!tip] 为什么 ApplicationContext 看起来是“多继承”？
+> **Java 的类（Class）是单继承的，但 Java 的接口（Interface）完全支持多继承！**
+> 图中上层节点全都是 **接口（Interface）**。`ApplicationContext` 作为一个超级门面，通过 `extends ListableBeanFactory, HierarchicalBeanFactory, MessageSource...` 实现了**接口能力聚合**；只有最底层的 `AbstractApplicationContext` 才是通过 `implements` 实现接口的**抽象类**。
+
 
 | 容器类型 | 核心定位与特征 | 初始化与加载机制 | 典型适用场景 |
 | :--- | :--- | :--- | :--- |
