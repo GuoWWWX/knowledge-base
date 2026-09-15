@@ -159,10 +159,65 @@ flowchart TD
      - **短路前置拦截**：在开始填充前还会调用 `postProcessAfterInstantiation()`，若任何处理器返回 `false` 则直接短路跳过属性填充。
 3. **Aware 感知接口回调（为什么需要？三大生产实战场景）**：
    - **核心第一性原理**：Spring 提倡“无侵入（Non-invasive）”，绝大多数业务 Bean 只需要做被动受管的普通 POJO；但**框架级组件、通用工具类与中间件 SDK** 必须具备“反向操控容器或自查身份”的特权，`Aware` 接口就是 Spring 为特权组件开辟的**受控反向访问通道**。
-   - **三大生产实战落地场景**：
-     - **场景 A：全局上下文获取工具类（`ApplicationContextAware`）**：在非 Spring 受管类（如静态 Util 方法、多线程 Runnable、第三方 SDK 回调、WebSocket 端点）中无法直接 `@Autowired`，通过实现该接口把 `ApplicationContext` 注入并赋给全局静态变量，实现 `SpringContextUtil.getBean(...)` 随时随地动态取 Bean；
-     - **场景 B：策略模式与插件化自注册（`BeanNameAware`）**：支付策略、规则引擎等多种实现类在启动时，通过 `setBeanName` 感知自己在 Spring 容器中的 Bean ID，随后在初始化阶段自动将自己注册到策略分发 Map 中，彻底消除硬编码映射；
-     - **场景 C：破解单例注入多例（Prototype）失效（`BeanFactoryAware`）**：当单例 Service 必须在每次业务调用时动态获取一个全新的多例任务对象时，直接 `@Autowired` 会因单例只初始化一次而导致多例失效；通过持有 `BeanFactory` 引用，在业务方法内动态调用 `beanFactory.getBean(PrototypeTask.class)` 即可获取全新实例。
+   - **三大生产实战落地场景与源码级代码**：
+     - **场景 A：全局上下文获取工具类（`ApplicationContextAware`）**：
+       在多线程异步任务（`Runnable`）、非 Spring 管理类（静态 Util、第三方 SDK 回调、WebSocket 端点）中无法直接 `@Autowired`，通过实现该接口把容器上下文赋给静态变量，实现随时随地动态取 Bean：
+       ```java
+       @Component
+       public class SpringContextUtil implements ApplicationContextAware {
+           private static ApplicationContext context;
+
+           @Override
+           public void setApplicationContext(ApplicationContext applicationContext) {
+               // 【Aware 的价值】：容器启动时，将核心上下文引用安全赋予该工具类
+               SpringContextUtil.context = applicationContext;
+           }
+
+           // 随后在任何静态方法、多线程异步任务中，一行代码动态获取任意 Bean！
+           public static <T> T getBean(Class<T> clazz) {
+               return context.getBean(clazz);
+           }
+       }
+       ```
+     - **场景 B：策略模式与插件化自注册（`BeanNameAware`）**：
+       在聚合支付、规则引擎等插件化体系中，策略 Bean 通过 `setBeanName` 感知自己在 Spring 中的 Bean ID，并在初始化时自动将自身注册到调度工厂，彻底告别硬编码与手动维护映射：
+       ```java
+       @Component("alipayStrategy")
+       public class AlipayStrategy implements PaymentStrategy, BeanNameAware {
+           private String beanName;
+
+           @Override
+           public void setBeanName(String name) {
+               // 【BeanNameAware 的价值】：让 Bean 知道自己在容器中的注册 ID
+               this.beanName = name; // 拿到 "alipayStrategy"
+           }
+
+           @PostConstruct
+           public void register() {
+               // 无需硬编码字符串，自动完成策略工厂自注册！
+               PaymentStrategyFactory.register(this.beanName, this);
+           }
+       }
+       ```
+     - **场景 C：破解单例注入多例（Prototype）失效（`BeanFactoryAware`）**：
+       单例 Service 若依赖多例 Task（每次处理订单需要新建一个任务实例），直接 `@Autowired` 会因单例只初始化一次导致多例失效；通过持有 `BeanFactory` 引用，在业务方法内动态索取全新实例：
+       ```java
+       @Service
+       public class OrderService implements BeanFactoryAware {
+           private BeanFactory beanFactory;
+
+           @Override
+           public void setBeanFactory(BeanFactory beanFactory) {
+               this.beanFactory = beanFactory;
+           }
+
+           public void handleOrder() {
+               // 每次业务调用都向容器索取全新的 Prototype 多例实例！
+               TaskRunner freshRunner = beanFactory.getBean(TaskRunner.class);
+               freshRunner.run();
+           }
+       }
+       ```
 4. **初始化阶段（Initialization：为什么绝不能在构造函数里写业务初始化？）**：
    - **反常识警示**：千万不要在构造函数里写业务初始化逻辑！在构造函数执行时，字段上的 `@Autowired` / `@Resource` 依赖还是 `null`，直接调用必抛致命的 `NullPointerException`。必须等待所有属性注入与 Aware 回调完成后，在初始化阶段执行。
    - **三大步骤分工与生产实战**：
