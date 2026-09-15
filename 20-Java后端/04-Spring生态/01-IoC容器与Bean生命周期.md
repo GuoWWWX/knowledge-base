@@ -145,6 +145,10 @@ flowchart TD
 1. **实例化（Instantiation）**：
    - 容器通过 `createBeanInstance()` 利用反射选择合适的构造函数实例化对象。
    - **⚡ 构造器注入在此完成**：若采用构造器注入（如 `public OrderService(PaymentService ps)`），Spring 在调用有参构造函数前便已解析并传入对应依赖 Bean；若无构造器注入，则调用无参构造函数生成原始裸对象（此时其所有标记了 `@Autowired` 的字段仍为 `null`）。
+   - **🔍 有参构造函数的依赖解析与死锁处理机制**：
+     - **深度优先递归解析（DFS On-Demand）**：Spring **并未在启动前进行全局依赖的拓扑排序**。当遇到有参构造器需要依赖项时，Spring 会暂停当前 Bean 的创建，通过 JVM 方法调用栈递归发起 `getBean(dependencyBean)`。调用栈天然具备后进先出特性，最底层被依赖的 Bean 会先完全经历“实例化 -> 属性填充 -> 初始化”并放入单例池，随后弹栈返回给上层构造函数传参调用；
+     - **构造器循环依赖与 Fail-Fast 报错**：若发生循环依赖（A 构造器需要 B，B 构造器又需要 A），Spring 在再次递归调用 `getBean("A")` 时，会通过内部的 `singletonsCurrentlyInCreation` 集合检测到 `"A"` 已在创建列表中。由于构造函数尚未返回，**堆内存中连半成品裸对象的引用都尚未生成，三级缓存无从提前暴露**，Spring 判定死锁闭环形成，直接抛出 `BeanCurrentlyInCreationException` 终止容器启动；
+     - **工程破局方案**：在构造器参数前添加 `@Lazy` 注解（如 `public A(@Lazy B b)`），Spring 会生成一个 CGLIB 动态代理占位符传给构造器，切断启动时的初始化闭环，直到真正调用方法时才触发实际 Bean 的加载；根本方案则是通过中介者模式或事件解耦。
 2. **属性填充（Populate Properties）**：
    - 容器调用 `populateBean()` 执行属性装配，**该阶段主要由“注解注入”与“Setter 方法注入”两大主力构成**：
      - **注解驱动注入（现代主力）**：底层依赖 `InstantiationAwareBeanPostProcessor.postProcessProperties()` 扩展点：
