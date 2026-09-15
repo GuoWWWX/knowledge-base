@@ -161,87 +161,87 @@ sequenceDiagram
 ### 深度剖析：破解循环依赖的三大底层疑问
 
 #### 疑问 1：A 找 B 时，为什么没有直接查三级缓存命中，而是转而去执行 B 的生命周期？
-> **真相：A 和 B 检索依赖走的底层方法完全相同（都是 `getBean()`），A 同样查了三级缓存！**
-> 1. A 在执行 `populateBean` 时，发现需要注入 B，于是调用 `getBean("b")` ➔ 触发 `getSingleton("b", true)`。
-> 2. `getSingleton("b", true)` 依次检查一级、二级、三级缓存。但此时 **B 压根还没有开始创建**，各级缓存全为空，且 `singletonsCurrentlyInCreation.contains("b") == false`。
-> 3. 既然缓存完全查不到，且 B 不是循环依赖中的对象，Spring 别无选择，只能走正规通道：调用 `createBean("b")` 从头启动 B 的生命周期！
+**真相：A 和 B 检索依赖走的底层方法完全相同（都是 `getBean()`），A 同样查了三级缓存！**
+1. A 在执行 `populateBean` 时，发现需要注入 B，于是调用 `getBean("b")` ➔ 触发 `getSingleton("b", true)`。
+2. `getSingleton("b", true)` 依次检查一级、二级、三级缓存。但此时 **B 压根还没有开始创建**，各级缓存全为空，且 `singletonsCurrentlyInCreation.contains("b") == false`。
+3. 既然缓存完全查不到，且 B 不是循环依赖中的对象，Spring 别无选择，只能走正规通道：调用 `createBean("b")` 从头启动 B 的生命周期！
 
 #### 疑问 2：B 找 A 时，为什么不继续往下实例化 A？死循环到底被谁终结的？
-> **真相：被 `singletonsCurrentlyInCreation` 守门人与三级缓存联合终结！**
-> 1. B 在执行 `populateBean` 时需要注入 A，同样调用 `getBean("a")` ➔ 触发 `getSingleton("a", true)`。
-> 2. 此时检查一级缓存无 A，但检查关键标记：`isSingletonCurrentlyInCreation("a") == true`（因为 A 最开始已经登记了正在创建中！）。
-> 3. 容器立刻意识到：**检测到循环依赖！允许穿透到二级与三级缓存**。
-> 4. 于是查三级缓存，**精准命中 A 在步骤 1 暴露的工厂回调**，拿到 A 的早期引用并直接 `return`。
-> 5. **核心关键**：既然 `getBean("a")` 已经成功返回了依赖对象，B 的属性赋值操作就宣告完成！**既然拿到了对象，根本就不会、也不可能再去调用 `createBean("a")`**！无限循环创建的套娃链条在这一步被硬生生切断！
+**真相：被 `singletonsCurrentlyInCreation` 守门人与三级缓存联合终结！**
+1. B 在执行 `populateBean` 时需要注入 A，同样调用 `getBean("a")` ➔ 触发 `getSingleton("a", true)`。
+2. 此时检查一级缓存无 A，但检查关键标记：`isSingletonCurrentlyInCreation("a") == true`（因为 A 最开始已经登记了正在创建中！）。
+3. 容器立刻意识到：**检测到循环依赖！允许穿透到二级与三级缓存**。
+4. 于是查三级缓存，**精准命中 A 在步骤 1 暴露的工厂回调**，拿到 A 的早期引用并直接 `return`。
+5. **核心关键**：既然 `getBean("a")` 已经成功返回了依赖对象，B 的属性赋值操作就宣告完成！**既然拿到了对象，根本就不会、也不可能再去调用 `createBean("a")`**！无限循环创建的套娃链条在这一步被硬生生切断！
 
 #### 疑问 3：A 是如何“苏醒”并完整执行后续阶段的？
-> **真相：JVM 单线程的方法调用栈（Call Stack）天然出栈机制！**
-> 
-> 这并不是什么多线程的异步挂起或唤醒，而是 Java 最基础的**同步方法嵌套调用**（从 A 启动并压栈等待 ➔ 转入 B 执行全套流程 ➔ 弹栈交还执行权 ➔ A 恢复执行后半段）：
-> 
-> ```text
-> JVM 单线程方法调用栈（Call Stack 逐帧演进全景）：
-> 
-> ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-> │ 【阶段一：A 启动生命周期（执行前半段，创建原始对象并挂起等待 B）】                                   │
-> │  1. 容器触发 getBean("a")                                                                        │
-> │  2. 标记 A 正在创建中：singletonsCurrentlyInCreation.add("a")                                     │
-> │  3. 进入 doCreateBean("a")                                                                       │
-> │     ├─ ① 实例化 A: A rawA = new ServiceA(); (在 JVM 堆内存分配原始裸对象空间)                     │
-> │     ├─ ② 提前暴露三级缓存工厂:                                                                    │
-> │     │    singletonFactories.put("a", () -> getEarlyBeanReference("a", mbd, rawA));              │
-> │     └─ ③ 属性填充 populateBean("a"): 扫描依赖字段 @Autowired private ServiceB b;                  │
-> │            └─ 尝试从三级缓存检索 B (此时 B 从未创建，各级缓存为空，未命中)                           │
-> │            └─ 发起同步依赖检索：getBean("b") ──────────────────────────────────────────────┐     │
-> │               【🚨 关键点：此时 A 的生命周期暂停在第 ③ 步，调用栈帧 1 压入栈底，等待 getBean("b") 返回！】 │     │
-> └────────────────────────────────────────────────────────────────────────────────────┼─────┘
->                                                                                      │ [方法压栈 Push]
->                                                                                      ▼
-> ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-> │ 【阶段二：嵌套执行 B 的完整生命周期（入栈执行，打破循环依赖并成为成熟单例）】                         │
-> │  1. getBean("b") 触发创建 B                                                                      │
-> │  2. 标记 B 正在创建中：singletonsCurrentlyInCreation.add("b")                                     │
-> │  3. 进入 doCreateBean("b")                                                                       │
-> │     ├─ ① 实例化 B: B rawB = new ServiceB(); (在 JVM 堆内存分配原始裸对象空间)                     │
-> │     ├─ ② 提前暴露三级缓存工厂:                                                                    │
-> │     │    singletonFactories.put("b", () -> getEarlyBeanReference("b", mbd, rawB));              │
-> │     ├─ ③ 属性填充 populateBean("b"): 扫描依赖字段 @Autowired private ServiceA a;                  │
-> │     │      └─ 发起依赖检索：getBean("a") ➔ 进入 getSingleton("a", true)                            │
-> │     │           ├─ 查一级缓存 singletonObjects: 无成品 A                                          │
-> │     │           ├─ 检查正在创建状态: singletonsCurrentlyInCreation.contains("a") == true！       │
-> │     │           ├─ 查二级缓存 earlySingletonObjects: 无                                           │
-> │     │           └─ 查三级缓存 singletonFactories: 【🎯精准命中 A 在阶段一暴露的工厂回调！】        │
-> │     │                ├─ 执行工厂方法：getObject() -> getEarlyBeanReference()                      │
-> │     │                │   (按需判断：若 A 有 AOP 切面则提前创建代理 proxyA，无切面则返回原始 rawA)   │
-> │     │                ├─ 早期引用升级存入二级缓存: earlySingletonObjects.put("a", earlyA)          │
-> │     │                ├─ 从三级缓存移除工厂: singletonFactories.remove("a")                         │
-> │     │                └─ getBean("a") 成功返回 earlyA，直接赋给 B.a 字段！                          │
-> │     │                   【💥 关键阻断：依赖获取成功，B 绝不重新调用 createBean("a")，死循环彻底斩断！】 │
-> │     ├─ ④ 初始化 B: initializeBean("b") (执行 Aware 回调、@PostConstruct、init-method、AOP 等)      │
-> │     └─ ⑤ 注册成品池:                                                                              │
-> │            ├─ 成熟单例 B 存入一级缓存: singletonObjects.put("b", matureB)                          │
-> │            └─ 清除 B 创建中标记: singletonsCurrentlyInCreation.remove("b")                        │
-> │  4. return matureB; ───────────────────────────────────────────────────────────────┐     │
-> └────────────────────────────────────────────────────────────────────────────────────┼─────┘
->                                                                                      │ [方法出栈 Pop]
->                                                                                      ▼
-> ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-> │ 【阶段三：A 恢复执行生命周期（执行后半段，消费成熟 B，闭环完成全套初始化）】                          │
-> │  1. 【执行权弹回】栈帧 2 弹出，调用栈切回栈帧 1，A 的 populateBean("a") 收到 getBean("b") 返回的 matureB│
-> │  2. 将 matureB 赋给 A.b 字段，A 的属性填充 ③ 正式全部完成！                                      │
-> │  3. ④ 初始化 A: initializeBean("a") (依次执行 Aware 回调、@PostConstruct、业务自定义 init-method 等)│
-> │  4. ⑤ 最终一致性校验与单例注册:                                                                  │
-> │     ├─ 检查二级缓存 earlySingletonObjects.get("a")：                                              │
-> │     │    若存在 earlyA (曾发生循环依赖提前暴露代理)，则直接取回 earlyA 作为最终单例返回，防止对象分裂！│
-> │     ├─ 将最终单例存入一级缓存: singletonObjects.put("a", matureA / earlyA)                         │
-> │     ├─ 从二级缓存彻底移除: earlySingletonObjects.remove("a")                                      │
-> │     └─ 清除 A 创建中标记: singletonsCurrentlyInCreation.remove("a")                               │
-> │  5. return matureA;                                                                              │
-> │  6. 【全盘大圆满】：A、B 单例均已入驻一级缓存，且彼此正确持有对方的有效引用！                        │
-> └──────────────────────────────────────────────────────────────────────────────────────────────────┘
-> ```
-> 
-> A 之所以能继续走完后续阶段，是因为在 JVM 单线程中，调用 B 的方法栈帧（`doCreateBean("b")`）执行完毕弹栈了，CPU 执行指针自然回到了 A 的代码行（`populateBean("a")`），A 从而能够顺理成章地继续执行 `initializeBean("a")` 并最终注册进一级缓存。
+**真相：JVM 单线程的方法调用栈（Call Stack）天然出栈机制！**
+
+这并不是什么多线程的异步挂起或唤醒，而是 Java 最基础的**同步方法嵌套调用**（从 A 启动并压栈等待 ➔ 转入 B 执行全套流程 ➔ 弹栈交还执行权 ➔ A 恢复执行后半段）：
+
+```text
+JVM 单线程方法调用栈（Call Stack 逐帧演进全景）：
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 【阶段一：A 启动生命周期（执行前半段，创建原始对象并挂起等待 B）】                                   │
+│  1. 容器触发 getBean("a")                                                                        │
+│  2. 标记 A 正在创建中：singletonsCurrentlyInCreation.add("a")                                     │
+│  3. 进入 doCreateBean("a")                                                                       │
+│     ├─ ① 实例化 A: A rawA = new ServiceA(); (在 JVM 堆内存分配原始裸对象空间)                     │
+│     ├─ ② 提前暴露三级缓存工厂:                                                                    │
+│     │    singletonFactories.put("a", () -> getEarlyBeanReference("a", mbd, rawA));              │
+│     └─ ③ 属性填充 populateBean("a"): 扫描依赖字段 @Autowired private ServiceB b;                  │
+│            └─ 尝试从三级缓存检索 B (此时 B 从未创建，各级缓存为空，未命中)                           │
+│            └─ 发起同步依赖检索：getBean("b") ──────────────────────────────────────────────┐     │
+│               【🚨 关键点：此时 A 的生命周期暂停在第 ③ 步，调用栈帧 1 压入栈底，等待 getBean("b") 返回！】 │     │
+└────────────────────────────────────────────────────────────────────────────────────┼─────┘
+                                                                                     │ [方法压栈 Push]
+                                                                                     ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 【阶段二：嵌套执行 B 的完整生命周期（入栈执行，打破循环依赖并成为成熟单例）】                         │
+│  1. getBean("b") 触发创建 B                                                                      │
+│  2. 标记 B 正在创建中：singletonsCurrentlyInCreation.add("b")                                     │
+│  3. 进入 doCreateBean("b")                                                                       │
+│     ├─ ① 实例化 B: B rawB = new ServiceB(); (在 JVM 堆内存分配原始裸对象空间)                     │
+│     ├─ ② 提前暴露三级缓存工厂:                                                                    │
+│     │    singletonFactories.put("b", () -> getEarlyBeanReference("b", mbd, rawB));              │
+│     ├─ ③ 属性填充 populateBean("b"): 扫描依赖字段 @Autowired private ServiceA a;                  │
+│     │      └─ 发起依赖检索：getBean("a") ➔ 进入 getSingleton("a", true)                            │
+│     │           ├─ 查一级缓存 singletonObjects: 无成品 A                                          │
+│     │           ├─ 检查正在创建状态: singletonsCurrentlyInCreation.contains("a") == true！       │
+│     │           ├─ 查二级缓存 earlySingletonObjects: 无                                           │
+│     │           └─ 查三级缓存 singletonFactories: 【🎯精准命中 A 在阶段一暴露的工厂回调！】        │
+│     │                ├─ 执行工厂方法：getObject() -> getEarlyBeanReference()                      │
+│     │                │   (按需判断：若 A 有 AOP 切面则提前创建代理 proxyA，无切面则返回原始 rawA)   │
+│     │                ├─ 早期引用升级存入二级缓存: earlySingletonObjects.put("a", earlyA)          │
+│     │                ├─ 从三级缓存移除工厂: singletonFactories.remove("a")                         │
+│     │                └─ getBean("a") 成功返回 earlyA，直接赋给 B.a 字段！                          │
+│     │                   【💥 关键阻断：依赖获取成功，B 绝不重新调用 createBean("a")，死循环彻底斩断！】 │
+│     ├─ ④ 初始化 B: initializeBean("b") (执行 Aware 回调、@PostConstruct、init-method、AOP 等)      │
+│     └─ ⑤ 注册成品池:                                                                              │
+│            ├─ 成熟单例 B 存入一级缓存: singletonObjects.put("b", matureB)                          │
+│            └─ 清除 B 创建中标记: singletonsCurrentlyInCreation.remove("b")                        │
+│  4. return matureB; ───────────────────────────────────────────────────────────────┐     │
+└────────────────────────────────────────────────────────────────────────────────────┼─────┘
+                                                                                     │ [方法出栈 Pop]
+                                                                                     ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 【阶段三：A 恢复执行生命周期（执行后半段，消费成熟 B，闭环完成全套初始化）】                          │
+│  1. 【执行权弹回】栈帧 2 弹出，调用栈切回栈帧 1，A 的 populateBean("a") 收到 getBean("b") 返回的 matureB│
+│  2. 将 matureB 赋给 A.b 字段，A 的属性填充 ③ 正式全部完成！                                      │
+│  3. ④ 初始化 A: initializeBean("a") (依次执行 Aware 回调、@PostConstruct、业务自定义 init-method 等)│
+│  4. ⑤ 最终一致性校验与单例注册:                                                                  │
+│     ├─ 检查二级缓存 earlySingletonObjects.get("a")：                                              │
+│     │    若存在 earlyA (曾发生循环依赖提前暴露代理)，则直接取回 earlyA 作为最终单例返回，防止对象分裂！│
+│     ├─ 将最终单例存入一级缓存: singletonObjects.put("a", matureA / earlyA)                         │
+│     ├─ 从二级缓存彻底移除: earlySingletonObjects.remove("a")                                      │
+│     └─ 清除 A 创建中标记: singletonsCurrentlyInCreation.remove("a")                               │
+│  5. return matureA;                                                                              │
+│  6. 【全盘大圆满】：A、B 单例均已入驻一级缓存，且彼此正确持有对方的有效引用！                        │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+A 之所以能继续走完后续阶段，是因为在 JVM 单线程中，调用 B 的方法栈帧（`doCreateBean("b")`）执行完毕弹栈了，CPU 执行指针自然回到了 A 的代码行（`populateBean("a")`），A 从而能够顺理成章地继续执行 `initializeBean("a")` 并最终注册进一级缓存。
 
 ---
 
