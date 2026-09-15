@@ -267,5 +267,6 @@ executor.setAwaitTerminationSeconds(30);
 
 ## 🧭 下一步
 
-高并发不仅依赖异步线程池的承载，还极度依赖缓存体系来抵挡数据库流量。
-请继续前往：[[16-SpringCache与分布式缓存实战]]！
+在掌握了 Spring Boot 的自动配置机制、启动流程与异步线程池体系后，应用上线绝不能是一个“两眼一抹黑”的黑盒系统。
+Spring Boot 是如何通过 **Actuator** 将应用的运行状态（健康检查、Prometheus 指标、配置属性、线程堆栈）全方位白盒化暴露出来的？在现代云原生 K8s 环境中，如何对接存活探针（Liveness）与就绪探针（Readiness）？服务发版时如何实现流量无损的优雅停机（Graceful Shutdown）？
+请进入第三关生产运维收官专题：[[14-SpringBoot生产运维与Actuator]]！

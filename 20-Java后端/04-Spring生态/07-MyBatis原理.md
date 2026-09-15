@@ -150,7 +150,6 @@ SELECT * FROM users WHERE username = 'admin' AND password = '' OR '1'='1'
 
 ## 🧭 下一步
 
-搞定了 Web 层的 SpringMVC 与持久层的 MyBatis，系统已经能顺畅跑通业务。
-但还有一个至关重要的门神在守护着系统的安全防线——**`Spring Security`**。
-它是如何通过多道安检门对用户进行身份认证（你是谁）和权限把控（你能干什么）的？
-请进入下一篇：[[12-Spring-Security]]！
+在核心记忆卡中我们指出：MyBatis 自带的二级缓存在分布式环境下存在脏读隐患，生产环境必须借助外置缓存。
+面对数十万 QPS 的读流量，如何使用 Spring 提供的统一抽象 **`Spring Cache`**？如何通过 `@Cacheable`、`@CacheEvict` 实现业务与缓存解耦？如何构建 **Caffeine 本地堆内 + Redis 分布式网络** 的两级缓存防护大堤？
+请进入第二关下一篇核心利器：[[16-SpringCache与分布式缓存实战]]！

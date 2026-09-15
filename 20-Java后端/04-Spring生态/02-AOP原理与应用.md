@@ -103,6 +103,18 @@ flowchart TD
 | **Spring Framework 策略** | 若目标类实现了接口，默认优先使用 JDK 代理 | 若未实现接口，自动回退至 CGLIB 代理 |
 | **Spring Boot 2.x/3.x 策略** | 配置 `spring.aop.proxy-target-class=false` 时开启 | **默认全局强制启用 CGLIB**（避免开发中因类型强制转换抛出 `BeanNotOfRequiredTypeException`） |
 
+### 4. 深度闭环：AOP 动态代理究竟是在 Bean 生命周期的哪个阶段生成的？
+
+结合上一篇 [[01-IoC容器与Bean生命周期]] 与 [[13-Spring循环依赖与三级缓存]] 的生命周期模型，面试官极常追问：“AOP 动态代理究竟是在什么时候生成的？”
+
+Spring 将代理的创建严格划分为两种场景：
+1. **常规情况（99% 无循环依赖的正常 Bean）**：
+   - 发生在 **阶段 4：初始化后置处理阶段（`postProcessAfterInitialization`）**；
+   - 核心后置处理器 `AbstractAutoProxyCreator` 会在目标 Bean 经历完实例化、属性填充、Aware 回调和 `@PostConstruct` 初始化之后，扫描切点匹配规则；若命中切面，**在此刻生成 JDK Proxy 或 CGLIB 代理对象，并最终将代理对象替换原始对象注入单例池**。
+2. **循环依赖情况（提前暴露早期代理）**：
+   - 发生在 **阶段 2：属性填充前（三级缓存 `getEarlyBeanReference` 触发时）**；
+   - 当 A 依赖 B、B 又反向依赖 A 时，为了让 B 能注入 A 的代理对象，三级缓存通过 `SmartInstantiationAwareBeanPostProcessor.getEarlyBeanReference()` **提前生成 A 的动态代理并升入第二级缓存**；随后当 A 自己走到阶段 4 时，检测到已被提前代理过，直接放行返回原始对象，确保全局单例唯一。
+
 ---
 
 ## 四、生产级高频陷阱：自调用失效（Self-Invocation）深度剖析

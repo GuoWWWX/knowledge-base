@@ -93,9 +93,9 @@ flowchart TD
 
     G1["🟢 第一关：底座内功 (Spring 核心)<br/>- 01 IoC 容器与 Bean 生命周期<br/>- 13 循环依赖与三级缓存<br/>- 02 AOP 原理与动态代理<br/>- 03 声明式事务与失效大坑<br/>- 11 Spring 事件机制"]:::s1
     
-    G2["🟡 第二关：工业利器 (Web 与数据层)<br/>- 06 SpringMVC 11 步就诊大链路<br/>- 07 MyBatis 代理与四大处理器<br/>- 12 Spring Security 机场多道安检"]:::s2
+    G2["🟡 第二关：工业利器 (Web 与数据层)<br/>- 06 SpringMVC 11 步就诊大链路<br/>- 07 MyBatis 代理与四大处理器<br/>- 16 SpringCache 与两级缓存架构<br/>- 12 Spring Security 机场多道安检"]:::s2
 
-    G3["🟠 第三关：魔法揭秘 (Spring Boot 核心)<br/>- 04 自动配置原理与条件退让<br/>- 05 手写自定义 Starter 外设<br/>- 10 SpringApplication 启动全流程"]:::s3
+    G3["🟠 第三关：魔法揭秘 (Spring Boot 核心)<br/>- 04 自动配置原理与条件退让<br/>- 05 手写自定义 Starter 外设<br/>- 10 SpringApplication 启动全流程<br/>- 15 异步线程池跨线程透传<br/>- 14 Actuator 生产监控与无损停机"]:::s3
 
     G4["🔴 第四关：云原生与前沿 (微服务与响应式)<br/>- 08 SpringCloud 微服务治理体系<br/>- 09 WebFlux 响应式流与背压"]:::s4
 
@@ -119,4 +119,10 @@ flowchart TD
 3. **追问“为什么”，而不是“怎么配”**：
    - 不要死背配置项，多思考：如果不这么设计会带来什么痛点？为什么解决循环依赖必须是三级缓存而不是两级？
 
-准备好了吗？让我们直接从这座现代化智慧城市的市政基础设施——[[01-IoC容器与Bean生命周期]] 启程！
+---
+
+## 🧭 下一步
+
+建立了全局上帝视角后，让我们正式开启第一关的探索，从 Spring 帝国最核心的市政公共基础设施——IoC 容器与 Bean 完整生命周期启程！
+请进入：[[01-IoC容器与Bean生命周期]]！
+
