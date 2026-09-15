@@ -105,7 +105,7 @@ flowchart TD
     end
 
     subgraph 阶段2_属性填充
-        S2["2. populateBean 依赖注入<br/>(AutowiredAnnotationBeanPostProcessor 注入 @Autowired / @Value 字段)"]
+        S2["2. populateBean 属性填充与依赖注入<br/>- 注解驱动: @Autowired / @Value / @Resource / @Inject<br/>- 显式/外部配置: applyPropertyValues 属性绑定"]
     end
 
     subgraph 阶段3_Aware感知接口回调
@@ -139,7 +139,13 @@ flowchart TD
 1. **实例化（Instantiation）**：
    - 容器通过 `createBeanInstance()` 利用反射选择合适的构造函数实例化对象。此时对象仅存在于堆内存中，其所有标记了 `@Autowired` 的字段仍为 `null`。
 2. **属性填充（Populate Properties）**：
-   - 容器调用 `populateBean()`，由内部注册的 `AutowiredAnnotationBeanPostProcessor` 解析并调用反射或 Setter，将目标依赖注入对象中。
+   - 容器调用 `populateBean()` 执行依赖装配，该阶段涵盖多条装配通道（**绝非仅限 `@Autowired`**）：
+     - **注解驱动依赖注入**：底层依赖 `InstantiationAwareBeanPostProcessor.postProcessProperties()` 扩展点：
+       - `AutowiredAnnotationBeanPostProcessor`：处理 `@Autowired`、`@Value`（外部配置/SpEL 解析）以及 `@Inject`（JSR-330 规范）；
+       - `CommonAnnotationBeanPostProcessor`：处理 `@Resource`（JSR-250 规范，优先按 Name 匹配注入）；
+       - `PersistenceAnnotationBeanPostProcessor`：处理 JPA 的 `@PersistenceContext` 注入 `EntityManager`。
+     - **显式/外部配置属性填充**：通过 `applyPropertyValues()` 将 XML 中的 `<property name="..." value/ref="..."/>` 或 Spring Boot 中 `@ConfigurationProperties` 绑定的外部环境配置，经由 `TypeConverter` 类型转换后通过 Setter 或反射注入。
+     - **短路前置拦截**：在开始填充前还会调用 `postProcessAfterInstantiation()`，若任何处理器返回 `false` 则直接短路跳过属性填充。
 3. **Aware 感知接口回调**：
    - Spring 让 Bean 具备“感知”容器环境的能力。依次回调 `BeanNameAware`、`BeanFactoryAware`、`ApplicationContextAware`，将当前的 Bean 标识与容器引用赋予 Bean 实例。
 4. **初始化阶段（Initialization）**：
