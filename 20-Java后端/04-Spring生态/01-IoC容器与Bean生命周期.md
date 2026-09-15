@@ -251,32 +251,46 @@ import org.springframework.context.annotation.Configuration;
 public class LifecycleVerifyDemo {
 
     static class BusinessService implements BeanNameAware, InitializingBean {
+        private String moduleName;
+
         public BusinessService() {
-            System.out.println("[步骤 1] 构造方法执行 (实例化完成)");
+            System.out.println("[步骤 1] 阶段一·实例化完成 (反射调用构造方法，生成原始裸对象)");
         }
 
+        // 阶段二：属性填充 (Setter 方法注入 / @Autowired 依赖注入)
+        @Autowired
+        public void setModuleName(@Value("${spring.application.name:OrderModule}") String moduleName) {
+            this.moduleName = moduleName;
+            System.out.println("[步骤 2] 阶段二·属性填充完成 (Setter/注解注入属性: moduleName=" + moduleName + ")");
+        }
+
+        // 阶段三：Aware 感知接口回调 (让 Bean 获取容器本身的身份或环境引用)
         @Override
         public void setBeanName(String name) {
-            System.out.println("[步骤 2] BeanNameAware 接口回调，注入 Bean 标识: " + name);
+            System.out.println("[步骤 3] 阶段三·Aware 感知接口回调 (注入 Bean 标识: " + name + ")");
         }
 
+        // 阶段四：初始化 - 4.1 注解前置处理
         @PostConstruct
         public void postConstruct() {
-            System.out.println("[步骤 3] @PostConstruct 注解方法执行 (初始化前置处理)");
+            System.out.println("[步骤 4] 阶段四·初始化前置处理 (@PostConstruct 注解方法执行)");
         }
 
+        // 阶段四：初始化 - 4.2 框架标准接口
         @Override
         public void afterPropertiesSet() {
-            System.out.println("[步骤 4] InitializingBean.afterPropertiesSet() 执行");
+            System.out.println("[步骤 5] 阶段四·初始化中 (InitializingBean.afterPropertiesSet() 执行)");
         }
 
+        // 阶段四：初始化 - 4.3 自定义 init-method
         public void customInit() {
-            System.out.println("[步骤 5] 自定义 init-method 执行 (初始化完成)");
+            System.out.println("[步骤 6] 阶段四·初始化完成 (自定义 init-method 执行)");
         }
 
+        // 阶段六：销毁
         @PreDestroy
         public void preDestroy() {
-            System.out.println("[步骤 7] @PreDestroy 执行，开始清理资源");
+            System.out.println("[步骤 8] 阶段六·容器关闭与销毁 (@PreDestroy 触发，释放底层连接资源)");
         }
     }
 
@@ -284,7 +298,7 @@ public class LifecycleVerifyDemo {
         @Override
         public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
             if (bean instanceof BusinessService) {
-                System.out.println("[扩展点] BeanPostProcessor.postProcessBeforeInitialization 介入");
+                System.out.println("  └── [扩展点] BeanPostProcessor.postProcessBeforeInitialization 介入");
             }
             return bean;
         }
@@ -292,7 +306,7 @@ public class LifecycleVerifyDemo {
         @Override
         public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
             if (bean instanceof BusinessService) {
-                System.out.println("[扩展点] BeanPostProcessor.postProcessAfterInitialization 介入 (AOP 代理包装点)");
+                System.out.println("  └── [步骤 7] 阶段四·初始化后置 BeanPostProcessor.postProcessAfterInitialization (AOP 代理包装点)");
             }
             return bean;
         }
@@ -323,6 +337,30 @@ public class LifecycleVerifyDemo {
     }
 }
 ```
+
+#### 控制台真实输出时序图谱：
+
+```text
+====== Spring 容器启动初始化 ======
+[步骤 1] 阶段一·实例化完成 (反射调用构造方法，生成原始裸对象)
+[步骤 2] 阶段二·属性填充完成 (Setter/注解注入属性: moduleName=OrderModule)
+[步骤 3] 阶段三·Aware 感知接口回调 (注入 Bean 标识: businessService)
+  └── [扩展点] BeanPostProcessor.postProcessBeforeInitialization 介入
+[步骤 4] 阶段四·初始化前置处理 (@PostConstruct 注解方法执行)
+[步骤 5] 阶段四·初始化中 (InitializingBean.afterPropertiesSet() 执行)
+[步骤 6] 阶段四·初始化完成 (自定义 init-method 执行)
+  └── [步骤 7] 阶段四·初始化后置 BeanPostProcessor.postProcessAfterInitialization (AOP 代理包装点)
+
+====== 业务 Bean 就绪，正常调用 ======
+
+====== 容器关闭 ======
+[步骤 8] 阶段六·容器关闭与销毁 (@PreDestroy 触发，释放底层连接资源)
+```
+
+> [!tip] 阶段二（属性填充）与阶段三（Aware 回调）核心辨析
+> - **阶段二：属性填充（`populateBean`）**：负责注入**业务依赖与外部配置**（通过 `@Autowired`、`@Resource`、`@Value` 或 Setter 方法），此时对象业务字段从 `null` 变为可用；
+> - **阶段三：Aware 回调**：发生在属性填充**之后**。当业务属性填好后，Spring 才会把**容器自身的身份与环境引用**（如 `beanName`、`BeanFactory`、`ApplicationContext`）赋予该 Bean；
+> - 两者是严格的先后承接关系，`Aware` 绝对不等于属性填充！
 
 ---
 
