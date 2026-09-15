@@ -86,11 +86,17 @@ flowchart LR
 
 ## 三、三种依赖注入方式对比与选型原则
 
-| 注入方式 | 代码形态 | 优点 | 缺点 / 官方评价 |
-| :--- | :--- | :--- | :--- |
-| **构造器注入**（Constructor Injection） | `public OrderService(InventoryService inv) { this.inv = inv; }` | 1. **强制依赖**：确保对象创建时即处于可用状态；<br>2. **支持 `final`**：字段可声明为不可变，保证线程安全；<br>3. **易于单元测试**：无需启动 Spring 容器即可通过普通 `new` 注入 Mock 对象；<br>4. **避免循环依赖隐患**。 | 构造函数参数过多时代码较长（表明类职责过重，倒逼单一职责重构）。<br>🌟 **Spring 官方强烈推荐首选**。 |
-| **Setter 方法注入**（Setter Injection） | `public void setInv(InventoryService inv) { this.inv = inv; }` | 支持运行时动态更改依赖，适合可选依赖（Optional Dependencies）。 | 无法将字段声明为 `final`；对象在实例化与 Setter 调用之间处于非完备状态。 |
-| **字段反射注入**（Field Injection） | `@Autowired private InventoryService inv;` | 代码极其精炼，编写速度快。 | 1. **隐藏依赖边界**：脱离 Spring 容器环境后外部无法直接注入，单元测试寸步难行；<br>2. **破坏封装性**：依赖 Java 反射强行侵入 `private` 字段。<br>❌ **Spring 官方不推荐使用**。 |
+| 注入方式 | 代码形态 | 生命周期发生阶段 | 优点 | 缺点 / 官方评价 |
+| :--- | :--- | :---: | :--- | :--- |
+| **构造器注入**<br>（Constructor） | `public OrderService(InventoryService inv) { this.inv = inv; }` | **阶段 1：实例化**<br>（`createBeanInstance`） | 1. **强制依赖**：确保对象创建时即处于可用状态；<br>2. **支持 `final`**：字段不可变，原生线程安全；<br>3. **易于单测**：脱离容器也可直接 `new` 注入 Mock 对象；<br>4. **避免循环依赖**。 | 构造函数参数过多时代码较长（提示类职责过重，倒逼单一职责重构）。<br>🌟 **Spring 官方强烈推荐首选**。 |
+| **Setter 方法注入**<br>（Setter） | `public void setInv(InventoryService inv) { this.inv = inv; }` | **阶段 2：属性填充**<br>（`populateBean`） | 支持运行时动态更改依赖，适合可选依赖（Optional Dependencies）。 | 无法将字段声明为 `final`；对象在实例化与 Setter 调用之间存在短暂的未完备状态。 |
+| **字段反射注入**<br>（Field） | `@Autowired private InventoryService inv;` | **阶段 2：属性填充**<br>（`populateBean`） | 代码极其精炼，编写速度快。 | 1. **隐藏依赖边界**：脱离容器后单测难以进行；<br>2. **破坏封装性**：依赖反射强行侵入 `private` 字段。<br>❌ **Spring 官方不推荐使用**。 |
+
+> [!important] 依赖注入在生命周期中的核心结论
+> **依赖注入（DI）并非全在 `populateBean` 阶段！**
+> - **构造器注入** 发生在 **阶段 1：实例化阶段**（在反射调用构造器 `new` 的一瞬间，依赖就已经就绪并传入）；
+> - **阶段 2：属性填充（`populateBean`）** 则主要负责 **注解驱动注入**（`@Autowired`、`@Resource`、`@Value` 的字段/方法）与 **Setter 方法注入**（显式属性设值与外部配置绑定）。
+
 
 ---
 
@@ -101,11 +107,11 @@ Bean 在 Spring 容器中的流转并非简单的 `new` 与垃圾回收，而是
 ```mermaid
 flowchart TD
     subgraph 阶段1_实例化
-        S1["1. InstantiationStrategy 实例化<br/>(反射调用构造函数生成原始裸对象)"]
+        S1["1. InstantiationStrategy 实例化<br/>(反射调用构造函数生成对象)<br/>⚡ 构造器注入在此阶段完成！"]
     end
 
     subgraph 阶段2_属性填充
-        S2["2. populateBean 属性填充与依赖注入<br/>- 注解驱动: @Autowired / @Value / @Resource / @Inject<br/>- 显式/外部配置: applyPropertyValues 属性绑定"]
+        S2["2. populateBean 依赖注入与属性设值<br/>⚡ 主力负责【注解注入】与【Setter 方法】<br/>- 注解驱动: @Autowired / @Resource / @Value 字段与方法<br/>- Setter设值: applyPropertyValues 属性设值与配置绑定"]
     end
 
     subgraph 阶段3_Aware感知接口回调
@@ -137,14 +143,15 @@ flowchart TD
 
 ### 关键扩展点源码细节剖析：
 1. **实例化（Instantiation）**：
-   - 容器通过 `createBeanInstance()` 利用反射选择合适的构造函数实例化对象。此时对象仅存在于堆内存中，其所有标记了 `@Autowired` 的字段仍为 `null`。
+   - 容器通过 `createBeanInstance()` 利用反射选择合适的构造函数实例化对象。
+   - **⚡ 构造器注入在此完成**：若采用构造器注入（如 `public OrderService(PaymentService ps)`），Spring 在调用有参构造函数前便已解析并传入对应依赖 Bean；若无构造器注入，则调用无参构造函数生成原始裸对象（此时其所有标记了 `@Autowired` 的字段仍为 `null`）。
 2. **属性填充（Populate Properties）**：
-   - 容器调用 `populateBean()` 执行依赖装配，该阶段涵盖多条装配通道（**绝非仅限 `@Autowired`**）：
-     - **注解驱动依赖注入**：底层依赖 `InstantiationAwareBeanPostProcessor.postProcessProperties()` 扩展点：
-       - `AutowiredAnnotationBeanPostProcessor`：处理 `@Autowired`、`@Value`（外部配置/SpEL 解析）以及 `@Inject`（JSR-330 规范）；
-       - `CommonAnnotationBeanPostProcessor`：处理 `@Resource`（JSR-250 规范，优先按 Name 匹配注入）；
-       - `PersistenceAnnotationBeanPostProcessor`：处理 JPA 的 `@PersistenceContext` 注入 `EntityManager`。
-     - **显式/外部配置属性填充**：通过 `applyPropertyValues()` 将 XML 中的 `<property name="..." value/ref="..."/>` 或 Spring Boot 中 `@ConfigurationProperties` 绑定的外部环境配置，经由 `TypeConverter` 类型转换后通过 Setter 或反射注入。
+   - 容器调用 `populateBean()` 执行属性装配，**该阶段主要由“注解注入”与“Setter 方法注入”两大主力构成**：
+     - **注解驱动注入（现代主力）**：底层依赖 `InstantiationAwareBeanPostProcessor.postProcessProperties()` 扩展点：
+       - `AutowiredAnnotationBeanPostProcessor`：解析 `@Autowired`、`@Value`（外部配置/SpEL 解析）以及 `@Inject`（JSR-330 规范），支持对字段直接反射赋值或调用带注解的 Setter 方法；
+       - `CommonAnnotationBeanPostProcessor`：解析 `@Resource`（JSR-250 规范，优先按 Name 匹配后反射或 Setter 赋值）；
+       - `PersistenceAnnotationBeanPostProcessor`：解析 JPA 的 `@PersistenceContext` 注入 `EntityManager`。
+     - **Setter 方法注入与配置绑定**：通过 `applyPropertyValues()` 遍历属性值集，经由 `TypeConverter` 类型转换后，反射调用 JavaBean 标准的 `setXxx(...)` 方法（如 XML `<property>` 配置、Spring Boot `@ConfigurationProperties` 绑定的外部环境属性）。
      - **短路前置拦截**：在开始填充前还会调用 `postProcessAfterInstantiation()`，若任何处理器返回 `false` 则直接短路跳过属性填充。
 3. **Aware 感知接口回调**：
    - Spring 让 Bean 具备“感知”容器环境的能力。依次回调 `BeanNameAware`、`BeanFactoryAware`、`ApplicationContextAware`，将当前的 Bean 标识与容器引用赋予 Bean 实例。
