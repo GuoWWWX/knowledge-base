@@ -121,33 +121,85 @@ protected Object getSingleton(String beanName, boolean allowEarlyReference) {
 sequenceDiagram
     autonumber
     actor Container as Spring 容器
-    participant A as ServiceA
-    participant B as ServiceB
+    participant A as ServiceA (调用栈帧 1)
+    participant B as ServiceB (调用栈帧 2)
     participant L3 as 三级缓存 (singletonFactories)
     participant L2 as 二级缓存 (earlySingletonObjects)
     participant L1 as 一级缓存 (singletonObjects)
 
-    Note over Container: 1. 准备创建 A，标记 A 处于创建中
+    Note over Container: 1. 触发 getBean("a")，标记 A 正在创建中 (加入 singletonsCurrentlyInCreation)
     Container->>A: 实例化 A (构造方法 new 原始裸对象)
-    Container->>L3: 暴露 A 的工厂回调 () -> getEarlyBeanReference(A)
-    Note over Container, A: 2. A 进行属性注入 populateBean()，发现依赖 B！
+    A->>L3: 提前暴露 A 的工厂回调 () -> getEarlyBeanReference(a, mbd, bean)
+    
+    Note over A: 2. A 属性填充 populateBean()，发现依赖 B，同步调用 getBean("b")
+    A->>L1: 检索 B: 一级缓存无、二级缓存无、三级缓存无 (B 未处于创建中，未命中缓存)
+    Note over Container, B: 3. 必须全新创建 B！A 的方法栈帧暂停等待 getBean("b") 返回
 
-    Note over Container: 3. 挂起 A，开始创建 B，标记 B 处于创建中
+    Note over Container: 4. 触发 getBean("b")，标记 B 正在创建中 (加入 singletonsCurrentlyInCreation)
     Container->>B: 实例化 B (构造方法 new 原始裸对象)
-    Container->>L3: 暴露 B 的工厂回调 () -> getEarlyBeanReference(B)
-    Note over Container, B: 4. B 进行属性注入 populateBean()，发现依赖 A！
+    B->>L3: 提前暴露 B 的工厂回调 () -> getEarlyBeanReference(b, mbd, bean)
+    
+    Note over B: 5. B 属性填充 populateBean()，发现依赖 A，同步调用 getBean("a")
+    B->>L1: 检索 A: 一级缓存无，检测到 A 正处于创建中！允许穿透到低级缓存
+    B->>L2: 检索 A: 二级缓存无
+    B->>L3: 检索 A: 命中三级缓存中 A 的工厂回调！
+    
+    Note over L3, L2: 6. 执行 A 的工厂回调，若 A 有切面则提前生成 AOP 代理，放入二级缓存，从三级缓存移除
+    L3->>L2: earlySingletonObjects.put("a", proxyA or rawA)
+    L2-->>B: getBean("a") 成功返回 A 的早期引用并注入进 B！(循环在此阻断，绝不再去创建 A)
+    
+    Note over B: 7. B 完成属性填充与初始化 initializeBean("b")
+    B->>L1: 成熟单例 B 放入一级缓存，清除 B 的创建中标记
+    Note over B, A: 8. getBean("b") 执行完毕并 return 成熟 B！调用栈出栈，执行权交还给 A！
 
-    Note over B, L3: 5. B 检索 A: 一级没有 -> 二级没有 -> 命中三级缓存！
-    L3->>L2: 调用 A 的 ObjectFactory.getObject()，若有 AOP 则提前生成代理 A，存入二级缓存，清除三级缓存
-    L2-->>B: 将早期引用 A 注入给 B
-    Note over B: 6. B 完成属性填充与初始化 initializeBean()
-    B->>L1: B 升级为成熟单例，放入一级缓存，清除创建中标记
-
-    Note over Container, A: 7. 恢复 A 的流程: 从一级缓存取出成熟 B 注入给 A
-    Note over A: 8. A 完成初始化 initializeBean()
-    Note over A: 9. 最终一致性校验: A 取出二级缓存的代理引用返回
-    A->>L1: 代理 A 存入一级缓存，清除二级缓存与创建中标记
+    Note over A: 9. A 收到成熟单例 B，完成 populateBean() 属性填充
+    Note over A: 10. A 执行初始化 initializeBean("a")
+    Note over A, L2: 11. 最终一致性校验: A 发现二级缓存已有提前暴露的早期引用，取回该引用
+    A->>L1: 将最终的单例 A 存入一级缓存，清除二级缓存与创建中标记
 ```
+
+### 深度剖析：破解循环依赖的三大底层疑问
+
+#### 疑问 1：A 找 B 时，为什么没有直接查三级缓存命中，而是转而去执行 B 的生命周期？
+> **真相：A 和 B 检索依赖走的底层方法完全相同（都是 `getBean()`），A 同样查了三级缓存！**
+> 1. A 在执行 `populateBean` 时，发现需要注入 B，于是调用 `getBean("b")` ➔ 触发 `getSingleton("b", true)`。
+> 2. `getSingleton("b", true)` 依次检查一级、二级、三级缓存。但此时 **B 压根还没有开始创建**，各级缓存全为空，且 `singletonsCurrentlyInCreation.contains("b") == false`。
+> 3. 既然缓存完全查不到，且 B 不是循环依赖中的对象，Spring 别无选择，只能走正规通道：调用 `createBean("b")` 从头启动 B 的生命周期！
+
+#### 疑问 2：B 找 A 时，为什么不继续往下实例化 A？死循环到底被谁终结的？
+> **真相：被 `singletonsCurrentlyInCreation` 守门人与三级缓存联合终结！**
+> 1. B 在执行 `populateBean` 时需要注入 A，同样调用 `getBean("a")` ➔ 触发 `getSingleton("a", true)`。
+> 2. 此时检查一级缓存无 A，但检查关键标记：`isSingletonCurrentlyInCreation("a") == true`（因为 A 最开始已经登记了正在创建中！）。
+> 3. 容器立刻意识到：**检测到循环依赖！允许穿透到二级与三级缓存**。
+> 4. 于是查三级缓存，**精准命中 A 在步骤 1 暴露的工厂回调**，拿到 A 的早期引用并直接 `return`。
+> 5. **核心关键**：既然 `getBean("a")` 已经成功返回了依赖对象，B 的属性赋值操作就宣告完成！**既然拿到了对象，根本就不会、也不可能再去调用 `createBean("a")`**！无限循环创建的套娃链条在这一步被硬生生切断！
+
+#### 疑问 3：A 是如何“苏醒”并完整执行后续阶段的？
+> **真相：JVM 单线程的方法调用栈（Call Stack）天然出栈机制！**
+> 
+> 这并不是什么多线程的异步挂起或唤醒，而是 Java 最基础的**同步方法嵌套调用**：
+> 
+> ```text
+> 线程执行调用栈（Call Stack）：
+> 
+> [栈帧 2: B 的创建流程] 
+>   doCreateBean("b") 
+>     -> 实例化 B
+>     -> populateBean("b") -> getBean("a")【命中三级缓存，直接拿到早期 A 返回】
+>     -> initializeBean("b")【初始化完成】
+>     -> 放入一级缓存 singletonObjects.put("b", B)
+>   return B 成熟实例;  <-- 【栈帧 2 执行完毕，弹出调用栈！】
+> ─────────────────────────────────────────────────────────────
+> [栈帧 1: A 的创建流程 (之前一直在等待 getBean("b") 返回)]
+>   doCreateBean("a")
+>     -> 实例化 A 并暴露三级缓存
+>     -> populateBean("a")【此时 getBean("b") 成功返回！将成熟 B 赋给 A.b 字段】
+>     -> initializeBean("a")【A 终于得以继续向下执行初始化！】
+>     -> 校验二级缓存，将成熟 A 放入一级缓存 singletonObjects.put("a", A)
+>   return A 成熟实例;  <-- 【栈帧 1 执行完毕，单例池初始化全盘大圆满！】
+> ```
+> 
+> A 之所以能继续走完后续阶段，是因为调用 B 的方法帧执行完毕弹栈了，控制权自然回到了 A 的代码行，A 得以继续执行 `initializeBean("a")` 并最终注册进一级缓存。
 
 ---
 
