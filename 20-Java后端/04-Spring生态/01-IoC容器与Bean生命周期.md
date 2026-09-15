@@ -157,15 +157,26 @@ flowchart TD
        - `PersistenceAnnotationBeanPostProcessor`：解析 JPA 的 `@PersistenceContext` 注入 `EntityManager`。
      - **Setter 方法注入与配置绑定**：通过 `applyPropertyValues()` 遍历属性值集，经由 `TypeConverter` 类型转换后，反射调用 JavaBean 标准的 `setXxx(...)` 方法（如 XML `<property>` 配置、Spring Boot `@ConfigurationProperties` 绑定的外部环境属性）。
      - **短路前置拦截**：在开始填充前还会调用 `postProcessAfterInstantiation()`，若任何处理器返回 `false` 则直接短路跳过属性填充。
-3. **Aware 感知接口回调**：
-   - Spring 让 Bean 具备“感知”容器环境的能力。依次回调 `BeanNameAware`、`BeanFactoryAware`、`ApplicationContextAware`，将当前的 Bean 标识与容器引用赋予 Bean 实例。
-4. **初始化阶段（Initialization）**：
-   - **`BeanPostProcessor.postProcessBeforeInitialization`**：初始化前的预处理（如 `CommonAnnotationBeanPostProcessor` 触发 `@PostConstruct`）。
-   - **`InitializingBean` 与 `init-method`**：执行业务自定义的初始化逻辑（如本地缓存预热、网络连接初始化）。
-   - **`BeanPostProcessor.postProcessAfterInitialization`**：**全框架最关键的扩展点！**
-     - 包括 `AbstractAutoProxyCreator` 在内的 AOP 核心处理器在此处生效。若 Bean 被切面拦截，容器会在此阶段**使用 JDK 动态代理或 CGLIB 代理包装原始 Bean，并最终将代理对象注入容器单例池**！
-5. **销毁阶段（Destruction）**：
-   - 当 `ApplicationContext.close()` 被调用时，容器触发销毁流程，按序执行 `@PreDestroy`、`DisposableBean.destroy()` 和自定义销毁方法，安全释放底层系统资源。
+3. **Aware 感知接口回调（为什么需要？三大生产实战场景）**：
+   - **核心第一性原理**：Spring 提倡“无侵入（Non-invasive）”，绝大多数业务 Bean 只需要做被动受管的普通 POJO；但**框架级组件、通用工具类与中间件 SDK** 必须具备“反向操控容器或自查身份”的特权，`Aware` 接口就是 Spring 为特权组件开辟的**受控反向访问通道**。
+   - **三大生产实战落地场景**：
+     - **场景 A：全局上下文获取工具类（`ApplicationContextAware`）**：在非 Spring 受管类（如静态 Util 方法、多线程 Runnable、第三方 SDK 回调、WebSocket 端点）中无法直接 `@Autowired`，通过实现该接口把 `ApplicationContext` 注入并赋给全局静态变量，实现 `SpringContextUtil.getBean(...)` 随时随地动态取 Bean；
+     - **场景 B：策略模式与插件化自注册（`BeanNameAware`）**：支付策略、规则引擎等多种实现类在启动时，通过 `setBeanName` 感知自己在 Spring 容器中的 Bean ID，随后在初始化阶段自动将自己注册到策略分发 Map 中，彻底消除硬编码映射；
+     - **场景 C：破解单例注入多例（Prototype）失效（`BeanFactoryAware`）**：当单例 Service 必须在每次业务调用时动态获取一个全新的多例任务对象时，直接 `@Autowired` 会因单例只初始化一次而导致多例失效；通过持有 `BeanFactory` 引用，在业务方法内动态调用 `beanFactory.getBean(PrototypeTask.class)` 即可获取全新实例。
+4. **初始化阶段（Initialization：为什么绝不能在构造函数里写业务初始化？）**：
+   - **反常识警示**：千万不要在构造函数里写业务初始化逻辑！在构造函数执行时，字段上的 `@Autowired` / `@Resource` 依赖还是 `null`，直接调用必抛致命的 `NullPointerException`。必须等待所有属性注入与 Aware 回调完成后，在初始化阶段执行。
+   - **三大步骤分工与生产实战**：
+     - **`postProcessBeforeInitialization`（初始化前置处理）**：`CommonAnnotationBeanPostProcessor` 在此触发 `@PostConstruct` 注解。**生产实战**：拉起 Netty 客户端网络长连接、读取配置执行合法性参数校验、加载本地 Caffeine 缓存预热；
+     - **`InitializingBean.afterPropertiesSet()` 与 `init-method`**：Spring 内置的标准接口与 `@Bean(initMethod="...")` 配置。**生产实战**：中间件 SDK（如 KafkaConsumer 启动后台拉取线程、Dubbo 暴露本地服务、RocketMQ Consumer 注册监听）；
+     - **`postProcessAfterInitialization`（初始化后置处理 —— 全框架最核心的 AOP 调包现场！）**：
+       - **动态代理生成**：`AbstractAutoProxyCreator` 在此检查原始 Bean 是否被任何切面拦截（如 `@Transactional` 事务、`@Async` 异步、`@SentinelResource` 限流）。
+       - **狸猫换太子**：若命中切面，容器会在此阶段**使用 JDK 动态代理或 CGLIB 代理包装原始 Bean，并最终将生成的代理对象存入 Spring 单例池**！后续业务代码注入并调用的实际上是增强后的代理对象。
+5. **销毁阶段（Destruction：生产级“优雅停机”的物理防线）**：
+   - **为什么不能直接 `kill -9` 拔电源？**：直接杀死进程会导致在途请求瞬间断连（上游报错 502/连接重置）、线程池队列中排队的上万任务被强制抛弃、内存缓冲区中的日志与监控数据丢失。
+   - **三大生产优雅停机行为**：
+     - **注册中心主动摘牌**：在微服务节点停机前，通知 Nacos / Eureka 立即下线本实例，促使 API 网关与下游消费者在毫秒级内将流量无损切走；
+     - **线程池排空在途请求**：Spring 触发 `@PreDestroy` / `DisposableBean.destroy()` 时，调用 `ThreadPoolTaskExecutor.shutdown()`，拒绝接收新任务并阻塞等待在途队列任务执行完毕；
+     - **系统底层资源安全释放**：调用 HikariCP 连接池 `close()` 安全释放与 MySQL 的物理连接、Netty EventLoop 优雅关闭、本地内存写缓冲数据强制 `flush` 刷入磁盘。
 
 ---
 
