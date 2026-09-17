@@ -238,11 +238,16 @@ flowchart TD
 ## 五、实战验证：生命周期完整时序控制台追踪
 
 ```java
+package com.study.spring;
+
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -250,47 +255,65 @@ import org.springframework.context.annotation.Configuration;
 
 public class LifecycleVerifyDemo {
 
-    static class BusinessService implements BeanNameAware, InitializingBean {
+    // 实现了感知接口(Aware)、初始化接口(InitializingBean)与销毁接口(DisposableBean)
+    static class BusinessService implements BeanNameAware, InitializingBean, DisposableBean {
         private String moduleName;
 
+        // 【阶段一·实例化】
         public BusinessService() {
             System.out.println("[步骤 1] 阶段一·实例化完成 (反射调用构造方法，生成原始裸对象)");
         }
 
-        // 阶段二：属性填充 (Setter 方法注入 / @Autowired 依赖注入)
+        // 【阶段二·属性填充】Setter 注入 / @Autowired 依赖注入
         @Autowired
         public void setModuleName(@Value("${spring.application.name:OrderModule}") String moduleName) {
             this.moduleName = moduleName;
             System.out.println("[步骤 2] 阶段二·属性填充完成 (Setter/注解注入属性: moduleName=" + moduleName + ")");
         }
 
-        // 阶段三：Aware 感知接口回调 (让 Bean 获取容器本身的身份或环境引用)
+        // 【阶段三·Aware 感知接口回调】让 Bean 获取容器本身的身份或环境引用
         @Override
         public void setBeanName(String name) {
             System.out.println("[步骤 3] 阶段三·Aware 感知接口回调 (注入 Bean 标识: " + name + ")");
         }
 
-        // 阶段四：初始化 - 4.1 注解前置处理
+        // 【阶段四·初始化 - 4.2 注解前置处理】本质由内置 CommonAnnotationBeanPostProcessor 触发
         @PostConstruct
         public void postConstruct() {
-            System.out.println("[步骤 4] 阶段四·初始化前置处理 (@PostConstruct 注解方法执行)");
+            System.out.println("[步骤 5] 阶段四·初始化 - 4.2 注解前置处理 (@PostConstruct 执行)");
         }
 
-        // 阶段四：初始化 - 4.2 框架标准接口
+        // 【阶段四·初始化 - 4.3 框架标准接口】
         @Override
         public void afterPropertiesSet() {
-            System.out.println("[步骤 5] 阶段四·初始化中 (InitializingBean.afterPropertiesSet() 执行)");
+            System.out.println("[步骤 6] 阶段四·初始化 - 4.3 框架标准接口 (InitializingBean.afterPropertiesSet() 执行)");
         }
 
-        // 阶段四：初始化 - 4.3 自定义 init-method
+        // 【阶段四·初始化 - 4.4 自定义 init-method】
         public void customInit() {
-            System.out.println("[步骤 6] 阶段四·初始化完成 (自定义 init-method 执行)");
+            System.out.println("[步骤 7] 阶段四·初始化 - 4.4 自定义方法 (initMethod='customInit' 执行)");
         }
 
-        // 阶段六：销毁
+        // 【阶段五·业务调用】
+        public void executeBusiness() {
+            System.out.println("  -> [业务操作] BusinessService 正在处理业务订单流程...");
+        }
+
+        // 【阶段六·销毁 - 6.1 注解驱动】
         @PreDestroy
         public void preDestroy() {
-            System.out.println("[步骤 8] 阶段六·容器关闭与销毁 (@PreDestroy 触发，释放底层连接资源)");
+            System.out.println("[步骤 9] 阶段六·销毁 - 6.1 注解驱动 (@PreDestroy 触发)");
+        }
+
+        // 【阶段六·销毁 - 6.2 框架标准接口】
+        @Override
+        public void destroy() {
+            System.out.println("[步骤 10] 阶段六·销毁 - 6.2 框架标准接口 (DisposableBean.destroy() 执行)");
+        }
+
+        // 【阶段六·销毁 - 6.3 自定义 destroy-method】
+        public void customDestroy() {
+            System.out.println("[步骤 11] 阶段六·销毁 - 6.3 自定义方法 (destroyMethod='customDestroy' 执行)");
         }
     }
 
@@ -298,7 +321,7 @@ public class LifecycleVerifyDemo {
         @Override
         public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
             if (bean instanceof BusinessService) {
-                System.out.println("  └── [扩展点] BeanPostProcessor.postProcessBeforeInitialization 介入");
+                System.out.println("[步骤 4] 阶段四·初始化 - 4.1 前置扩展点 (BeanPostProcessor.postProcessBeforeInitialization 介入)");
             }
             return bean;
         }
@@ -306,7 +329,7 @@ public class LifecycleVerifyDemo {
         @Override
         public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
             if (bean instanceof BusinessService) {
-                System.out.println("  └── [步骤 7] 阶段四·初始化后置 BeanPostProcessor.postProcessAfterInitialization (AOP 代理包装点)");
+                System.out.println("[步骤 8] 阶段四·初始化 - 4.5 后置扩展点 (BeanPostProcessor.postProcessAfterInitialization AOP代理包装点)");
             }
             return bean;
         }
@@ -314,13 +337,15 @@ public class LifecycleVerifyDemo {
 
     @Configuration
     static class Config {
-        @Bean(initMethod = "customInit")
+        // 配置自定义初始化与销毁方法
+        @Bean(initMethod = "customInit", destroyMethod = "customDestroy")
         BusinessService businessService() {
             return new BusinessService();
         }
 
+        // 静态工厂方法注入 BeanPostProcessor：避免 Config 配置类过早实例化引发警告
         @Bean
-        LoggingPostProcessor loggingPostProcessor() {
+        static LoggingPostProcessor loggingPostProcessor() {
             return new LoggingPostProcessor();
         }
     }
@@ -329,10 +354,11 @@ public class LifecycleVerifyDemo {
         System.out.println("====== Spring 容器启动初始化 ======");
         var context = new AnnotationConfigApplicationContext(Config.class);
 
-        System.out.println("\n====== 业务 Bean 就绪，正常调用 ======");
+        System.out.println("\n====== 阶段五·业务 Bean 就绪，正常调用 ======");
         BusinessService service = context.getBean(BusinessService.class);
+        service.executeBusiness();
 
-        System.out.println("\n====== 容器关闭 ======");
+        System.out.println("\n====== 阶段六·容器关闭与销毁 ======");
         context.close();
     }
 }
@@ -345,16 +371,19 @@ public class LifecycleVerifyDemo {
 [步骤 1] 阶段一·实例化完成 (反射调用构造方法，生成原始裸对象)
 [步骤 2] 阶段二·属性填充完成 (Setter/注解注入属性: moduleName=OrderModule)
 [步骤 3] 阶段三·Aware 感知接口回调 (注入 Bean 标识: businessService)
-  └── [扩展点] BeanPostProcessor.postProcessBeforeInitialization 介入
-[步骤 4] 阶段四·初始化前置处理 (@PostConstruct 注解方法执行)
-[步骤 5] 阶段四·初始化中 (InitializingBean.afterPropertiesSet() 执行)
-[步骤 6] 阶段四·初始化完成 (自定义 init-method 执行)
-  └── [步骤 7] 阶段四·初始化后置 BeanPostProcessor.postProcessAfterInitialization (AOP 代理包装点)
+[步骤 4] 阶段四·初始化 - 4.1 前置扩展点 (BeanPostProcessor.postProcessBeforeInitialization 介入)
+[步骤 5] 阶段四·初始化 - 4.2 注解前置处理 (@PostConstruct 执行)
+[步骤 6] 阶段四·初始化 - 4.3 框架标准接口 (InitializingBean.afterPropertiesSet() 执行)
+[步骤 7] 阶段四·初始化 - 4.4 自定义方法 (initMethod='customInit' 执行)
+[步骤 8] 阶段四·初始化 - 4.5 后置扩展点 (BeanPostProcessor.postProcessAfterInitialization AOP代理包装点)
 
-====== 业务 Bean 就绪，正常调用 ======
+====== 阶段五·业务 Bean 就绪，正常调用 ======
+  -> [业务操作] BusinessService 正在处理业务订单流程...
 
-====== 容器关闭 ======
-[步骤 8] 阶段六·容器关闭与销毁 (@PreDestroy 触发，释放底层连接资源)
+====== 阶段六·容器关闭与销毁 ======
+[步骤 9] 阶段六·销毁 - 6.1 注解驱动 (@PreDestroy 触发)
+[步骤 10] 阶段六·销毁 - 6.2 框架标准接口 (DisposableBean.destroy() 执行)
+[步骤 11] 阶段六·销毁 - 6.3 自定义方法 (destroyMethod='customDestroy' 执行)
 ```
 
 > [!tip] 阶段二（属性填充）与阶段三（Aware 回调）核心辨析
