@@ -213,6 +213,50 @@ public class GlobalExceptionHandler {
 
 ---
 
+### 拓展实战：RESTful 规范下无返回值（`void`）Controller 方法的最佳实践
+
+在实际生产开发中，并非所有接口都需要向客户端回传复杂的 JSON 业务数据体。在严谨的 RESTful API 设计与高并发写场景中，大量接口（如资源创建、数据删除、状态切换）**只负责执行业务动作，无需冗余的数据载荷**。使用 `public void` 搭配 `@ResponseStatus` 是最正统、最高性能的写法：
+
+```java
+@RestController
+@RequestMapping("/api/v1/users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 1. 资源创建成功：标准返回 201 Created (无需冗余 JSON)
+     */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED) // HTTP 协议响应码显式设为 201
+    public void createUser(@RequestBody @Valid UserDTO dto) {
+        userService.create(dto);
+        // 方法为 void 无返回值，SpringMVC 不会向 Body 写入任何数据，直接返回纯净的 201 响应头
+    }
+
+    /**
+     * 2. 资源删除成功：标准返回 204 No Content
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT) // HTTP 协议响应码显式设为 204
+    public void deleteUser(@PathVariable Long id) {
+        userService.deleteById(id);
+        // 204 明确告知客户端：服务器已成功处理了请求，但协议上没有返回任何实体内容
+    }
+}
+```
+
+#### 底层执行机理与工程收益剖析：
+1. **默认执行机制**：若一个 Controller 方法返回值声明为 `void`，且**未添加** `@ResponseStatus` 注解，SpringMVC 默认会在协议头返回 `200 OK`，并将响应体置空；
+2. **`@ResponseStatus` 介入链路**：当添加了 `@ResponseStatus(HttpStatus.CREATED)`（或 `NO_CONTENT`）后，底层负责无返回值处理的适配器组件会检测到该注解，通过 `response.setStatus(...)` 显式覆盖默认的 200 状态码，并标记 `mavContainer.setRequestHandled(true)` 宣告当前请求处理完成；
+3. **三大硬核工程收益**：
+   - **0 堆内存分配**：无需在年轻代反复实例化 `new Result<Void>()` 这一类空包装对象，降低高并发下的 GC 频次；
+   - **0 序列化 CPU 开销**：彻底跳过 Jackson `HttpMessageConverter` 对空对象的序列化流程；
+   - **极小网络传输报文**：TCP 报文内只包含几十字节的 HTTP Header，无任何 Body 载荷，极大节省了内网微服务 RPC 与公网网关的带宽吞吐。
+
+---
+
 ### 全局异常处理底层路由链路：`HandlerExceptionResolver`
 
 当业务 Controller 或拦截器在执行过程中抛出未捕获异常时，SpringMVC 是如何精准找到 `@RestControllerAdvice` 对应的 `@ExceptionHandler` 方法的？
