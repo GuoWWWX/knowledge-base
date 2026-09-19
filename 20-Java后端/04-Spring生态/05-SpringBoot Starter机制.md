@@ -174,12 +174,66 @@ public class LoginService {
 
 ---
 
-## 🏗️ 架构进阶：双模块设计（推荐生产规范）
+## 🏗️ 架构进阶：工业级三层解耦标准（Core + AutoConfigure + Starter）
 
-在正规开源项目（如 MyBatis、Redisson）中，Starter 通常拆为两个模块：
-1. **`xxx-spring-boot-autoconfigure`**：包含所有的 Java 代码、配置类、属性类和 `imports` 文件；
-2. **`xxx-spring-boot-starter`**：**里面连一行 Java 代码都没有！** 只有一个 `pom.xml`，依赖了上面的 autoconfigure 模块和相关的核心三方包。
-- **好处**：依赖彻底解耦，非 Spring Boot 项目也可以只引入核心 SDK 而不受 Boot 框架污染。对于团队内部小型组件，也可以偷懒合并在一个单模块中。
+很多初学者看到这里会产生一个巨大的困惑：
+> *“既然 AutoConfigure 里包含了所有的 Java 配置代码和 `imports` 文件，那真正的业务功能代码写在哪？那个里面连一行代码都没有的 Starter 到底要它有什么用？”*
+
+在正规的工业级开源生态（如 MyBatis、Redisson、PageHelper）中，**一个成熟的 Starter 体系实际上由 3 个独立分工的模块组成**：
+
+### 1. 工业级三模块职责分工架构图
+
+```mermaid
+flowchart TD
+    UserApp["你的业务项目 (pom.xml)"] -->|"1. 仅需引入一行依赖\n<artifactId>sms-spring-boot-starter</artifactId>"| Starter["3. 聚合启动器\n(sms-spring-boot-starter)\n【纯空壳 pom.xml，无 Java 代码】"]
+
+    subgraph DependencyPassing["Maven 依赖传递生效（一键拉取黄金搭配全家桶）"]
+        Starter -->|"传递依赖 1"| AutoConfig["2. 自动配置适配包\n(sms-spring-boot-autoconfigure)\n【含 @AutoConfiguration、imports 文件】"]
+        Starter -->|"传递依赖 2"| CoreSDK["1. 核心功能 SDK\n(sms-core)\n【纯 Java 业务逻辑，0 个 Spring 依赖】"]
+    end
+
+    AutoConfig -.->|"2. Spring Boot 启动自动发现\n读取配置并将 SmsClient 注册为 Bean"| UserApp
+    CoreSDK -.->|"3. 业务代码直接注入 SmsClient 并调用底层业务方法"| UserApp
+```
+
+1. **`xxx-core`（核心功能 SDK / 纯业务工具包）**：
+   - **代码内容**：纯 Java 代码（如 `SmsClient`、`mybatis.jar`、`redisson.jar`）。负责底层真正发短信、解析 SQL、连接 Redis 的功能。
+   - **核心特征**：**代码里绝对不能出现任何 Spring 的注解或依赖（如 `@Component`、`@Autowired`、`@Configuration`）**。
+   - **核心价值**：非 Spring 项目（哪怕是普通的控制台 `main` 方法、古老 Servlet 遗留系统、或其他微服务框架）也可以单独引入该包，直接 `new SmsClient(...)` 即可跑通，绝不受 Spring 框架依赖污染。
+2. **`xxx-spring-boot-autoconfigure`（自动配置适配包 / 框架红娘）**：
+   - **代码内容**：只包含与 Spring Boot 绑定的装配代码，如 `SmsProperties`、`SmsAutoConfiguration` 以及 `AutoConfiguration.imports` 文件。
+   - **核心特征**：它**不实现**发短信的核心底层逻辑，它的唯一工作就是**充当红娘**——读取业务项目的 `application.yml`，并在容器启动时自动帮你在 Spring 里 `new` 一个 `SmsClient` 注册为容器 Bean。
+   - **核心价值**：将“核心功能”与“Spring 框架适配”彻底解耦。哪怕 Spring Boot 以后大版本升级（如 Boot 2 升 Boot 3，底层包名从 `javax` 变为 `jakarta`），核心的 `xxx-core` 一行代码都不用变，只需重写本适配模块即可。
+3. **`xxx-spring-boot-starter`（聚合包装盒 / 一键开箱大礼包）**：
+   - **代码内容**：**里面连一行 Java 代码都没有！** 只有一个 `pom.xml`。
+   - **核心特征**：在 `pom.xml` 里同时将上面的 `xxx-core` 和 `xxx-spring-boot-autoconfigure` 声明为依赖。
+   - **核心价值**：充当“一键开箱门面（Facade）”。业务方不需要知道背后到底由哪些散装包组成、也不需要操心版本兼不兼容，只需在 `pom.xml` 里引入这一个 Starter，Maven 的依赖传递机制就会自动将全套配套包拉取齐备。
+
+---
+
+### 2. 核心疑问深度解答
+
+#### 疑问 A：既然 Starter 里一行代码都没有，为什么不直接让业务方依赖 `autoconfigure`？
+- **防拼图式报错**：如果让业务方直接依赖 `autoconfigure`，业务方必须自己手动再去寻找并引入 `sms-core`。一旦业务方少引了、或者引入了不兼容的 `core` 核心版本，一启动就会直接抛出 `ClassNotFoundException` 惨剧。
+- **一站式门面**：Starter 是一套契约，它打包了经过官方严苛集成测试的“黄金组合版本”。
+
+#### 疑问 B：为什么开源社区常把这种模式称为“双模块设计”？
+- 像 MyBatis 官方的整合仓库叫 `mybatis-spring-boot`，它的仓库里确实只有两个子模块：`mybatis-spring-boot-autoconfigure` 和 `mybatis-spring-boot-starter`。
+- **原因在于**：底层的核心功能库 `mybatis`（即 `mybatis-3.5.x.jar`）是一个历史更早、完全独立的顶级开源项目！所以 Spring 整合仓库自身只需维护“自动配置模块”和“Starter 聚合模块”即可。
+- **认知拨正**：不管是叫“三模块分层”还是“双模块工程”，**【核心功能包】、【自动配置包】、【Starter 聚合包】这三者的逻辑边界是绝对分明、各司其职的**。
+
+---
+
+### 3. 生产选型：标准三层架构 vs 团队偷懒单模块
+
+在实际企业研发中，到底该拆分还是合在一起？遵循以下选型准则：
+
+1. **公司级通用中间件 / 开源基础组件（必须严格采用标准分层）**：
+   - **形态**：`xxx-core` + `xxx-spring-boot-autoconfigure` + `xxx-spring-boot-starter`。
+   - **适用**：供全公司几十个团队复用，未来可能支持多种异构技术栈，或作为开源项目发布。
+2. **业务团队内部小型开箱即用组件（推荐偷懒单模块，符合 KISS 原则）**：
+   - **形态**：直接在一个 `xxx-spring-boot-starter` 模块里，把属性类、工具类、AutoConfiguration 类、`imports` 文件全塞在一起。
+   - **适用**：小团队内部 3~5 个微服务自用，团队 100% 绑定 Spring Boot 生态，追求开发极简与极速迭代，无需承担过度工程化的多模块维护成本。
 
 ---
 
