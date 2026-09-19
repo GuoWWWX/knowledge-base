@@ -1,137 +1,237 @@
 ---
-title: SpringBoot启动流程
+title: SpringBoot启动流程与生命周期扩展
 tags:
   - 领域/Java后端
   - 类型/知识
   - 主题/Spring
   - 阶段/04
 created: 2026-08-06
-updated: 2026-09-11
+updated: 2026-09-19
 status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
 
-# 🚀 10 · SpringBoot 启动流程（火箭点火升空与 run() 核心拆解）
+# 🚀 10 · SpringBoot 启动流程与生命周期扩展（从火箭点火到底层时序）
 
-> **一句话导读**：看似普普通通的一行 `SpringApplication.run(App.class, args)`，背后却经历了一场精密绝伦的**“重型火箭自检与点火升空”**。搞懂这 12 步启动时序，Spring Boot 的底层生命节拍与扩展点你便能了然于胸。
+> **一句话导读**：看似普普通通的一行 `SpringApplication.run(App.class, args)`，背后却经历了一场精密绝伦的“重型火箭自检、燃料加注与点火升空”。为什么 Tomcat 会延迟到最后才开放端口？为什么有些事件监听器无法注入 `@Autowired`？搞懂这 7 大核心阶段与生命周期扩展点，你就能在底层全面掌控 Spring Boot 应用的生命搏动。
 
 ---
 
-## 🏛️ SpringApplication.run() 核心启动流程宏观全景
-
-你在 `main` 方法中敲下的那一行代码，就像发射基地指挥长按下了**总点火按钮**：
+## 🧭 知识全景：Spring Boot 启动两大阶段与七大事件
 
 ```mermaid
 flowchart TD
-    Button["🔴 点击运行 main()：SpringApplication.run(App.class, args)"] --> S1["1. 确定火箭类型 (推断 Web 环境：Servlet / Reactive / None)"]
-    S1 --> S2["2. 铺设通信链路 (读取环境变量、配置数据 Environment)"]
-    S2 --> S3["3. 建造核心驾驶舱 (创建 ApplicationContext 容器)"]
-    S3 --> S4["4. 🔥 核心总点火！容器刷新 refreshContext()<br/>👉 加载自动配置、创建所有 Bean、启动内置 Tomcat！"]
-    S4 --> S5["5. 执行起飞前核验 (调用 ApplicationRunner 预热缓存)"]
-    S5 --> S6["6. 🚀 成功入轨！对外宣布应用完全就绪 (ApplicationReadyEvent)"]
+    subgraph Phase1["阶段一：SpringApplication 实例化构造"]
+        P1_1["1. 推断 Web 应用类型<br/>(NONE / SERVLET / REACTIVE)"]
+        P1_2["2. SPI 加载 Initializer 初始化器<br/>(META-INF/spring.factories 或 Boot 3 SPI)"]
+        P1_3["3. SPI 加载 Listener 监听器"]
+        P1_4["4. 推断 main() 主程序入口类"]
+    end
+
+    subgraph Phase2["阶段二：run() 启动执行主干"]
+        P2_1["1. 启动计时器 StopWatch 与发布 Starting 事件"]
+        P2_2["2. 准备并绑定 Environment 环境变量与配置"]
+        P2_3["3. 打印 Banner 标志"]
+        P2_4["4. 实例化 ApplicationContext 容器"]
+        P2_5["5. 容器预处理 prepareContext()<br/>(注册主类 BeanDefinition)"]
+        P2_6["6. 核心点火：refreshContext()<br/>(启动 Tomcat、执行 BeanFactoryPostProcessor、实例化所有单例)"]
+        P2_7["7. 启动后置收尾：callRunners() 执行启动任务并发布 Ready 事件"]
+    end
+
+    Phase1 --> Phase2
 ```
 
 ---
 
-## 🏃 启动核心生命节拍（大厂面试满分链路）
+## 🏃 启动主干全景时序：三大步与两大阶段
 
-整个启动过程严密划分为 **两大阶段、六大步骤**：
+Spring Boot 的启动严格划分为两大物理阶段：**实例化阶段（Constructor）** 和 **运行阶段（`run()`）**。
+
+### 1. 阶段一：`new SpringApplication(primarySources)` 构造阶段
+
+在执行 `run()` 之前，首先会在内存中构造 `SpringApplication` 实例，完成四件关键自检：
+1. **推断 Web 运行环境类型（`WebApplicationType`）**：
+   - 通过 `ClassUtils.isPresent()` 探测类路径下的特征类：
+     - 若类路径下存在 `DispatcherHandler` 且不存在 `DispatcherServlet`，推断为 **`REACTIVE`**（WebFlux 环境）；
+     - 若不存在 `Servlet` 或 `ConfigurableWebApplicationContext`，推断为 **`NONE`**（纯后台非 Web 应用，如离线批处理任务）；
+     - 否则默认推断为 **`SERVLET`**（传统的 Spring MVC / Tomcat 阻塞环境）。
+2. **加载 `ApplicationContextInitializer`（容器初始化器）**：
+   - 通过 Spring SPI 机制检索类路径下所有候选初始化器并实例化，用于在容器刷新的早期执行自定义回调。
+3. **加载 `ApplicationListener`（全局事件监听器）**：
+   - 检索并缓存所有监听器实例，为后续在启动生命周期各个节点发布广播事件做好准备。
+4. **推断 `main()` 入口类**：
+   - 分析当前线程的调用栈 `new RuntimeException().getStackTrace()`，逆向寻找包含 `main` 方法的顶层执行类。
+
+---
+
+### 2. 阶段二：`run(args)` 核心运行阶段逐帧拆解
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Dev as 开发者执行 main()
-    participant App as SpringApplication 实例
-    participant Env as Environment (环境与配置)
-    participant Context as ApplicationContext (IoC 容器)
+    actor Dev as main() 入口
+    participant App as SpringApplication
+    participant Listeners as SpringApplicationRunListeners
+    participant Env as ConfigurableEnvironment
+    participant Context as ApplicationContext
+    participant Tomcat as 内嵌 Tomcat 引擎
     participant Runners as 启动任务 (Runners)
 
-    Note over Dev, App: 【阶段一：构造 SpringApplication 实例】
-    Dev->>App: 1. new SpringApplication(App.class)
-    App->>App: 2. 推断 Web 类型 (检查是否存在 DispatcherServlet)
-    App->>App: 3. 加载所有的 ApplicationContextInitializer 和 ApplicationListener
+    Dev->>App: 1. SpringApplication.run(App.class, args)
+    App->>Listeners: 2. starting()：发布 ApplicationStartingEvent (点火广播)
+    App->>Env: 3. prepareEnvironment()：读取命令行、yml 与系统变量
+    App->>Listeners: 4. environmentPrepared()：发布环境就绪事件
+    App->>Context: 5. createApplicationContext()：创建容器实例
+    App->>Context: 6. prepareContext()：应用初始化器，注册主启动类
+    App->>Listeners: 7. contextPrepared()：发布容器初就绪事件
+    
+    rect rgb(240, 248, 255)
+    Note over Context, Tomcat: 8. 🌟 核心点火：refreshContext() 容器刷新
+    Context->>Context: 8.1 执行 BeanFactoryPostProcessor 解析自动配置
+    Context->>Tomcat: 8.2 onRefresh()：创建并启动内嵌 Tomcat
+    Context->>Context: 8.3 finishBeanFactoryInitialization()：实例化所有非懒加载单例
+    Context->>Tomcat: 8.4 finishRefresh()：正式开启 HTTP 端口监听！
+    end
 
-    Note over Dev, Context: 【阶段二：正式执行 run() 启动】
-    App->>Env: 4. 准备 Environment (读取命令行、系统参数、application.yml)
-    App->>Context: 5. 创建对应类型的 ApplicationContext 容器
-    App->>Context: 6. 预处理容器 (prepareContext：注入主类 BeanDefinition)
-    
-    Note over Context: 7. 🌟 终极核心：refreshContext(context)<br/>(调用 Spring 底层著名的 refresh() 12 步！)
-    Context->>Context: 7.1 解析所有 @Configuration 与自动配置类
-    Context->>Context: 7.2 🚀 启动嵌入式 Web 容器 (启动内置 Tomcat 监听端口！)
-    Context->>Context: 7.3 实例化并装配所有单例 Bean
-    
-    App->>App: 8. 发布 ApplicationStartedEvent 事件 (容器刷新完毕)
-    App->>Runners: 9. callRunners：执行所有的 CommandLineRunner 和 ApplicationRunner
-    App->>App: 10. 发布 ApplicationReadyEvent 事件 (应用完全就绪，开始接单！)
-    App-->>Dev: 11. 返回可用的 context
+    App->>Listeners: 9. contextLoaded() 与 started()：发布容器就绪事件
+    App->>Runners: 10. callRunners()：调用 ApplicationRunner / CommandLineRunner
+    App->>Listeners: 11. ready()：发布 ApplicationReadyEvent (对外宣布完全就绪)
+    App-->>Dev: 12. 返回最终可用的 Context
 ```
+
+1. **准备运行监听器（`SpringApplicationRunListeners`）**：
+   - 它是整个启动事件广播的指挥官，聚合了所有注册的监听器，负责在启动的各个节点发出标准事件广播。
+2. **构建并配置 Environment（环境变量）**：
+   - 提取并整合命令行参数（`CommandLinePropertySource`）、系统环境变量、`application.yml` / `application.properties` 配置；
+   - 对外广播 `ApplicationEnvironmentPreparedEvent`。
+3. **创建容器实例（`createApplicationContext`）**：
+   - 根据之前推断的 Web 类型，通过反射实例化对应的容器：
+     - `SERVLET` 环境：实例化 `AnnotationConfigServletWebServerApplicationContext`；
+     - `REACTIVE` 环境：实例化 `AnnotationConfigReactiveWebServerApplicationContext`；
+     - `NONE` 环境：实例化标准的 `AnnotationConfigApplicationContext`。
+4. **容器预处理（`prepareContext`）**：
+   - 为容器设置 `Environment`；
+   - 依次调用先前加载的所有的 `ApplicationContextInitializer` 的 `initialize()` 方法；
+   - 将主启动类（如 `App.class`）作为最初始的 `BeanDefinition` 注入容器，为后续的 `@ComponentScan` 和 `@EnableAutoConfiguration` 埋下解析根基。
+5. **容器核心刷新（`refreshContext`）**：
+   - 委托底层执行 `AbstractApplicationContext.refresh()`，完成 Spring 体系最繁重的解析、初始化、AOP 织入以及 Tomcat 启动。
+6. **执行启动任务（`callRunners`）**：
+   - 检索并依次执行容器中注册的所有 `ApplicationRunner` 和 `CommandLineRunner` 实现类，用于执行缓存预热、RPC 连通性自检等预加载任务。
+7. **发布完全就绪事件**：
+   - 广播 `ApplicationReadyEvent`，对外宣告服务正式接单。
 
 ---
 
-## 🔬 终极核心拆解：refresh() 里到底干了啥惊天动地的事？
+## 📢 深入大厂必考：7 大启动生命周期事件时序与分界线
 
-在第 7 步 `refreshContext()` 中，Spring Boot 委托调用了 Spring 底层最著名的 **`AbstractApplicationContext.refresh()`** 方法。
-这是 Spring 整个框架中最繁重、最核心的“心脏搏动点”：
+在整个启动链路中，Spring Boot 会按严格的时序对外广播 7 个核心生命周期事件：
 
-1. **`invokeBeanFactoryPostProcessors`**：
-   - 执行工厂后置处理器。我们在前面学到的 **`@ComponentScan` 扫描、`@EnableAutoConfiguration` 自动配置类解析**，全都在这一步彻底执行完成！所有的施工图纸（BeanDefinition）在这一刻全部就位！
-2. **`registerBeanPostProcessors`**：
-   - 注册所有的 `BeanPostProcessor`（也就是后面负责为 Bean 生成 AOP 动态代理的监理们全部就位！）。
-3. **`onRefresh()`（🌟 Spring Boot 的神来之笔！）**：
-   - 传统的 Spring 这里是空的；
-   - **Spring Boot 在这里直接启动了内置的 Tomcat / Netty 服务器！**
-   - 不再需要把 war 包放到外部的 Tomcat 目录下，项目直接内嵌服务器化身独立自包含进程！
-4. **`finishBeanFactoryInitialization`**：
-   - 将容器中所有的非懒加载单例 Bean 真正实例化（调用构造方法、属性填充、初始化方法、AOP 代理织入）。
+1. **`ApplicationStartingEvent`（火箭刚点火）**：
+   - 触发时机：`run()` 方法刚开始执行，此时除了监听器之外，环境（Environment）和容器（Context）都**尚未建立**。
+2. **`ApplicationEnvironmentPreparedEvent`（环境已就绪）**：
+   - 触发时机：配置属性和环境变量加载完毕，但**容器仍未创建**。
+   - 典型用途：在最早期拦截或动态解密 `application.yml` 中的敏感数据库密码。
+3. **`ApplicationContextInitializedEvent`（容器刚诞生）**：
+   - 触发时机：容器对象实例化完成，并在调用完 `ApplicationContextInitializer` 之后触发，此时 Bean 尚未加载。
+4. **`ApplicationPreparedEvent`（施工图纸就位）**：
+   - 触发时机：主类的 `BeanDefinition` 刚刚注册进容器，但**尚未执行 `refresh()` 刷新，业务 Bean 尚未被实例化**。
+5. **`ApplicationStartedEvent`（容器刷新完毕）**：
+   - 触发时机：`refreshContext()` 顺利完成，所有单例 Bean 实例化完毕，内嵌 Tomcat 已经启动。
+6. **`ApplicationReadyEvent`（完全就绪）**：
+   - 触发时机：所有的 `ApplicationRunner` 运行完毕，应用处于可以对外接收业务流量的最成熟状态。
+7. **`ApplicationFailedEvent`（启动异常坠毁）**：
+   - 触发时机：启动期间发生任何未捕获的异常时触发，可在此捕获异常并向监控平台发送紧急告警。
+
+> 🚨 **高频翻车陷阱：为什么在某些监听器里无法 `@Autowired` 注入 Service？**
+> - **根本原因**：`ApplicationStartingEvent` 和 `ApplicationEnvironmentPreparedEvent` 触发时，**Spring 容器根本还没创建**，更不用说单例 Bean 了！
+> - 如果监听这两个早期事件，监听器只能作为纯原生类通过 `SpringFactoriesLoader` 注册加载，绝对无法依赖注入任何 Spring 托管组件！
 
 ---
 
-## 🏃 启动扩展点：ApplicationRunner 与 CommandLineRunner
+## 🔬 终极硬核揭秘：内嵌 Tomcat 是如何分阶段启动与延迟开放端口的？
 
-很多时候，我们希望在**项目完全启动好的一瞬间，自动执行一些预处理工作**（比如：把热点字典数据提前加载进 Redis 缓存、建立 MQ 消费者长连接）。
+很多人以为 Tomcat 是在 `refreshContext()` 中一次性直接跑起来并对外开放的，其实不然。
+**Spring Boot 在这里设计了一个极其精密的高可用“两阶段启动防火墙”：**
 
-Spring Boot 提供了两个开箱即用的“起飞核验”接口：
+```mermaid
+flowchart TD
+    subgraph S1["阶段一：创建并启动 Tomcat 引擎 (onRefresh)"]
+        A1["ServletWebServerApplicationContext.onRefresh()"] --> A2["调用 getWebServerFactory() 获取 TomcatServletWebServerFactory"]
+        A2 --> A3["创建 Tomcat 引擎实例，配置 Connector，挂载 DispatcherServlet"]
+        A3 --> A4["启动 Tomcat 内部核心容器与工作线程池，但【不开放 HTTP 端口监听】！"]
+    end
 
-```java
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
+    subgraph S2["安全隔离过渡区：实例化单例 Bean"]
+        B1["finishBeanFactoryInitialization() 遍历实例化所有业务 Service、Dao、Controller"]
+        B2["执行依赖注入、BeanPostProcessor 后置拦截、AOP 代理织入"]
+    end
 
-// 方式一：CommandLineRunner (入参是原始 String[] 数组)
-@Component
-@Order(1) // 控制执行顺序，数字越小越先执行
-public class WarmUpCacheRunner implements CommandLineRunner {
-    @Override
-    public void run(String... args) {
-        System.out.println("🔥 [Runner 1] 项目启动完成，开始预热 Redis 基础缓存...");
-    }
-}
+    subgraph S3["阶段二：正式开启端口接单 (finishRefresh)"]
+        C1["finishRefresh() 容器完全刷新就绪"]
+        C2["调用 webServer.start()：Connector 正式绑定并开启对外网络端口 (如 8080)！"]
+        C3["流量安全涌入，所有业务 Bean 已完全就绪，绝无 500 报错！"]
+    end
 
-// 方式二：ApplicationRunner (入参是封装好的高级 ApplicationArguments 对象，推荐！)
-@Component
-@Order(2)
-public class InitSystemCheckRunner implements ApplicationRunner {
-    @Override
-    public void run(ApplicationArguments args) {
-        System.out.println("🔍 [Runner 2] 检查远程微服务与数据库连通性...");
-    }
-}
+    S1 --> S2 --> S3
 ```
 
-> 💡 **两者的唯一区别**：
-> 功能完全一致，区别仅在于**入参解析方式**：
-> `CommandLineRunner` 只能拿到原汁原味的原始参数数组 `String[] args`；
-> `ApplicationRunner` 帮你把参数智能解析成了诸如 `--server.port=8080` 的 `OptionValues`，更易于提取键值对。
+1. **为什么不在 `onRefresh()` 阶段就开放端口？**
+   - 如果在 `onRefresh()` 阶段就绑定并监听 8080 端口，外部流量（或者前端请求、探针探测）可能会在下一毫秒立即涌入；
+   - 但此时容器的 `finishBeanFactoryInitialization()` **根本还没执行**！所有的业务 Service、Dao 都是 `null`；
+   - 导致最先到达的一批用户请求由于找不到对应 Bean 直接发生 `NullPointerException` 或大面积报 `500 / 503`！
+2. **Spring Boot 的解法（延迟开门）**：
+   - 在 `onRefresh()` 中完成底座的初始化与装配；
+   - 只有当全部单例 Bean 都实例化完毕、AOP 动态代理织入全部就绪、容器顺利进入 `finishRefresh()` 时，才正式命令 Connector 监听物理网络端口！
+
+---
+
+## 🔄 SPI 机制的代际演进：Spring Boot 2.x vs 3.x
+
+在 Spring Boot 启动与自动配置的加载机制中，经历了一次重要的架构升级：
+
+1. **Spring Boot 2.x：`META-INF/spring.factories` 大一统模式**：
+   - 所有的初始化器、监听器、自动配置类全部混杂存放在同一个 `spring.factories` 文件中；
+   - **痛点**：启动时每次都需要由 `SpringFactoriesLoader` 全量加载整个大文件并进行字符串键匹配，解析效率较低，且配置项过多时极难维护。
+2. **Spring Boot 3.x：专职拆分式架构（AutoConfiguration.imports）**：
+   - 自动配置类剥离至：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`；
+   - 专职属性绑定器与监听器各自独立，极大精简了单文件的检索体积；
+   - 配合 Java 17+ 模块化支持，启动解析性能与内存占用显著优化。
+
+---
+
+## ⚡ 企业级微服务启动提速实战策略
+
+随着企业微服务业务不断膨胀，工程的启动时间往往会从 10 秒恶化到数分钟。以下是生产级的优化手段：
+
+1. **开启全局按需懒加载（`Lazy Initialization`）**：
+   - 在 `application.yml` 中配置：
+     ```yaml
+     spring:
+       main:
+         lazy-initialization: true # 开启单例 Bean 全局懒加载
+     ```
+   - **原理**：启动时不预先实例化所有单例 Bean，而是推迟到首次通过 HTTP 请求调用该 Bean 时才动态加载。
+   - **收益与权衡**：
+     - **优点**：本地开发调试和单元测试启动速度提升 50%~80%；
+     - **生产警告**：生产环境核心交易服务慎用！因为这会导致第一次请求因现场实例化 Bean 而出现明显的响应毛刺（P99 延迟暴增），甚至由于某些配置错误直到运行时才暴露。
+2. **排除非必要自动配置项**：
+   - 检查并排除未使用的出厂配置：
+     ```java
+     @SpringBootApplication(exclude = {
+         DataSourceAutoConfiguration.class,
+         RabbitAutoConfiguration.class
+     })
+     ```
+3. **定位慢 Bean 启动排查工具（Spring Startup Actuator）**：
+   - 引入 `org.springframework.boot:spring-boot-starter-actuator` 并开启 `startup` 端点；
+   - 使用 `BufferingApplicationStartup` 收集启动耗时并输出火焰图，精准揪出初始化耗时超过 2 秒的毒瘤 Bean。
 
 ---
 
 ## 📜 生产高频避坑：配置属性覆盖优先级法则
 
 面试和运维最容易遇到的抓狂问题：“为什么我在 `application.yml` 里改了端口，启动后它依然读的是旧端口？”
-**因为 Spring Boot 有一套严格的配置覆盖金字塔：**
+因为 Spring Boot 有一套严格的配置覆盖金字塔：
 
 ```mermaid
 flowchart TD
@@ -149,9 +249,14 @@ flowchart TD
 
 ## 🧠 一分钟复盘核心记忆卡
 
-1. **两大阶段**：构造阶段（推断 Web 类型、加载监听器） + `run()` 阶段（准备环境、建容器、刷新容器、调 Runner）。
-2. **核心脉搏**：`refreshContext()` 内部启动内嵌 Tomcat，完成自动配置解析与单例 Bean 实例化。
-3. **启动钩子**：预热缓存与业务初始化，使用 `@Order` 排序的 `ApplicationRunner`。
+1. **两大阶段**：
+   - 构造阶段推断 Web 类型与加载 SPI 监听器；`run()` 阶段建环境、造容器、刷容器、调 Runner。
+2. **事件与时序边界**：
+   - `ApplicationStartingEvent` 与 `EnvironmentPreparedEvent` 发生时**容器尚未创建**，绝不能依赖注入 Bean。
+3. **Tomcat 启动玄机**：
+   - `onRefresh()` 搭建引擎，`finishRefresh()` 延迟开放端口，防止未熟 Bean 引发流量穿透报错。
+4. **启动提速利器**：
+   - 本地调试启用 `lazy-initialization`，生产结合 Actuator Startup 端点精确定位耗时瓶颈。
 
 ---
 

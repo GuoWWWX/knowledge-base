@@ -7,33 +7,47 @@ tags:
   - 主题/运维监控
   - 阶段/04
 created: 2026-09-13
-updated: 2026-09-13
+updated: 2026-09-19
 status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
 
-# 🩺 14 · Spring Boot 生产运维与 Actuator（云原生监控与优雅停机）
+# 🩺 14 · Spring Boot 生产运维与 Actuator（云原生双探针与无损优雅停机）
 
-> **一句话导读**：应用写完不是终点，线上运维才是考验的开始。Spring Boot Actuator 是微服务的“数字化体检中心”，掌握核心端点管控、Prometheus 指标对接、K8s 双探针集成与无损优雅停机，是保障高可用线上服务的必修课。
-
----
-
-## 🏛️ 为什么需要 Actuator？（从黑盒到白盒运维）
-
-在单体应用时代，运维往往只能通过外部黑盒探测（如尝试发一个 HTTP ping 请求）。但在云原生微服务与容器化架构下，应用内部的运行状态必须对外透明可见：
-
-- 数据库连接池还剩多少可用连接？
-- JVM 堆内存与 GC 频率是否濒临警戒线？
-- 接口响应延迟分布（P99 / P95）如何？
-- 容器启动后，业务是否真的准备好接收外部流量了？
-
-**Spring Boot Actuator** 提供了生产就绪型（Production-ready）的监控与管理功能，将应用内部的健康状态、性能指标、环境变量与审计日志通过标准的 REST API 暴露出来。
+> **一句话导读**：代码写完只是万里长征第一步，线上高可用运维才是真考场。Spring Boot Actuator 是微服务的“数字化体检中心”。掌握核心端点管控、K8s 存活/就绪双探针平滑流量摘除、无损优雅停机 5 步时序，以及基于 Micrometer 的自定义指标监控，是打造高可用生产系统的必修课。
 
 ---
 
-## 🔍 核心端点矩阵与安全暴露规约
+## 🧭 生产运维全景架构图
 
-引入起步依赖：
+```mermaid
+flowchart TD
+    subgraph ActuatorCore["Spring Boot Actuator 监控中枢"]
+        EP["内置端点 (health / metrics / loggers / env)"]
+        CustomH["自定义 HealthIndicator (外设健康检查)"]
+        Micro["Micrometer 计量器 (Counter / Timer / Gauge)"]
+    end
+
+    subgraph K8s["Kubernetes 云原生容器平台"]
+        Liveness["存活探针 LivenessProbe<br/>(/actuator/health/liveness)"]
+        Readiness["就绪探针 ReadinessProbe<br/>(/actuator/health/readiness)"]
+        Rolling["Rolling Update 滚动发布<br/>(平滑流量切入与摘除)"]
+    end
+
+    subgraph Monitor["企业级可观测性大盘"]
+        Prom["Prometheus (时序数据库拉取 /actuator/prometheus)"]
+        Grafana["Grafana 监控告警大盘"]
+    end
+
+    ActuatorCore --> K8s
+    ActuatorCore --> Monitor
+```
+
+---
+
+## 🔍 核心端点规约与生产安全加固
+
+引入依赖：
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -41,174 +55,248 @@ mastery: ⭐⭐⭐⭐⭐
 </dependency>
 ```
 
-### 1. 生产常用高频端点矩阵
+### 1. 生产高频核心端点职责
 
-| 端点 ID | 访问路径 | 默认启用 | 核心职责与生产价值 |
-| :--- | :--- | :---: | :--- |
-| **`health`** | `/actuator/health` | 是 | **系统健康检查**。聚合数据库、Redis、磁盘与自定义健康指示器，输出整体健康状态（`UP`、`DOWN`、`OUT_OF_SERVICE`）。 |
-| **`metrics`** | `/actuator/metrics` | 否 | **性能度量指标**。底层基于 Micrometer 框架，统计 JVM 内存/线程数、HTTP 请求吞吐与耗时，标准对接 Prometheus。 |
-| **`loggers`** | `/actuator/loggers` | 否 | **动态修改日志级别**。无需重启进程，线上实时调整指定 Package 或 Class 的日志级别（如从 `INFO` 改为 `DEBUG`）。 |
-| **`info`** | `/actuator/info` | 否 | **应用静态信息**。展示 Git 提交版本号、构建时间、自定义应用描述等元数据。 |
-| **`env`** | `/actuator/env` | 否 | **环境变量与配置**。查看当前生效的 Spring Environment 属性源（注意敏感脱敏）。 |
-| **`threaddump`** | `/actuator/threaddump` | 否 | **导出线程堆栈**。直接获取当前 JVM 线程快照，排查死锁与高负载线程。 |
-
----
-
-### 2. 生产安全铁律：严禁裸奔暴露
-
-Actuator 曾多次因配置不当引发高危安全漏洞（如通过 `/actuator/env` 泄露数据库密码或通过未授权端点执行代码执行）。
-
-#### 🚨 生产标准安全配置：
-```yaml
-management:
-  endpoints:
-    web:
-      base-path: /actuator                  # 建议生产修改为混淆路径，如 /inner-monitor
-      exposure:
-        # 严禁写 include: "*" ！只白名单暴露业务必需端点
-        include: health,metrics,info,loggers
-  endpoint:
-    health:
-      show-details: when-authorized         # 仅在认证通过后展示详细依赖组件状态
-      probes:
-        enabled: true                       # 开启 K8s 存活/就绪探针支持
-```
-
-> 🛡️ **内网防护策略**：
-> 1. 在 API 网关（Spring Cloud Gateway / Nginx）层**直接拦截 `/actuator/**` 路径**，禁止外网公网直接访问；
-> 2. 结合 **Spring Security** 对 `/actuator/**` 施加基于角色的 HTTP Basic 认证。
+1. **`health`（`/actuator/health`）**：
+   - **系统健康状态检查**：聚合数据库、Redis、RabbitMQ、磁盘等组件的运行状况，输出整体健康状态（`UP`、`DOWN`、`OUT_OF_SERVICE`）。
+2. **`metrics`（`/actuator/metrics`）**：
+   - **性能度量指标**：底层基于 Micrometer 框架，统计 JVM 堆内存、GC 停顿频次、Tomcat 活动线程数、HTTP 响应耗时分布。
+3. **`prometheus`（`/actuator/prometheus`）**：
+   - **Prometheus 标准采集格式端点**：将内存中的度量指标转换为 Prometheus 的文本规范格式，供外部时序数据库拉取。
+4. **`loggers`（`/actuator/loggers`）**：
+   - **动态调整日志级别**：无需重启服务进程，线上秒级调整指定包或类的日志级别（如从 `INFO` 动态调整为 `DEBUG`），排查完后还原。
+5. **`threaddump`（`/actuator/threaddump`）**：
+   - **导出 JVM 线程快照**：现场抓取所有活跃线程的调用栈，快速排查死锁与 CPU 飙高问题。
 
 ---
 
-### 3. 生产神技：运行时动态修改日志级别（无需重启）
+### 2. 生产安全防护铁律：防未授权数据泄漏
 
-当生产环境突发偶发性 Bug，但当前日志级别为 `INFO` 无法捕获关键参数时，绝不能重新编译发版重启，可以通过 `/actuator/loggers` 动态调整：
+Actuator 端点直接暴露在公网极易引发严重安全事件（如通过 `/actuator/env` 获取未脱敏密钥，或被恶意触发 HeapDump 导致服务拒绝服务）。
 
-```bash
-# 1. 查询当前订单服务的日志级别
-GET /actuator/loggers/com.example.order.service
-
-# 2. 动态调整指定类为 DEBUG 级别（发送 POST 请求）
-POST /actuator/loggers/com.example.order.service
-Content-Type: application/json
-
-{
-  "configuredLevel": "DEBUG"
-}
-```
-调整后下一秒即刻生效，定位完问题后可再次发请求改回 `INFO`，避免 DEBUG 日志刷爆磁盘。
+1. **修改基础根路径并配置白名单**：
+   ```yaml
+   management:
+     endpoints:
+       web:
+         base-path: /inner-actuator            # 生产环境混淆根路径，防自动化扫描
+         exposure:
+           # 🚨 严禁配置 include: "*" ！必须显式配置白名单
+           include: health,metrics,prometheus,loggers
+     endpoint:
+       health:
+         show-details: when-authorized         # 仅在具备认证权限时展示内部依赖明细
+         probes:
+           enabled: true                       # 开启 K8s 存活与就绪探针支持
+   ```
+2. **网关与网络层物理阻断**：
+   - 在 API 网关（Spring Cloud Gateway / Nginx）层针对 `/inner-actuator/**` 路径配置直接拦截规则，禁止公网外部 IP 访问；
+   - 监控系统通过容器内部集群网络（Pod IP / ClusterIP）直接拉取指标。
 
 ---
 
-## ☸️ 云原生 K8s 存活探针与就绪探针集成
+## ☸️ K8s 云原生探针与滚动发布零停机实战
 
-在 Kubernetes 容器编排环境中，K8s 通过两类探针判定 Pod 状态：
+在 Kubernetes 容器化部署环境下，Spring Boot 与 K8s 探针的精密配合是实现**零停机滚动更新（Zero-Downtime Rolling Update）**的核心所在。
 
 ```mermaid
-flowchart TD
-    subgraph K8sProbes["K8s 容器健康检查机制"]
-        Liveness["1. 存活探针 (Liveness Probe)<br/>👉 检查容器是否还活在？<br/>👉 失败动作：直接杀掉容器并重启 Pod"]
-        Readiness["2. 就绪探针 (Readiness Probe)<br/>👉 检查容器是否准备好接待流量？<br/>👉 失败动作：仅将 Pod 从 Service 负载均衡端点摘除"]
+flowchart LR
+    subgraph K8sProbes["K8s 容器探针模型"]
+        P1["1. 启动探针 StartupProbe<br/>👉 检查应用是否启动成功<br/>👉 保护慢启动应用不被误杀"]
+        P2["2. 存活探针 LivenessProbe<br/>👉 检查容器是否死锁或假死<br/>👉 探测失败则强杀并重启 Pod"]
+        P3["3. 就绪探针 ReadinessProbe<br/>👉 检查业务是否具备接单能力<br/>👉 探测失败立即从 Service 摘除流量"]
     end
 ```
 
-### 1. Spring Boot 原生双探针端点
-Spring Boot 2.3+ 原生内置了与 K8s 契合的双探针路径：
-- **存活探针路径**：`GET /actuator/health/liveness`（检查内部关键组件是否 Deadlock、OOM）
-- **就绪探针路径**：`GET /actuator/health/readiness`（检查缓存加载、预热是否完成，连接是否通畅）
+### 1. 存活探针 vs 就绪探针的本质区别
 
-### 2. K8s `deployment.yaml` 生产标准配置：
+1. **LivenessProbe（存活探针 - `/actuator/health/liveness`）**：
+   - **探测目标**：应用内部是否处于死锁、内存枯竭等**无法自愈的致命死循环**；
+   - **失败处理**：K8s 判定该容器已死，会立即执行 `kill` 并依据重启策略**重启该 Pod**；
+   - **避坑警示**：千万不要在 Liveness 检查中去 Ping 外部数据库或 Redis！若外部数据库短暂网络抖动，K8s 会误以为是本应用崩溃而频繁重启本 Pod，引发大面积雪崩。
+2. **ReadinessProbe（就绪探针 - `/actuator/health/readiness`）**：
+   - **探测目标**：应用当前是否具备处理外部请求的业务能力（如本地缓存是否预热完成、线程池是否饱和）；
+   - **失败处理**：K8s **不会重启容器**，而是立即将该 Pod 从 Service 的负载均衡 Endpoints 列表中**剔除**，停止向其转发任何流量；一旦指标恢复正常，再自动切回流量。
+
+---
+
+### 2. 生产实战：微服务滚动发布防流量击穿配置
+
+在 K8s 发布新镜像时，常出现新 Pod 刚刚创建、Tomcat 端口刚开，流量瞬间涌入，而本地缓存尚未预热完成，导致最初几十个请求大面积报 502 / 504。
+
+#### 生产标准 `deployment.yaml` 探针配置范式：
 ```yaml
 spec:
   containers:
     - name: order-service
-      image: order-service:v1.0.0
-      livenessProbe:
-        httpGet:
-          path: /actuator/health/liveness
-          port: 8080
-        initialDelaySeconds: 45 # 启动后等待 45 秒再开始首次探测（给 JVM 预留启动时间）
-        periodSeconds: 10       # 探测周期 10 秒
-        failureThreshold: 3     # 连续 3 次失败触发重启
+      image: order-service:v2.0
       readinessProbe:
         httpGet:
-          path: /actuator/health/readiness
+          path: /inner-actuator/health/readiness
           port: 8080
-        initialDelaySeconds: 20
-        periodSeconds: 5
-        failureThreshold: 2
+        initialDelaySeconds: 15     # 容器启动 15 秒后再开始第一次就绪探测
+        periodSeconds: 5            # 每隔 5 秒探测一次
+        failureThreshold: 3         # 连续 3 次失败则标记为未就绪并摘除流量
+      livenessProbe:
+        httpGet:
+          path: /inner-actuator/health/liveness
+          port: 8080
+        initialDelaySeconds: 30     # 存活探测留出更充裕的初始化窗口
+        periodSeconds: 10
+        failureThreshold: 3
 ```
 
 ---
 
-## 🛑 微服务无损发布：优雅停机（Graceful Shutdown）
+## 🛑 真正的无损优雅停机（Graceful Shutdown）底层 5 步时序
 
-在持续集成与发布部署过程中，粗暴的 `kill -9` 会直接切断进程，导致正在执行中的 HTTP 请求当场报错、数据库分布式事务中断、MQ 消息丢失。
-
-Spring Boot 2.3+ 原生支持**优雅停机（Graceful Shutdown）**：
-
-### 1. 开启配置
-```yaml
-server:
-  shutdown: graceful # 开启优雅停机（支持 Web 容器：Tomcat, Jetty, Netty）
-
-spring:
-  lifecycle:
-    timeout-per-shutdown-phase: 30s # 停机最长宽限期：给在途请求 30 秒执行时间
-```
-
-### 2. 优雅停机完整生命周期时序：
+当 K8s 销毁一个旧 Pod 或运维执行滚动更新时，直接 `kill -9` 会导致正在处理中的订单请求被直接斩断，用户界面报网络中断或数据状态卡在中间态。
+Spring Boot 原生内置了 **Graceful Shutdown（优雅停机）** 机制。
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor K8s as K8s / 发布运维平台
-    participant App as Spring Boot 应用 (Tomcat)
-    participant Worker as 在途业务线程
+    actor K8s as K8s / 运维发布
+    participant App as Spring Boot 进程
+    participant Tomcat as 内嵌 Web 容器
+    participant Queue as 线程池 / 在途请求
+    participant DB as 数据源 / 物理连接池
 
-    K8s->>App: 1. 发送 SIGTERM (15) 信号
-    App-->>App: 2. 就绪探针 (readiness) 自动切换为 OUT_OF_SERVICE
-    Note over K8s: 3. K8s Service 负载均衡网格立即摘除该 Pod 实例，新请求不再涌入
-    App-->>App: 4. 停止接收新 HTTP 请求，启动 30s 倒计时
-    Worker->>App: 5. 正在处理的在途请求全部执行完成
-    App->>App: 6. 销毁 Spring 上下文 (@PreDestroy、关闭连接池)
-    App->>K8s: 7. 进程自然退出 (Exit 0)
+    K8s->>App: 1. 发送 SIGTERM 终止信号 (kill -15)
+    App->>Tomcat: 2. 标记状态为 STOPPING，立即停止接收新的 HTTP 连接！
+    Note over App, K8s: 此时 K8s 就绪探针感知变化，将其从服务网关负载均衡名单中摘除
+    
+    App->>Queue: 3. 开启超时缓冲期倒计时 (spring.lifecycle.timeout-per-shutdown-phase=30s)
+    Queue->>Tomcat: 4. 允许已经在处理中的活跃请求继续执行完毕
+    
+    Queue->>DB: 5. 在途任务处理完毕，依序关闭线程池并释放数据库连接池
+    App-->>K8s: 6. 进程正常无损退出 (Exit Code 0)
 ```
 
-> 💡 **核心注意点**：
-> 如果 30 秒倒计时结束，在途请求仍未执行完毕，Spring Boot 会强行终止剩余线程以保护系统按时关机。因此对于长耗时异步任务，应配合线程池的 `setWaitForTasksToCompleteOnShutdown(true)` 使用。
+### 1. 开启生产优雅停机核心配置
+```yaml
+server:
+  shutdown: graceful                             # 开启内嵌 Web 容器优雅停机支持
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s              # 优雅停机最大容忍缓冲期：30 秒
+```
+
+### 2. 优雅停机 5 步时序逐帧解剖
+1. **捕获停机信号**：JVM 注册的 ShutdownHook 捕获到操作系统发来的 `SIGTERM`（即 `kill -15`，切勿使用 `kill -9`）；
+2. **阻断新请求**：内嵌 Tomcat 停止监听端口，拒绝任何新的 TCP 连接握手与 HTTP 请求；
+3. **保护在途任务**：给正在执行的活跃线程留出缓冲时间（最高等待 30 秒），保证已扣款的订单逻辑能平稳完成并写库；
+4. **关闭生命周期资源**：依次调用各 `DisposableBean` 的 `destroy()` 方法，关闭异步线程池（`ThreadPoolTaskExecutor.shutdown()`）并归还所有数据源连接；
+5. **安全退出进程**：所有资源安全回收后，JVM 进程平稳退出。
 
 ---
 
-## 📊 对接 Prometheus 构建微服务指标大盘
+## 🛠️ 生产级自定义监控实战：HealthIndicator 与 Micrometer
 
-通过 Micrometer 抽象，仅需一条依赖即可无缝对接 Prometheus：
-```xml
-<dependency>
-    <groupId>io.github.mweirauch</groupId>
-    <artifactId>micrometer-registry-prometheus</artifactId>
-</dependency>
+Actuator 的真正强大之处，在于支持开发者极其轻松地扩展自定义健康度量与业务指标。
+
+### 1. 实战一：自定义外部支付网关健康检查（`HealthIndicator`）
+
+```java
+@Component
+public class PaymentGatewayHealthIndicator implements HealthIndicator {
+
+    @Override
+    public Health health() {
+        // 模拟对外部三方支付网关进行毫秒级探测
+        boolean isConnected = checkThirdPartyGateway();
+        
+        if (isConnected) {
+            return Health.up()
+                    .withDetail("gateway", "Alipay & WeChatPay")
+                    .withDetail("latency", "12ms")
+                    .build();
+        } else {
+            return Health.down()
+                    .withDetail("error", "支付网关网络超时或鉴权失败！")
+                    .build();
+        }
+    }
+
+    private boolean checkThirdPartyGateway() {
+        // 执行底层 HTTP ping 检测
+        return true;
+    }
+}
 ```
-访问 `GET /actuator/prometheus`，即可输出标准时序数据，配置 Prometheus 自动定时拉取（Pull 模式），在 Grafana 导入 JVM 官方仪表盘模板（如 Dashboard ID `4701`），即可实现：
-- JVM 堆/堆外/元空间使用率折线图；
-- GC 停顿耗时与频率实时曲线；
-- Tomcat 活跃线程数与连接队列积压监控；
-- HTTP 接口 QPS、P95/P99 延迟热力图。
+- **效果**：访问 `/inner-actuator/health` 时，Spring Boot 会自动聚合该组件的返回值；若其返回 `DOWN`，整个应用的健康状态将联动变为 `DOWN`。
+
+---
+
+### 2. 实战二：基于 Micrometer 自定义业务度量指标（对接 Prometheus）
+
+在电商系统中，我们往往希望实时监控“**每秒下单成功总数**”以及“**下单核心方法耗时分布**”：
+
+```java
+@Service
+public class OrderBizService {
+
+    private final Counter orderSuccessCounter;
+    private final Timer orderProcessTimer;
+
+    public OrderBizService(MeterRegistry registry) {
+        // 1. 注册一个订单成功的计数器 (Counter)
+        this.orderSuccessCounter = Counter.builder("biz.order.success.total")
+                .description("业务订单创建成功累计计数")
+                .tag("module", "trade")
+                .register(registry);
+
+        // 2. 注册一个下单方法耗时计时器 (Timer)
+        this.orderProcessTimer = Timer.builder("biz.order.process.time")
+                .description("下单业务核心链路处理耗时")
+                .tag("module", "trade")
+                .publishPercentiles(0.95, 0.99) // 统计 P95, P99 响应耗时
+                .register(registry);
+    }
+
+    public void processOrder(OrderDTO dto) {
+        // 使用 Timer 包裹耗时方法
+        orderProcessTimer.record(() -> {
+            // 执行核心下单逻辑...
+            doCreateOrder(dto);
+            
+            // 下单成功，计数器 +1
+            orderSuccessCounter.increment();
+        });
+    }
+
+    private void doCreateOrder(OrderDTO dto) {
+        try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+    }
+}
+```
+- **Prometheus 采集效果**：
+  - 访问 `/inner-actuator/prometheus`，即可看到暴露出的文本指标：
+    ```text
+    biz_order_success_total{module="trade"} 1052.0
+    biz_order_process_time_seconds{module="trade",quantile="0.99"} 0.052
+    ```
+  - 运维可以直接在 Grafana 中配置 PromQL 查询语句 `rate(biz_order_success_total[1m])`，实时绘制每秒下单 TPS 走势图。
 
 ---
 
 ## 🧠 一分钟复盘核心记忆卡
 
-1. **核心定位**：Actuator 是生产级微服务白盒化可观测体系底座。
-2. **安全防线**：生产严禁 `include: "*"` 全量裸奔暴露；敏感环境关闭公网访问。
-3. **K8s 双探针**：存活探针（`/liveness` 失败重启 Pod） + 就绪探针（`/readiness` 失败摘除流量）。
-4. **动态排障**：通过 `/actuator/loggers` 线上秒级动态热更新日志级别，无需发版重启。
-5. **优雅停机**：`server.shutdown: graceful` + `timeout-per-shutdown-phase: 30s`，配合 K8s 摘流量消化在途请求。
+1. **核心端点与安全**：
+   - 生产环境严禁暴露全部端点；混淆基础路径并仅白名单暴露 `health`, `metrics`, `prometheus`；动态日志用 `loggers`。
+2. **K8s 探针分工**：
+   - **Liveness** 挂了杀容器（防死锁死循环）；**Readiness** 挂了摘流量（防慢启动与负载过载）；滚动发布必须配全。
+3. **优雅停机 5 步时序**：
+   - 开启 `server.shutdown=graceful`；收到 `SIGTERM` 立即拒收新请求，缓冲期等待在途请求完成后再关连接与进程。
+4. **自定义监控实战**：
+   - 实现 `HealthIndicator` 自定义外设健康探测；利用 `MeterRegistry` 注册业务 `Counter` / `Timer` 对接 Prometheus。
 
 ---
 
 ## 🧭 下一步
 
-掌握了现代单体 Spring Boot 工业级应用的全部开发与运维底座后，随着业务飞速扩张，单体架构必然拆分为由成百上千个服务实例组成的微服务联邦。
-服务之间如何进行自动化注册与健康发现？如何通过 OpenFeign 进行优雅的声明式 HTTP 远程调用？外部百万流量如何经由统一网关（Spring Cloud Gateway）进行路由鉴权与灰度染色？面对级联故障如何进行流量熔断与防护？
-请进入第四关分布式微服务与前沿：[[08-SpringCloud组件概览]]！
+搞懂了生产环境如何监控、排查与实现无损停机后，当面对海量高并发业务时，如何将耗时任务抽离主线程异步并发执行？
+Spring 提供的 `@Async` 声明式异步底层原理是什么？为什么直接使用 `@Async` 会暗藏 `SimpleAsyncTaskExecutor` 无界创建线程把内存打爆的致命陷阱？跨线程时 MDC 日志追踪链路（TraceId）丢失如何解决？
+请继续攻克第三关核心进阶：[[15-Spring异步与线程池体系]]！
+
