@@ -217,6 +217,12 @@ MyBatis 在底层创建 `Executor` 时，提供了三种基础实现：
    - **大坑三：Java 端内存爆满与 OOM**：MyBatis 解析带有几千个 `?` 占位符的 DynamicContext 会产生数以万计的内部临时对象，极易引发堆内存抖动与 Full GC。
 
 3. **真正的高吞吐批量写入方案（生产标准范式）**：
+
+> 💡 **心智模型搭桥：为什么这段代码看起来带点“底层驱动感”，平时不是直接调 Mapper 吗？**
+> - **平时的直觉盲区**：我们在 Spring 里通常直接 `@Autowired private OrderMapper orderMapper`，然后如果在循环里执行 `orderMapper.insert(o)`，底层使用的是默认的 `SimpleExecutor`。循环 1 万次意味着向数据库发起 **10000 次独立的网络往返（TCP 请求）**，耗时数分钟，服务器直接卡死；
+> - **底层解法**：必须让 MyBatis 切换到底层的 **`BatchExecutor`** 批量执行器。通过 `sqlSessionFactory` 显式开启一个 BATCH 会话，循环调用的 `mapper.insert()` **根本不会去连物理数据库**，而是由 MyBatis 暂存在本地内存（底层调用 JDBC 的 `ps.addBatch()`），每达到 1000 条调用一次 `flushStatements()` 批量刷盘；
+> - **与 MyBatis-Plus 的呼应**：你在业务中写 `orderService.saveBatch(list)` 觉得极其优雅，**其实点进 MyBatis-Plus 的 `saveBatch` 源码，其底层核心就是由下面这段代码封装而成的**！
+
    - **第一步：配置 JDBC 批处理驱动参数**：在数据库连接 URL 中追加 `rewriteBatchedStatements=true`（针对 MySQL 驱动，该参数会将原本一条条发送的 Batch 改写为高效的合并发送）。
    - **第二步：采用 `SqlSession` 的 `ExecutorType.BATCH` 模式并分批提交**：
    ```java
@@ -227,14 +233,15 @@ MyBatis 在底层创建 `Executor` 时，提供了三种基础实现：
 
        @Transactional(rollbackFor = Exception.class)
        public void batchInsertOrders(List<OrderDO> orderList) {
-           // 1. 开启 BATCH 执行模式的会话
+           // 1. 显式开启 BATCH 执行模式的会话
            try (SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH, false)) {
+               // 2. 从 BATCH 会话中获取 Mapper 代理对象
                OrderMapper mapper = sqlSession.getMapper(OrderMapper.class);
                int batchSize = 1000;
                for (int i = 0; i < orderList.size(); i++) {
-                   mapper.insert(orderList.get(i)); // 仅追加到本地 batch，未刷盘
+                   mapper.insert(orderList.get(i)); // 仅追加到本地 batch 队列，暂未真正发往数据库
                    
-                   // 2. 每达到批次阈值，显式触发一次刷新并提交事务
+                   // 3. 每达到批次阈值，显式触发一次刷新并提交事务
                    if ((i + 1) % batchSize == 0 || i == orderList.size() - 1) {
                        sqlSession.flushStatements();
                    }
@@ -265,13 +272,18 @@ flowchart TD
     W1 --> Target
 ```
 
+> 💡 **认知拨正：为什么插件代码里充斥着 `StatementHandler`、`Statement`、`BoundSql`，感觉像底层 JDBC？**
+> - **为什么不能拦截 Mapper 接口？** 因为 Mapper 接口只是一个顶着面具的代理替身，真正的 SQL 解析、参数设定、物理网络交互全是由 MyBatis 内部的“四大核心工匠（四大金刚）”完成的；
+> - **四大金刚的本质职责就是操纵 JDBC**：MyBatis 官方规定插件（`Interceptor`）**只能拦截四大金刚中的方法**。当我们要监控 SQL 耗时时，必须拿到发往数据库的真正语句，而这个语句正是封装在 `StatementHandler` 的 `BoundSql` 中；
+> - **开源工业界的共同选择**：无论是著名的分页插件 **`PageHelper`**，还是 MyBatis-Plus 的**多租户数据隔离插件（`TenantLineInnerInterceptor`）**，翻开源码第一行声明全都是拦截 `StatementHandler`！这就是纯正的 MyBatis 内部最高标准扩展方式。
+
 1. **底层洋葱包装原理**：
    - 在四大核心对象（`Executor`, `StatementHandler`, `ParameterHandler`, `ResultSetHandler`）被实例化时，全局配置 `Configuration` 会调用 `interceptorChain.pluginAll(target)`；
    - 内部遍历所有已注册的 `Interceptor`，依次调用其 `plugin.wrap(target, this)`；
    - 每次包装都生成一个 `Plugin` 代理实例，多个拦截器层层嵌套形成类似洋葱的调用链路。
 
 2. **拦截器核心注解语法**：
-   - `@Intercepts`：声明这是一个拦截器；
+   - `@Intercepts`：声明这是一个 MyBatis 插件；
    - `@Signature`：精准指定拦截的目标接口类、拦截的方法名称、以及该方法的形参列表类型。
 
 3. **生产级实战一：全链路慢 SQL 监控与告警插件**：
