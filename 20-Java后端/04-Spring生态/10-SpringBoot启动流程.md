@@ -187,15 +187,52 @@ flowchart TD
 
 ## 🔄 SPI 机制的代际演进：Spring Boot 2.x vs 3.x
 
-在 Spring Boot 启动与自动配置的加载机制中，经历了一次重要的架构升级：
+在组件自动发现（SPI）的机制上，Spring Boot 经历了一次关键的架构解耦演进：
 
-1. **Spring Boot 2.x：`META-INF/spring.factories` 大一统模式**：
-   - 所有的初始化器、监听器、自动配置类全部混杂存放在同一个 `spring.factories` 文件中；
-   - **痛点**：启动时每次都需要由 `SpringFactoriesLoader` 全量加载整个大文件并进行字符串键匹配，解析效率较低，且配置项过多时极难维护。
-2. **Spring Boot 3.x：专职拆分式架构（AutoConfiguration.imports）**：
-   - 自动配置类剥离至：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`；
-   - 专职属性绑定器与监听器各自独立，极大精简了单文件的检索体积；
-   - 配合 Java 17+ 模块化支持，启动解析性能与内存占用显著优化。
+### 1. 代际分工对比：从“大一统杂烩”到“动静分流”
+
+1. **Spring Boot 2.x：`META-INF/spring.factories` 大一统**：
+   - 所有的初始化器、监听器、环境处理器以及成百上千个自动配置类，全部塞在同一个 `spring.factories` 键值对文件中；
+   - **痛点**：启动时 `SpringFactoriesLoader` 必须全量解析这个庞大的 Properties 文件；随着生态膨胀，单文件解析极慢，且对 GraalVM 原生镜像（AOT）编译极不友好。
+2. **Spring Boot 3.x：动静专职分流（各司其职）**：
+   - **自动配置类（90% 大头）独立搬家**：
+     - 剥离至：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`；
+     - 每行一个全限定类名，专供 `@EnableAutoConfiguration` 底层的 `ImportCandidates` 极速索引，天然适配 GraalVM 静态分析。
+   - **初始化器与监听器（底层系统级 Hook）保留在 `spring.factories`**：
+     - **`spring.factories` 并没有被废除，而是大幅瘦身**！
+     - `ApplicationContextInitializer`（容器初始化器）、`SpringApplicationRunListener`（运行过程监听器）、`ApplicationListener`（系统监听器）以及 `EnvironmentPostProcessor`（环境后置处理器）等极早期组件，**依然保留在 `META-INF/spring.factories` 中**；
+     - **底层原因**：这些组件在 Spring 容器还没创建的极早期阶段就需要被 `SpringFactoriesLoader` 加载，数量少（通常仅几个到十几个），保留原机制能确保底层引导时序绝对稳定。
+
+### 2. 生产实战：初始化器与监听器的 3 种注册姿势
+
+如果你在自研 Starter 或业务中需要使用 `ApplicationContextInitializer` 或 `ApplicationListener`，有以下标准途径：
+
+1. **SPI 文件注册（Starter 推荐，零侵入）**：
+   - 在 `src/main/resources/META-INF/spring.factories` 中按需声明：
+     ```properties
+     # 注册容器初始化器
+     org.springframework.context.ApplicationContextInitializer=com.example.MyContextInitializer
+     # 注册系统监听器
+     org.springframework.context.ApplicationListener=com.example.MyApplicationListener
+     ```
+2. **配置文件声明（业务项目极简推荐）**：
+   - 在 `application.yml` 里直接指定，无需创建 SPI 目录：
+     ```yaml
+     context:
+       initializer:
+         classes: com.example.MyContextInitializer
+       listener:
+         classes: com.example.MyApplicationListener
+     ```
+3. **启动类编程式注册（动态或硬编码注入）**：
+   - 在 `main` 方法中显式添加：
+     ```java
+     SpringApplication app = new SpringApplication(MyApplication.class);
+     app.addInitializers(new MyContextInitializer());
+     app.addListeners(new MyApplicationListener());
+     app.run(args);
+     ```
+   - *(注：若仅监听容器刷新后的晚期事件如 `ContextRefreshedEvent`、`ApplicationReadyEvent`，也可以直接在类上标注 `@Component` 或使用 `@EventListener`)*。
 
 ---
 
