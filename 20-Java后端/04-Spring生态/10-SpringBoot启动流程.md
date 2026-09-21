@@ -147,7 +147,7 @@ flowchart TD
     end
 
     subgraph Phase3["【阶段三：内嵌 Web 容器创建与引擎预热】(onRefresh)"]
-        C1["ServletWebServerApplicationContext 识别为 Web 环境"]
+        C1["ServletWebServerApplicationContext 触发重写的 onRefresh() 模板方法"]
         C2["从容器检索获取 ServletWebServerFactory (TomcatServletWebServerFactory)"]
         C3["工厂创建 Tomcat 实例，并将 DispatcherServlet 注册挂载"]
         C4["启动 Tomcat 核心引擎与线程池，【延迟开放 Connector 网络端口】"]
@@ -198,10 +198,11 @@ flowchart TD
 - **触发时机**：容器刷新之 **`onRefresh()`**。
 - **关联章节**：[[06-SpringMVC请求处理流程]]
 - **底层穿透**：
-  1. `ServletWebServerApplicationContext` 执行 `onRefresh()` 钩子，从容器中检索阶段二注册的 `TomcatServletWebServerFactory`；
-  2. 工厂通过原生 API 创建内嵌 Tomcat 实例，并初始化 Connector、Engine、Host 与 Context；
-  3. **MVC 调度器挂载**：将同由容器托管的 **`DispatcherServlet`** 注册挂载进 Tomcat 的 ServletContext 中；
-  4. **延迟监听端口机制（高可用防火墙）**：Tomcat 启动核心引擎与线程池，但**死死保持 Connector 处于非监听状态，绝不对外开放 8080 端口**。
+  1. **多态触发**：父类 `AbstractApplicationContext.refresh()` 执行到 `onRefresh()` 模板钩子。由于早先构造阶段已确定为 Web 环境并创建了对应子类，此处直接触发 `ServletWebServerApplicationContext` 重写的 `onRefresh()`，内部调用 `createWebServer()`；
+  2. **检索 Web 工厂**：从容器中检索阶段二由 Starter 注册的 `TomcatServletWebServerFactory`；
+  3. **构建 Tomcat 实例**：工厂通过原生 API 创建内嵌 Tomcat 实例，并初始化 Connector、Engine、Host 与 Context；
+  4. **MVC 调度器挂载**：将同由容器托管的 **`DispatcherServlet`** 注册挂载进 Tomcat 的 ServletContext 中；
+  5. **延迟监听端口机制（高可用防火墙）**：Tomcat 启动核心引擎与线程池，但**死死保持 Connector 处于非监听状态，绝不对外开放 8080 端口**。
   - *深度死穴解析*：若在此阶段提前开放网络端口，此时阶段四的业务 Bean **根本尚未实例化和注入**（全为 `null`）。外部网络流量一旦瞬间涌入，将全部抛出 `NullPointerException` 或直接报 `500 / 503` 故障！
 
 #### 阶段四：非懒加载单例 Bean 生命周期全面爆发
