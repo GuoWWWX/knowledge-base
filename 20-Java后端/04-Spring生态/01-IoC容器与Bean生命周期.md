@@ -232,6 +232,27 @@ flowchart TD
      - **注册中心主动摘牌**：在微服务节点停机前，通知 Nacos / Eureka 立即下线本实例，促使 API 网关与下游消费者在毫秒级内将流量无损切走；
      - **线程池排空在途请求**：Spring 触发 `@PreDestroy` / `DisposableBean.destroy()` 时，调用 `ThreadPoolTaskExecutor.shutdown()`，拒绝接收新任务并阻塞等待在途队列任务执行完毕；
      - **系统底层资源安全释放**：调用 HikariCP 连接池 `close()` 安全释放与 MySQL 的物理连接、Netty EventLoop 优雅关闭、本地内存写缓冲数据强制 `flush` 刷入磁盘。
+6. **开发者视角：容器内部调度流水线（不可重写） vs 可扩展干涉点（三大层次）**：
+   - **认知误区澄清（第一性原理）**：
+     初学者常困惑：既然生命周期有 `populateBean()`（属性填充）、`initializeBean()`（初始化），日常写业务 Bean 能不能 `@Override` 重写它们？
+     **答案是绝不能**。`populateBean`、`initializeBean` 是 Spring 容器工厂类（`AbstractAutowireCapableBeanFactory`）内部的**流水线调度驱动方法**；而业务类（如 `UserService`）是流水线上被加工的**工件（受管 Bean）**。业务类根本没有继承该工厂类，物理与语法上都不可能重写流水线调度代码。
+   - **开发者真正可重写 / 实现的 3 级扩展全景**：
+     Spring 采用“回调接口（Callback）”与“后置处理器（PostProcessor）”机制为开发者开放了清晰的扩展干涉通道：
+
+| 扩展层级 | 核心接口 / 注解 | 允许重写 / 实现的方法 | 介入时机与底层作用 | 典型生产应用场景 |
+| :--- | :--- | :--- | :--- | :--- |
+| **层次 1：单 Bean 自身回调**<br>*(只管自己，单兵作战)* | **`InitializingBean`** | `@Override public void afterPropertiesSet()` | 属性填充完成后、`init-method` 之前 | 启动时加载本地缓存、连接预热、参数合法性校验 |
+| ^ | **`DisposableBean`** | `@Override public void destroy()` | 容器关闭销毁前 | 释放物理连接、停止后台任务、优雅停机 |
+| ^ | **`Aware` 系列**<br>*(如 `ApplicationContextAware`、`BeanNameAware`)* | `@Override public void setApplicationContext(...)`<br>`@Override public void setBeanName(...)` | 属性填充后、初始化之前 | 自定义工具类保存容器全局引用；策略模式获取注册 ID |
+| ^ | **`@PostConstruct` / `@PreDestroy`** | *(自定义无参方法，无需继承接口)* | 与初始化/销毁时机一致 | **业务开发首选**：JSR-250 规范，对 Spring 框架零侵入 |
+| **层次 2：全局 Bean 拦截器**<br>*(批量干涉所有 Bean，框架核心)* | **`BeanPostProcessor`** | `@Override public Object postProcessBeforeInitialization(...)`<br>`@Override public Object postProcessAfterInitialization(...)` | 每个 Bean 初始化前、初始化后（**AOP 代理包装点**） | 检查标记注解、扫描自定义元数据、**动态代理包装（如事务、切面、RPC 客户端生成）** |
+| ^ | **`InstantiationAwareBeanPostProcessor`** | `@Override public PropertyValues postProcessProperties(...)` | **真正介入属性填充阶段！**（在依赖注入设值前拦截） | **`@Autowired`、`@Value` 的底层实现载体**（`AutowiredAnnotationBeanPostProcessor`） |
+| ^ | ^ | `@Override public Object postProcessBeforeInstantiation(...)` | **Bean 实例化（new）之前** | 若返回非空对象则短路后续常规实例化流水线 |
+| **层次 3：容器图纸修改**<br>*(Bean 实例化前篡改图纸)* | **`BeanFactoryPostProcessor`** | `@Override public void postProcessBeanFactory(...)` | 所有 `BeanDefinition` 加载完成、Bean 尚未实例化前 | 解析替换 `${...}` 占位符、动态修改 Bean 的 Scope（单例/多例） |
+
+   - **工程落地选型指南（KISS 原则）**：
+     - **业务开发（95% 场景）**：首选 `@PostConstruct` 与 `@PreDestroy`，避免实现 Spring 专有的 `InitializingBean` / `DisposableBean` 导致代码与框架强耦合；获取容器引用时实现 `ApplicationContextAware`。
+     - **框架与 SDK 开发（5% 场景）**：需要拦截所有 Bean 或基于自定义注解做动态代理包装时，实现 `BeanPostProcessor`；需要干预属性注入行为时，实现 `InstantiationAwareBeanPostProcessor`。
 
 ---
 
