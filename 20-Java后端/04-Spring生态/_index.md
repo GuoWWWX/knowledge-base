@@ -20,8 +20,8 @@ updated: 2026-09-11
 ### 🟢 第一关：Spring 核心内功（底层基石）
 - [x] [[00-Spring生态全景与心智模型]] — Spring 核心体系认知：IoC、AOP 与全家桶演进脉络
 - [x] [[01-IoC容器与Bean生命周期]] — BeanDefinition、实例化、属性填充、初始化与销毁五大阶段及后置处理器扩展
-- [ ] [[13-Spring循环依赖与三级缓存]] — 单例 Bean 循环依赖解决方案、二级缓存局限性与提前 AOP 代理机制
-- [ ] [[02-AOP原理与应用]] — 动态代理底层机制（JDK Proxy vs CGLIB）、切面织入与内部自调用失效破解
+- [x] [[13-Spring循环依赖与三级缓存]] — 单例 Bean 循环依赖解决方案、二级缓存局限性与提前 AOP 代理机制
+- [x] [[02-AOP原理与应用]] — 动态代理底层机制（JDK Proxy vs CGLIB）、切面织入与内部自调用失效破解
 - [ ] [[03-Spring事务管理]] — 声明式事务传播机制、底层连接管理与事务失效的 7 大高频场景与破解
 - [ ] [[11-Spring事件机制]] — 事件发布与监听解耦、同步/异步事件处理与 `@TransactionalEventListener` 事务同步监听
 
@@ -34,7 +34,7 @@ updated: 2026-09-11
 ### 🟠 第三关：现代 SpringBoot 魔法引擎
 - [ ] [[04-SpringBoot自动配置原理]] — `@EnableAutoConfiguration`、AutoConfigurationImportSelector 与 `@Conditional` 条件注解装配机制
 - [ ] [[05-SpringBoot Starter机制]] — 约定优于配置、自动装配规范与手写企业级自定义 Starter 实战
-- [ ] [[10-SpringBoot启动流程]] — `SpringApplication.run()` 核心步骤、环境准备、上下文刷新与各阶段扩展监听点
+- [x] [[10-SpringBoot启动流程]] — `SpringApplication.run()` 核心步骤、环境准备、上下文刷新与各阶段扩展监听点
 - [ ] [[15-Spring异步与线程池体系]] — `@Async` 异步机制、ThreadPoolTaskExecutor 生产配置、TaskDecorator 跨线程 Context 透传与优雅停机
 - [ ] [[14-SpringBoot生产运维与Actuator]] — 生产级白盒监控、核心端点安全策略、Prometheus 集成、K8s 双探针与优雅停机
 
