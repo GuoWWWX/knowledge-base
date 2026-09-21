@@ -200,10 +200,29 @@ flowchart TD
 - **底层穿透**：
   1. **多态触发**：父类 `AbstractApplicationContext.refresh()` 执行到 `onRefresh()` 模板钩子。由于早先构造阶段已确定为 Web 环境并创建了对应子类，此处直接触发 `ServletWebServerApplicationContext` 重写的 `onRefresh()`，内部调用 `createWebServer()`；
   2. **检索 Web 工厂**：从容器中检索阶段二由 Starter 注册的 `TomcatServletWebServerFactory`；
-  3. **构建 Tomcat 实例**：工厂通过原生 API 创建内嵌 Tomcat 实例，并初始化 Connector、Engine、Host 与 Context；
+  3. **构建 Tomcat 实例**：工厂通过原生 API 创建内嵌 Tomcat 实例，并初始化 Connector、Engine、Host 与 Context，生成底层的 **`ServletContext`**；
   4. **MVC 调度器挂载**：将同由容器托管的 **`DispatcherServlet`** 注册挂载进 Tomcat 的 ServletContext 中；
-  5. **延迟监听端口机制（高可用防火墙）**：Tomcat 启动核心引擎与线程池，但**死死保持 Connector 处于非监听状态，绝不对外开放 8080 端口**。
-  - *深度死穴解析*：若在此阶段提前开放网络端口，此时阶段四的业务 Bean **根本尚未实例化和注入**（全为 `null`）。外部网络流量一旦瞬间涌入，将全部抛出 `NullPointerException` 或直接报 `500 / 503` 故障！
+  5. **延迟监听端口机制（高可用防护）**：Tomcat 启动核心引擎与线程池，但**死死保持 Connector 处于非监听状态，绝不对外开放 8080 端口**。
+
+> 💡 **架构深拷问：为什么必须在阶段四之前创建 Tomcat，而不是推迟到最后与端口开放合并执行？**
+> 
+> 初学者常有疑问：*“阶段四只是在实例化业务 Service，看起来纯粹是 Java 堆内对象的事，跟 Tomcat 有什么关系？为什么不把 Tomcat 的创建和端口开放一起放到最后？”*
+> 
+> **根本原因在于：阶段四里的很多 Bean，底层强依赖 Tomcat 在阶段三提供的“Web 环境基础设施”：**
+> 1. **`ServletContext` 的依赖注入与 Aware 回调**：
+>    - 业务 Service 或三方工具类中常有 `@Autowired private ServletContext servletContext` 或实现 `ServletContextAware` 接口（例如获取文件上传路径、加载模板引擎、配置静态资源）；
+>    - `ServletContext` 必须由 Tomcat 启动创建。若颠倒顺序，阶段四实例化这些 Bean 时将因找不到 `ServletContext` 注入 `null` 或抛出致命异常导致启动中断。
+> 2. **Web 专属作用域的注册（`@RequestScope` / `@SessionScope`）**：
+>    - `request` 和 `session` 作用域并非 Spring 核心容器原生具备，必须由 Tomcat 建立 Web 上下文时向 `BeanFactory` 注册；
+>    - 若阶段四先跑，当扫描到标注了 `@RequestScope` 的组件时，将当场抛出 `IllegalStateException: No Scope registered for scope name 'request'`。
+> 3. **原生 Web 组件（Filter / Servlet / Listener）的标准管线挂载**：
+>    - 开发者声明的 `FilterRegistrationBean` 等拦截组件，需要由 `ServletContextInitializer` 统一挂载到 Tomcat 的 `StandardContext` 管道中，必须先有宿主引擎底座。
+> 4. **Servlet 规范的历史生态兼容**：
+>    - 传统 war 包外置 Tomcat 部署时代，永远是“先有 ServletContext，后有 Spring 业务 Bean”；内嵌模式虽然反转了主导者，但依然必须遵循这一依赖顺序。
+> 
+> **两段式解耦的架构真谛**：
+> - **上半场（阶段三 `onRefresh`：建环境底座）**：生成 `ServletContext`、注册 Web 作用域、挂载 `DispatcherServlet`，为阶段四业务 Bean 提供运行依托；
+> - **下半场（阶段五 `finishRefresh`：通网络放行）**：等阶段四的所有单例与 AOP 代理全部就绪后，调用 `webServer.start()` 开放 8080 端口，确保外部请求安全接入。
 
 #### 阶段四：非懒加载单例 Bean 生命周期全面爆发
 - **触发时机**：容器刷新之 **`finishBeanFactoryInitialization()`**。
