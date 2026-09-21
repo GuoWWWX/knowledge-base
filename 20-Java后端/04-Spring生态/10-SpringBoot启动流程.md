@@ -122,6 +122,113 @@ sequenceDiagram
 
 ---
 
+## ⚙️ 核心大一统：Starter 加载、Tomcat 启动与 Bean 生命周期是如何齿轮咬合的？
+
+初学者在学完前面章节后，往往觉得各个知识点是孤立的碎片：Starter 讲 `imports` 文件，IoC 讲生命周期四步曲，Tomcat 讲 `onRefresh`。
+**实际上，Spring Boot 的启动核心 `refreshContext()` 就是一条环环相扣的精密生产流水线，前一步的输出，恰恰是后一步的原材料：**
+
+### 1. 三大核心技术的齿轮咬合图
+
+```mermaid
+flowchart TD
+    subgraph Act0["【序幕：地基与种子图纸】(run 前半段)"]
+        A1["读取 application.yml 配置<br/>👉 拿到端口号、数据库、Redis 密码 (Environment)"]
+        A2["创建空容器 AnnotationConfigServletWebServerApplicationContext"]
+        A3["将启动主类 App.class 作为【唯一种子】注册为初始 BeanDefinition"]
+        A1 --> A2 --> A3
+    end
+
+    subgraph Act1["【第一幕：图纸大爆炸 —— Starter 登场】(invokeBeanFactoryPostProcessors)"]
+        B1["Spring 唤醒大工匠：ConfigurationClassPostProcessor"]
+        B2["顺着 App 种子挖到 @EnableAutoConfiguration<br/>👉 读取 META-INF/spring/.../AutoConfiguration.imports"]
+        B3["解析引入的所有 Starter (Web, Redis, MyBatis)<br/>经 @Conditional 过滤，将所有 @Bean 转化为【BeanDefinition 图纸】！"]
+        B4["【阶段产物】：此时没有 new 出任何业务 Bean！<br/>但户口本里已登记了全套图纸 (含 Tomcat工厂、RedisTemplate、你的Service)"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    subgraph Act2["【第二幕：后厨建炉灶不开门 —— Tomcat 现身】(onRefresh)"]
+        C1["ServletWebServerApplicationContext 发现自己是 Web 容器"]
+        C2["去图纸库捞出第一幕由 starter-web 带来的 TomcatServletWebServerFactory"]
+        C3["通过工厂 new 出 Tomcat 引擎底座，把 DispatcherServlet 作为 Servlet 挂进去"]
+        C4["启动 Tomcat 核心与工作线程池，但【死死憋住 Connector 端口先不接客】！"]
+        C1 --> C2 --> C3 --> C4
+    end
+
+    subgraph Act3["【第三幕：家具全部进场 —— Bean生命周期爆发】(finishBeanFactoryInitialization)"]
+        D1["容器开始遍历第一幕登记的所有非懒加载单例图纸 (BeanDefinition)"]
+        D2["【实例化】：反射 new 出 Controller、Service、MapperProxy 原始对象"]
+        D3["【属性注入】：populateBean 解决 @Autowired 依赖注入 (三级缓存)"]
+        D4["【初始化】：执行 BeanPostProcessor、AOP 动态代理生成、@PostConstruct"]
+        D5["【阶段产物】：所有业务 Service 与中间件 Client 全部成熟就绪！"]
+        D1 --> D2 --> D3 --> D4 --> D5
+    end
+
+    subgraph Act4["【第四幕：撤警戒线开门接客】(finishRefresh 与 Runners)"]
+        E1["finishRefresh()：通知 Tomcat 引擎解除警戒，webServer.start() 正式监听 8080 端口！"]
+        E2["callRunners()：调用 CommandLineRunner 执行业务自检与 Redis 缓存预热"]
+        E3["广播 ApplicationReadyEvent，外部真实请求正式安全涌入！"]
+        E1 --> E2 --> E3
+    end
+
+    Act0 --> Act1 --> Act2 --> Act3 --> Act4
+```
+
+### 2. 四幕大戏逐层深度剖析
+
+#### 序幕：准备好地基与一张“种子图纸”
+- `run()` 一跑起来，先将 `application.yml` 解析并存入 **`Environment`**（没有端口号和数据库密码，后续一切都无法配置）；
+- 反射创建空容器实例（如 `AnnotationConfigServletWebServerApplicationContext`）；
+- 将主类 `App.class` 注册为第一张 `BeanDefinition`。
+
+#### 第一幕：Starter 到底是在什么时候、怎么加载的？
+- **触发时机**：容器刷新之 **`invokeBeanFactoryPostProcessors()`**。
+- **咬合过程**：
+  1. Spring 激活核心处理器 **`ConfigurationClassPostProcessor`**（它本身是一个 `BeanDefinitionRegistryPostProcessor`）；
+  2. 它从种子图纸 `App.class` 上解析出 `@SpringBootApplication` 包含的 `@EnableAutoConfiguration`；
+  3. 顺藤摸瓜检索类路径下的 `AutoConfiguration.imports` 文件（我们在【05-Starter 机制】学到的核心文件）；
+  4. 遍历所有候选自动配置类，利用 `@ConditionalOnClass` 等条件注解进行过滤；
+  5. 将符合条件的自动配置类及其内部的所有 `@Bean` 方法，**全部转化为 `BeanDefinition`（Bean 定义图纸）注册到容器中**！
+- **关键心智**：在这一幕结束时，**容器里连一个业务对象都还没有 new 出来**！它仅仅是将 Starter 里的图纸和你自己写的 `@Service` 图纸全部收集齐全，整齐登记在册。
+
+#### 第二幕：Tomcat 到底是谁造出来的？什么时候诞生的？
+- **触发时机**：容器刷新之 **`onRefresh()`**。
+- **咬合过程**：
+  1. 在第一幕中，`spring-boot-starter-web` 已经将 `ServletWebServerFactoryConfiguration` 里的 **`TomcatServletWebServerFactory`** 作为图纸登记在册；
+  2. 主线走到 `onRefresh()` 模板方法，Spring 发现自己是 Web 容器，必须搭建底层 Web 引擎；
+  3. 于是从容器中获取该工厂 Bean，**通过工厂 `new` 出了底层的内嵌 Tomcat 对象**；
+  4. 创建 Tomcat 引擎、挂载虚拟主机，并将同样是 Spring Bean 的 **`DispatcherServlet`** 注册为 Servlet；
+  5. **安全隔离防线**：启动 Tomcat 核心容器与线程池，但**死死憋住 Connector 网络端口，绝不对外开放监听**！
+
+#### 第三幕：你学过的“Bean 生命周期四步曲”，在哪个齿轮里转动？
+- **触发时机**：容器刷新之 **`finishBeanFactoryInitialization()`**。
+- **咬合过程**：
+  1. 此时底层 Tomcat 引擎已搭建完毕，Spring 终于腾出手来处理业务对象；
+  2. 容器循环遍历第一幕登记的所有非懒加载单例 `BeanDefinition`；
+  3. **实例化（Instantiation）**：通过反射把你的 `UserService`、`OrderController`、以及 Starter 带来的 `RedisTemplate` **真正 `new` 出堆内内存对象**；
+  4. **属性填充（PopulateBean）**：解决 `@Autowired` 依赖注入（若存在相互引用，通过我们在【13-三级缓存】学到的半成品暴露来破解循环依赖）；
+  5. **初始化（Initialization）**：
+     - 调用 `@PostConstruct` 与 `afterPropertiesSet()`；
+     - 触发在【02-AOP 原理】学到的 **`BeanPostProcessor`**（如 `AnnotationAwareAspectJAutoProxyCreator`），在这一瞬间将目标 Bean 掉包替换为 **CGLIB / JDK 动态代理对象**！
+- **核心顿悟**：**这就是为什么第二幕的 Tomcat 绝不能提前开门接客！** 此时所有的 Service、Controller 正在紧锣密鼓地经历生命周期四步曲，一旦外界请求提前进来，由于依赖注入和代理尚未完成，必将遭遇大面积 `NullPointerException`！
+
+#### 第四幕：开门迎客与业务自检
+- **触发时机**：容器刷新之 **`finishRefresh()`** 与后续 **`callRunners()`**。
+- **咬合过程**：
+  1. **Tomcat 延迟开门**：所有单例 Bean 与 AOP 代理全部就绪，Spring 正式调用 Tomcat 的 `webServer.start()`，**物理端口（如 8080）正式开闸对外监听**；
+  2. **执行业务 Runner**：调用开发者实现的 `CommandLineRunner` / `ApplicationRunner`，此时数据库连接池、Redis 客户端全已成熟，可以安全执行缓存预热或 RPC 注册；
+  3. **广播就绪事件**：发布 `ApplicationReadyEvent`，K8s 就绪探针检测通过，流量平滑涌入。
+
+### 3. 四大核心概念因果闭环矩阵
+
+| 核心模块 | 它在启动中的具体环节 | 它的上游输入是什么？（因） | 它给下游的产物是什么？（果） |
+| :--- | :--- | :--- | :--- |
+| **Starter 自动配置** | 第一幕：`invokeBeanFactoryPostProcessors` | 读取 `application.yml` 与 `imports` 配置文件 | 解析出大量 `@Bean`，转化为 **`BeanDefinition` 图纸** 存入注册表。 |
+| **内嵌 Tomcat 引擎** | 第二幕：`onRefresh()` | 依据 Starter 带来的 Web 工厂图纸进行构建 | 搭建好 Web 底座并挂载 `DispatcherServlet`，但先不开放网络端口。 |
+| **Bean 生命周期 (四步曲)** | 第三幕：`finishBeanFactoryInitialization` | 遍历第一幕产生的所有 `BeanDefinition` 图纸 | 反射 `new`、`@Autowired` 属性填充、AOP 动态代理织入，产生成熟单例。 |
+| **端口开放与业务预热** | 第四幕：`finishRefresh()` 与 `callRunners()` | 所有成熟的单例 Bean 与就绪的 Tomcat 底座 | Tomcat 正式开启 8080 端口，执行 Runner 业务预热，对外接单。 |
+
+---
+
 ## 📢 深入大厂必考：7 大启动生命周期事件时序与分界线
 
 在整个启动链路中，Spring Boot 会按严格的时序对外广播 7 个核心生命周期事件：
