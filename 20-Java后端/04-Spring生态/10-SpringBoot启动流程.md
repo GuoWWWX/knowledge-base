@@ -21,7 +21,7 @@ mastery: ⭐⭐⭐⭐⭐
 
 启动在物理上分为**构造阶段**（`new SpringApplication()`：推断 Web 类型、SPI 加载 Initializer / Listener、推断 main 类）与 **`run()` 执行阶段**（建环境 → 造容器 → `refresh` → 调 Runner）两段，逐帧时序见下一章。
 
-无论哪一段，全程共广播 **7 个 `Application*` 事件**，由 `SpringApplicationRunListener` 在每个节拍上发出。**记住「容器刷新了没有」，就记住了能不能注入 Bean**：
+无论哪一段，全程共广播 **7 个 `Application*` 事件**，由 `SpringApplicationRunListener` 在每个节拍上发出。**记住“容器刷新了没有”，就记住了能不能注入 Bean**：
 
 | # | 事件 | 发布回调 | 触发时机 | 容器状态 | 能否 `@Autowired` 业务 Bean |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -54,7 +54,7 @@ Spring Boot 的启动严格划分为两大物理阶段：**实例化阶段（Con
      - 若类路径下存在 `DispatcherHandler`，**且**不存在 `DispatcherServlet` **且**不存在 Jersey 的 `ServletContainer`，推断为 **`REACTIVE`**（WebFlux 环境）；
      - 若不存在 `Servlet` 或 `ConfigurableWebApplicationContext`，推断为 **`NONE`**（纯后台非 Web 应用，如离线批处理任务）；
      - 否则默认推断为 **`SERVLET`**（传统的 Spring MVC / Tomcat 阻塞环境）。
-   - **易错点**：`REACTIVE` 的判定是「**与**」关系，不是「有 WebFlux 就行」。若同时引入 `spring-boot-starter-web` 与 `spring-boot-starter-webflux`，最终会落到 `SERVLET`——这正是「明明引了 WebFlux，启动日志里跑起来的却是 Tomcat」的根因。
+   - **易错点**：`REACTIVE` 的判定是“**与**”关系，不是“有 WebFlux 就行”。若同时引入 `spring-boot-starter-web` 与 `spring-boot-starter-webflux`，最终会落到 `SERVLET`——这正是“明明引了 WebFlux，启动日志里跑起来的却是 Tomcat”的根因。
 2. **加载 `ApplicationContextInitializer`（容器初始化器）**：
    - 通过 Spring SPI 机制检索类路径下所有候选初始化器并实例化，用于在容器刷新的早期执行自定义回调。
 3. **加载 `ApplicationListener`（全局事件监听器）**：
@@ -294,7 +294,7 @@ flowchart TD
   1. **Tomcat 正式开闸**：全量单例 Bean 与 AOP 代理完全就绪后，`finishRefresh()` 调用 `webServer.start()`，Tomcat **正式绑定并开始监听物理网络端口（如 8080）**；
   2. **执行启动任务**：检索并依次调用 `ApplicationRunner` 与 `CommandLineRunner`，开发者可在此安全调用成熟的 `RedisTemplate` 执行热点数据预热，或建立外部 RPC 长连接；
   3. **K8s 就绪探针放行**：广播 `ApplicationReadyEvent`，Spring Boot Actuator 的健康指标状态 `ReadinessState` 流转为 `ACCEPTING_TRAFFIC`，Kubernetes 就绪探针探测通过，负载均衡器正式切入生产网络流量！
-  4. **⚠️ 一个必须知道的「危险窗口」**：注意第 1 步与第 3 步之间存在时间差——**端口在第 1 步就已经开放，但就绪状态要到第 3 步才置为 `ACCEPTING_TRAFFIC`**。如果 Runner 里做了耗时的全量缓存预热（比如跑 30 秒），就会出现「TCP 能连通、业务却还没准备好」的窗口期：K8s 认为它未就绪因而不切流量，但**直连 Pod IP 的健康检查、服务网格探针、以及 K8s 之外的负载均衡仍可能打进来**。
+  4. **⚠️ 一个必须知道的“危险窗口”**：注意第 1 步与第 3 步之间存在时间差——**端口在第 1 步就已经开放，但就绪状态要到第 3 步才置为 `ACCEPTING_TRAFFIC`**。如果 Runner 里做了耗时的全量缓存预热（比如跑 30 秒），就会出现“TCP 能连通、业务却还没准备好”的窗口期：K8s 认为它未就绪因而不切流量，但**直连 Pod IP 的健康检查、服务网格探针、以及 K8s 之外的负载均衡仍可能打进来**。
      - **对策**：Runner 保持轻量；重活改为异步执行或挂到 `ApplicationReadyEvent` 之后；流量门禁一律基于 `ReadinessState` 而非 `LivenessState`（后者只用于决定是否重启容器，误用会导致启动期间被反复 kill）。
 
 ---
@@ -423,7 +423,7 @@ public class MyRunListener implements SpringApplicationRunListener {
 }
 ```
 
-其余 5 个回调（`starting` / `environmentPrepared` / `contextPrepared` / `contextLoaded` / `ready`）按需覆写——**签名与上方七大事件表的「发布回调」列一一对应**，不再赘述。
+其余 5 个回调（`starting` / `environmentPrepared` / `contextPrepared` / `contextLoaded` / `ready`）按需覆写——**签名与上方七大事件表的“发布回调”列一一对应**，不再赘述。
 
 ```properties
 # src/main/resources/META-INF/spring.factories
@@ -495,7 +495,7 @@ flowchart TD
 > 1. **profile 专属文件永远赢过同位置的通用文件**——`application-prod.yml` 覆盖 `application.yml`
 > 2. **外置永远赢过内置**——改 jar 包里的配置可能毫无效果
 > 3. **外置目录内部还有优先级**：`file:./config/*/` > `file:./config/` > `file:./`（jar 所在目录）
-> 4. 还有个 `RandomValuePropertySource`（`${random.*}`），它夹在「配置数据」与「环境变量」之间，日常排查用不到，但看到配置里写 `${random.int}` 时要明白它不是从 yml 来的
+> 4. 还有个 `RandomValuePropertySource`（`${random.*}`），它夹在“配置数据”与“环境变量”之间，日常排查用不到，但看到配置里写 `${random.int}` 时要明白它不是从 yml 来的
 >
 > 另外，`spring.config.import`（Boot 2.4+）导入的配置**优先于导入它的那个文件**，这是接入配置中心（Nacos / Apollo）的常用姿势。
 

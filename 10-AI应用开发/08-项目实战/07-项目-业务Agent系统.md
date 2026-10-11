@@ -6,7 +6,7 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 强化中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -15,7 +15,7 @@ repo: 未绑定
 # 业务 Agent 系统
 
 > [!info] 项目简介
-> 选择一个真实业务场景，把 RAG、多轮对话、MCP 工具、Skills 和 Agent 编排组合成一个可展示的端到端系统。面试目标是证明 Agent 不是“让模型自己乱跑”，而是一个可控、可观测、可审批、可回滚的业务自动化系统。
+> 选择一个真实业务场景，把 RAG、多轮对话、MCP 工具、Skills 和 Agent 编排组合成一个可展示的端到端系统。核心目标是构建一个状态可控、全链路可观测、高风险可审批、异常可补偿的业务自动化系统。
 
 ## 🎯 本节定位
 
@@ -68,14 +68,15 @@ flowchart TD
     E --> F[Executor Agent]
     F --> G[RAG Retriever]
     F --> H[Tool Gateway]
-    H --> I[MCP Tools]
     H --> J[权限/参数/风险校验]
     J --> K{风险等级}
     K -->|L0-L2| L[自动执行]
     K -->|L3| M[人工确认]
     K -->|L4| N[拒绝/转工单]
-    L --> O[Final Composer]
-    M --> O
+    M -->|批准后重新校验| L
+    L --> I[MCP Tools]
+    I --> O[Final Composer]
+    M -->|拒绝或过期| O
     N --> O
     O --> P[Langfuse Trace + Audit Log]
 ```
@@ -95,7 +96,7 @@ stateDiagram-v2
     EXECUTING --> COMPLETED: 所有步骤完成
     EXECUTING --> FAILED: 工具失败/超时
     FAILED --> COMPENSATING: 需要补偿
-    COMPENSATING --> COMPLETED: 补偿完成
+    COMPENSATING --> COMPENSATED: 已补偿，原任务未成功
     COMPENSATING --> MANUAL_REVIEW: 补偿失败
 ```
 
@@ -109,7 +110,7 @@ stateDiagram-v2
 | L3 高风险需审批 | 影响用户权益 | 退款、发券、改地址 | 人工确认、二次校验 |
 | L4 禁止自治 | 高危动作 | 转账、删库、改权限 | 拒绝或转人工工单 |
 
-核心原则：Agent 不是安全主体。Agent 只能提出“要调用什么工具和参数”，真正的鉴权、参数校验、审批和审计必须在 Java 服务端完成。
+核心原则：模型仅负责生成工具调用意图与候选参数，实际的身份鉴权、参数校验、人工审批与安全审计均由 Java 服务端强制执行。
 
 ## 🛠️ Tool Gateway 设计
 
@@ -127,6 +128,7 @@ G --> H{是否需要审批}
 H -->|否| I[执行工具]
 H -->|是| J[创建审批任务]
 I --> K[审计日志]
+J -->|批准后重新校验| C
 J --> K
 ```
 
@@ -170,7 +172,8 @@ CREATE TABLE agent_tool_call_log (
   result_summary TEXT,
   error_message TEXT,
   created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL
+  updated_at DATETIME NOT NULL,
+  UNIQUE KEY uk_task_idempotency(task_id, idempotency_key)
 );
 
 CREATE TABLE agent_approval (
@@ -185,14 +188,16 @@ CREATE TABLE agent_approval (
 );
 ```
 
+上述表结构展示了核心审计模型。在实际生产中，审批记录需绑定目标工具名、规范化参数摘要、资源版本号与审批有效期；审批通过后执行前应再次复核权限与参数一致性（若参数发生变更需重新发起审批），同时在下游业务接口侧实现幂等保障。
+
 ## 🔁 超时、重试与幂等
 
 | 场景 | 策略 |
 | ---- | ---- |
-| 工具超时 | 每个工具配置独立 timeout，超时返回可解释错误 |
+| 工具超时 | 超时可能已经执行成功；先按幂等键查询业务结果，不盲目重试 |
 | 临时失败 | 指数退避重试，限制最大次数 |
 | 高风险动作 | 不自动重试，转人工确认 |
-| 重复请求 | 使用 taskId + stepNo + toolName 生成幂等键 |
+| 重复请求 | 业务动作使用稳定幂等键，重试不换键；同键不同参数拒绝 |
 | 部分成功 | 状态机记录完成步骤，只重试失败步骤 |
 | 补偿失败 | 进入 `MANUAL_REVIEW`，不让 Agent 无限自修复 |
 
@@ -205,7 +210,7 @@ CREATE TABLE agent_approval (
 | 任务轨迹 | plan、tool call、结果 | task 级 | 必须可审计 |
 | 长期知识 | 业务制度、FAQ | 知识库 | 必须权限过滤 |
 
-原则：Memory 不是垃圾桶。只保存可解释、可删除、可授权、可审计的信息。
+设计原则：严格控制记忆写入质量，仅持久化结构清晰、用户授权、支持检索与删除且可审计的上下文信息。
 
 ## 👀 可观测字段
 
@@ -239,8 +244,8 @@ Langfuse / 日志至少记录：
 1. 查询订单是否延迟。
 2. 检索补偿规则。
 3. 判断补偿金额是否低于自动阈值。
-4. L2 自动创建补偿券或 L3 进入审批。
-5. 写审计日志。
+4. 根据风险分级策略，发券操作归属 L3 级动作，自动生成审批单等待人工确认（若业务允许小额自动发放，可配置独立的额度阈值规则降级为 L2 执行）。
+5. 审批通过并复核后执行，写审计日志。
 
 ### 任务 3：退款申请
 
@@ -276,7 +281,7 @@ Langfuse / 日志至少记录：
 
 ### 30 秒版
 
-业务 Agent 的重点不是让模型全自动，而是把 RAG、工具调用、多轮记忆和审批流程组合起来，并通过 Tool Gateway 做权限、参数、风险、幂等和审计控制。
+业务 Agent 的核心是将 RAG 检索、工具调用、多轮记忆与审批工作流有机结合，并通过服务端 Tool Gateway 统一实施权限校验、参数验证、风险分级、幂等控制与操作审计。
 
 ### 2 分钟版
 

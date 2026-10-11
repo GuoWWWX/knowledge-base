@@ -2,7 +2,7 @@
 title: Codex一次任务执行全链路
 tags: [领域/AI应用, 类型/知识, 主题/Codex, 主题/产品拆解]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -19,6 +19,8 @@ mastery: ⭐☆☆☆☆
 > 帮我修一下订单接口的空指针问题，保持最小改动，修完跑相关测试。
 
 这个任务看起来是一句话，但对 Codex 来说不是一次模型回复，而是一条工程执行链。
+
+以下通过时序图展示该任务从提交到验证交付的完整执行链路：
 
 ## 全链路时序
 
@@ -56,9 +58,7 @@ sequenceDiagram
 
 Codex 可以从 CLI、IDE、Codex app、Cloud/Web 等 surface 进入。入口不同，但任务会被统一理解成一个 thread。
 
-你可以这样讲：
-
-> Surface 负责交互体验，Thread 负责承载任务状态。
+> Surface 负责提供贴合不同场景的交互体验，Thread 则负责持久化承载任务状态与上下文。
 
 ### 2. 上下文装配
 
@@ -131,18 +131,18 @@ Codex 官方手册强调两件事：
 
 ```mermaid
 flowchart TD
-    A[User Goal] --> B[Surface: CLI/IDE/App/Cloud]
-    B --> C[Thread State]
-    C --> D[Context Builder]
-    D --> E[AGENTS.md / Skills / MCP / Files]
-    E --> F[Model Reasoning]
-    F --> G[Tool Plan]
-    G --> H[Sandbox + Approval]
-    H --> I[File Edit / Shell / Git / MCP]
-    I --> J[Verification]
-    J --> K{Pass?}
+    A["User Goal"] --> B["Surface: CLI / IDE / App / Cloud"]
+    B --> C["Thread State"]
+    C --> D["Context Builder"]
+    D --> E["AGENTS.md / Skills / MCP / Files"]
+    E --> F["Model Reasoning"]
+    F --> G["Tool Plan"]
+    G --> H["Sandbox + Approval"]
+    H --> I["File Edit / Shell / Git / MCP"]
+    I --> J["Verification"]
+    J --> K{"Pass?"}
     K -->|No| F
-    K -->|Yes| L[Diff + Summary + Risk]
+    K -->|Yes| L["Diff + Summary + Risk"]
 ```
 
 ## 为什么这样设计
@@ -171,4 +171,3 @@ flowchart TD
 
 - [OpenAI Codex Manual](https://developers.openai.com/codex/codex-manual.md)
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
-

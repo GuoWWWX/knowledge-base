@@ -26,12 +26,12 @@ mastery: ⭐⭐⭐⭐⭐
 ```mermaid
 flowchart TD
     subgraph DijkstraCycle["Dijkstra 堆优化核心循环"]
-        PQ["小顶堆 (PriorityQueue)<br/>按 dist 升序排列 (node, dist)"] --> PollMin["1. poll 出堆顶当前最短距离节点 (u, d)"]
-        PollMin --> CheckVisited{"d > dist[u] ?<br/>(是否为堆中遗留的过期脏数据)"}
+        PQ["小顶堆 (PriorityQueue) 按 dist 升序排列 (node, dist)"] --> PollMin["1. poll 出堆顶当前最短距离节点 (u, d)"]
+        PollMin --> CheckVisited{"d > dist[u] ? (是否为堆中遗留的过期脏数据)"}
         CheckVisited -->|"是 (已有更优解)"| Continue["跳过 continue (懒惰删除)"]
         CheckVisited -->|"否 (确认最终最优解)"| Relax["2. 遍历 u 的所有出边 (u -> v, weight)"]
-        Relax --> CanRelax{"dist[u] + weight < dist[v] ?<br/>(能否通过 u 松弛缩短到达 v 的距离)"}
-        CanRelax -->|"能缩短"| Update["更新 dist[v] = dist[u] + weight<br/>并将 (v, dist[v]) 压入堆中!"]
+        Relax --> CanRelax{"dist[u] + weight < dist[v] ? (能否通过 u 松弛缩短到达 v 的距离)"}
+        CanRelax -->|"能缩短"| Update["更新 dist[v] = dist[u] + weight 并将 (v, dist[v]) 压入堆中!"]
         CanRelax -->|"不能"| Ignore["忽略"]
         Update --> PQ
     end

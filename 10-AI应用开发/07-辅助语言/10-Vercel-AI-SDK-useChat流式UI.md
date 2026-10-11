@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -25,12 +25,11 @@ mastery: ⭐☆☆☆☆
 
 `useChat` 把聊天 UI 里重复的状态处理收起来：
 
-- `messages`：历史消息。
-- `input`：输入框内容。
-- `handleInputChange`：输入变化。
-- `handleSubmit`：提交表单。
-- `isLoading`：模型是否还在生成。
-- `stop` / `reload`：停止或重试。
+以下基于 **AI SDK 5** 的核心接口说明：
+- `messages`：UI 消息，文本在 `parts` 中。
+- `sendMessage`：发送消息；输入框由 React `useState` 管理。
+- `status` / `error`：提交、生成和错误状态。
+- `stop` / `regenerate`：停止或重新生成。
 
 后端需要提供兼容的数据流接口，常见路径是 `app/api/chat/route.ts`。
 
@@ -39,15 +38,15 @@ mastery: ⭐☆☆☆☆
 | Java Web 心智 | `useChat` 心智 | 记忆点 |
 | ------------- | -------------- | ------ |
 | Controller 返回 SSE | API Route 返回 data stream | 流式响应 |
-| 前端状态管理 | `messages` / `input` | Hook 管状态 |
-| 提交表单 | `handleSubmit` | 自动发请求 |
-| loading 标志 | `isLoading` | 控制按钮和占位 |
-| 重试接口 | `reload` | 重新生成上一轮 |
+| 前端状态管理 | `messages` + 本地 `input` | 消息和输入分开管理 |
+| 提交表单 | `sendMessage` | 自动发请求 |
+| loading 标志 | `status` | 控制按钮和占位 |
+| 重试接口 | `regenerate` | 重新生成上一轮 |
 
 ## ⚙️ 环境命令
 
 ```bash
-pnpm add ai @ai-sdk/react @ai-sdk/openai
+pnpm add ai@5 @ai-sdk/react@2 @ai-sdk/openai@2
 pnpm dev
 ```
 
@@ -68,25 +67,32 @@ components/
 ```tsx
 "use client";
 
+import { useState } from "react";
 import { useChat } from "@ai-sdk/react";
 
 export function ChatBox() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  const [input, setInput] = useState("");
+  const { messages, sendMessage, status, error, stop } = useChat();
+  const busy = status === "submitted" || status === "streaming";
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        {messages.map((message) => (
-          <p key={message.id}>
-            <strong>{message.role}:</strong> {message.content}
-          </p>
-        ))}
-      </div>
-
-      <input value={input} onChange={handleInputChange} placeholder="问一个问题" />
-      <button type="submit" disabled={isLoading || input.trim() === ""}>
-        Send
-      </button>
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      if (busy || !input.trim()) return;
+      void sendMessage({ text: input });
+      setInput("");
+    }}>
+      {messages.map((message) => (
+        <div key={message.id}>
+          {message.parts.map((part, i) =>
+            part.type === "text" ? <span key={i}>{part.text}</span> : null
+          )}
+        </div>
+      ))}
+      <input value={input} onChange={(e) => setInput(e.target.value)} />
+      <button type="submit" disabled={busy || !input.trim()}>发送</button>
+      <button type="button" disabled={!busy} onClick={() => stop()}>停止</button>
+      {error && <p role="alert">请求失败，请稍后重试。</p>}
     </form>
   );
 }
@@ -95,7 +101,7 @@ export function ChatBox() {
 `app/api/chat/route.ts`：
 
 ```ts
-import { streamText } from "ai";
+import { convertToModelMessages, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 export async function POST(req: Request) {
@@ -103,17 +109,17 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai("gpt-4.1-mini"),
-    messages,
+    messages: await convertToModelMessages(messages),
   });
 
-  return result.toDataStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
 ```
 
 ## 🤖 AI 生态落点
 
 - ChatGPT 类页面：`useChat` 管 UI，`streamText` 管模型流。
-- RAG 问答：后端先检索，再把上下文加入 system prompt。
+- RAG 问答：后端先检索相关文档片段，作为参考上下文组装到对话请求中。
 - 项目调试台：前端快速测试不同 Prompt、模型和工具调用。
 - 内部业务助手：把消息、用户信息、会话 ID 发给 API Route，后端做权限和上下文组装。
 
@@ -123,13 +129,14 @@ export async function POST(req: Request) {
 - 后端必须返回 AI SDK 兼容的数据流，普通 JSON 不能驱动逐字更新。
 - `messages` 会越来越长，真实项目要做会话存储、截断或摘要。
 - 不要把模型 API Key 放到客户端组件。
-- 输入框提交要处理空字符串和重复提交，避免浪费模型调用。
+- 提交表单时需做好空字符串拦截与防重提交处理；点击“停止”会中止本地流读取与网络请求，若需同步终止服务端推理，可在后端监听 `req.signal` 中断信号。
+- 上述示例仅渲染了 `text` 类型的消息片段；若涉及工具调用、文件附件或知识库引用，可遍历 `message.parts` 按对应类型分别渲染。同时，身份鉴权与会话归属校验应在服务端接口中完成。
 
 ## 🎯 面试 / 项目用途
 
 > [!question] 高频问题
 > - Q: `useChat` 帮你做了什么？
->   - A: 它管理消息数组、输入框、提交请求、loading 状态和流式消息更新。
+>   - A: 它管理消息、发送、请求状态和流式更新；输入框内容由组件自己管理。
 > - Q: 为什么流式 UI 体验更好？
 >   - A: 用户能更早看到首段输出，不必等模型完整生成后才显示。
 > - Q: 生产 Chat UI 还要补什么？

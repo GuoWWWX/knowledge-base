@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -48,6 +48,7 @@ TypeScript AI 项目通常不是直接运行 `.ts` 文件，而是由 Node、包
 
 ```bash
 node -v
+# Corepack 用于管理包管理器版本（Node 25+ 需单独安装 corepack 或直接按官方文档安装 pnpm）
 corepack enable
 pnpm -v
 pnpm install
@@ -59,7 +60,7 @@ pnpm dev
 ```bash
 pnpm create next-app ai-chat-demo --ts
 cd ai-chat-demo
-pnpm add ai @ai-sdk/openai
+pnpm add ai@5 @ai-sdk/openai@2 @ai-sdk/react@2
 pnpm dev
 ```
 
@@ -81,11 +82,13 @@ pnpm why ai
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   }
 }
 ```
+
+上述命令对应 `package.json` 的 `scripts` 配置（Next.js 16 起推荐直接使用 `eslint .` 替代已移除的 `next lint`）。在 CI 环境中，建议使用 `pnpm install --frozen-lockfile` 并配合 `packageManager` 字段锁定包管理器与依赖版本。
 
 运行逻辑是：`pnpm dev` -> 找 `scripts.dev` -> 启动框架开发服务。
 

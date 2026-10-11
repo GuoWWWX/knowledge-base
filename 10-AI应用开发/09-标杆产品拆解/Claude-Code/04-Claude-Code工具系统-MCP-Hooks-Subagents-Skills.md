@@ -2,7 +2,7 @@
 title: Claude-Code工具系统-MCP-Hooks-Subagents-Skills
 tags: [领域/AI应用, 类型/知识, 主题/ClaudeCode, 主题/工具调用]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -35,7 +35,7 @@ MCP 让 Claude Code 可以连接外部系统，例如文档、数据库、浏览
 
 ## Hooks：生命周期治理
 
-Hooks 让开发者在 Claude Code 的某些阶段插入自定义命令或检查。它的产品意义是把 Agent 纳入工程规范，而不是让 Agent 自由行动。
+Hooks 允许开发者在 Claude Code 运行生命周期的关键阶段挂载自定义命令或校验脚本，从而将确定性的工程规范嵌入 Agent 执行链路。
 
 可以用于：
 
@@ -44,6 +44,8 @@ Hooks 让开发者在 Claude Code 的某些阶段插入自定义命令或检查�
 - 命令执行前拦截危险命令。
 - 任务结束后生成审计日志。
 - 提交前跑测试。
+
+在实际配置中需根据阶段特性划分职责：`PreToolUse` 在工具执行前触发，适合执行参数检查与高风险操作拦截；`PostToolUse` 在工具执行后触发，适合执行代码格式化、测试验证或审计日志记录。同时，Hook 脚本应纳入仓库受控管理，并与底层的 Sandbox 沙箱及服务端鉴权配合使用。
 
 ## Subagents：专业化分工
 
@@ -54,7 +56,7 @@ Subagents 适合把复杂任务拆给不同角色：
 - Test Agent：只补测试和跑用例。
 - Docs Agent：只更新文档。
 
-注意：多 Agent 不等于越多越好。写文件任务要避免冲突，最好限定目录或让主 Agent 统一合并。
+在设计多 Agent 协作时，应合理控制子代理粒度；涉及文件写入的任务需明确划分目录边界或由主 Agent 统一合并变更，避免并发修改冲突。
 
 ## Skills：任务能力包
 
@@ -65,19 +67,19 @@ Skills 适合把重复任务沉淀成可加载工作流。例如：
 - 前端 UI 检查 Skill。
 - SQL 优化 Skill。
 
-这和 [[../../05-Agent-MCP-Skills/13-Skills详解]] 的核心思想一致：让 Agent 不只依赖模型临场发挥，而是加载明确流程。
+这和 [[../../05-Agent-MCP-Skills/13-Skills详解]] 的核心思想一致：让 Agent 依托明确定义的标准工作流执行任务。
 
 ## 架构抽象
 
 ```mermaid
 flowchart TD
-    A[用户目标] --> B[Claude Code Agent]
-    B --> C[Skills: 任务流程]
-    B --> D[Subagents: 专业分工]
-    B --> E[MCP: 外部工具]
-    B --> F[Hooks: 生命周期治理]
-    E --> G[GitHub/Docs/DB/Browser/内部系统]
-    F --> H[权限/格式化/测试/审计]
+    A["用户目标"] --> B["Claude Code Agent"]
+    B --> C["Skills: 任务流程"]
+    B --> D["Subagents: 专业分工"]
+    B --> E["MCP: 外部工具"]
+    B --> F["Hooks: 生命周期治理"]
+    E --> G["GitHub / Docs / DB / Browser / 内部系统"]
+    F --> H["权限 / 格式化 / 测试 / 审计"]
 ```
 
 ## 对企业 AI 平台的启发
@@ -103,4 +105,3 @@ flowchart TD
 - [Claude Code Skills](https://code.claude.com/docs/skills)
 - [[../../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[../../05-Agent-MCP-Skills/13-Skills详解]]
-

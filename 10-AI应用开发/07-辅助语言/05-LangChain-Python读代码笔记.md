@@ -14,7 +14,7 @@ mastery: ⭐☆☆☆☆
 # LangChain-Python读代码笔记
 
 > [!abstract] 一句话总结
-> 读 LangChain Python 代码时，重点不是背 API，而是看懂模型、Prompt、Retriever、Tool 和 Chain/Graph 如何串成一个 AI 应用流程。
+> 读 LangChain Python 代码时，核心是理清模型、Prompt、Retriever、Tool 和 Chain/Graph 如何串联成完整的 AI 应用流程。
 
 ## 🎯 本节定位
 
@@ -80,7 +80,7 @@ result = chain.invoke({"topic": "RAG"})
 print(result.content)
 ```
 
-阅读这段代码时，把 `prompt | model` 理解成管道：输入字典 -> 渲染 Prompt -> 调模型 -> 返回消息。
+阅读这段代码时，`prompt | model` 表示 LCEL 链式组合：输入字典 -> 渲染 Prompt -> 调用模型 -> 返回消息。
 
 ## 🤖 AI 生态落点
 

@@ -7,7 +7,7 @@ tags:
   - 主题/推理
   - 阶段/06
 created: 2026-07-05
-updated: 2026-07-05
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -66,10 +66,10 @@ vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Jav
 ## 私有化验收清单
 
 - [ ] 模型许可证允许商用和私有部署。
-- [ ] 显存、并发、上下文长度经过压测。
+- [ ] **显存容量核算与压测**：综合计入模型权重、并发请求的 KV Cache 占用及 CUDA 运行时开销（权重量化与 KV Cache 量化分别独立计算），并通过真实上下文长度与并发压测确定单机容量。
 - [ ] 支持流式输出和超时取消。
 - [ ] 有 OpenAI-compatible API 或清晰 SDK。
-- [ ] 日志不落敏感原文，trace 可脱敏。
+- [ ] 日志/Trace 脱敏，检查遥测、外部工具和回退云模型路径，避免“模型在内网、数据仍出域”。
 - [ ] 有模型版本、Prompt 版本和回滚策略。
 - [ ] 网关层做限流、熔断、额度和审计。
 
@@ -78,7 +78,7 @@ vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Jav
 - 只看单轮效果，不测并发吞吐。
 - 本地能跑，不代表生产显存和延迟可接受。
 - 忘记模型许可证，后续商用合规有风险。
-- 私有模型结构化输出和工具调用能力弱于云模型，需要单独评估。
+- 忽略私有化中小参数模型与云端旗舰模型在复杂推理上的能力边界，上线前需针对 JSON 结构化输出、Function Calling 准确率与长上下文指令遵循做专项评测。
 
 ## 面试讲法
 
@@ -97,5 +97,3 @@ vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Jav
 - [vLLM Documentation](https://docs.vllm.ai/)
 - [SGLang Documentation](https://docs.sglang.ai/)
 - [Spring AI OpenAI Chat](https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html)
-
-

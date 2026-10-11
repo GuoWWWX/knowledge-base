@@ -2,7 +2,7 @@
 title: Codex上下文工程-AGENTS-MCP-Skills
 tags: [领域/AI应用, 类型/知识, 主题/Codex, 主题/上下文工程]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -10,7 +10,7 @@ mastery: ⭐☆☆☆☆
 # Codex 上下文工程：AGENTS.md / MCP / Skills
 
 > [!abstract] 一句话总结
-> Codex 的上下文工程不是“把更多文件塞给模型”，而是把项目规则、外部工具和可复用工作流分层装配给 Agent。
+> Codex 的上下文工程通过分层机制，将项目持久规则、外部工具连接与可复用工作流按需装配到模型上下文中。
 
 ## 三类上下文
 
@@ -29,7 +29,7 @@ Codex 官方手册说明，Codex 会在开始工作前读取 `AGENTS.md`，并�
 - 把重复口头提示变成仓库文件。
 - 让团队约定可版本化。
 - 让不同会话、不同人、不同任务共享同一套规则。
-- 让局部模块可以覆盖全局规则。
+- 支持按目录层级就近覆盖业务约定，而底层的工具执行权限与沙箱安全边界则始终由宿主环境策略统一管控。
 
 ## MCP：连接外部工具和上下文
 
@@ -100,4 +100,3 @@ flowchart TD
 - [OpenAI Codex Manual：Custom instructions with AGENTS.md](https://developers.openai.com/codex/codex-manual.md#customization-and-tooling)
 - [OpenAI Codex Manual：Model Context Protocol](https://developers.openai.com/codex/codex-manual.md#customization-and-tooling)
 - [OpenAI Codex Manual：Agent Skills](https://developers.openai.com/codex/codex-manual.md#customization-and-tooling)
-

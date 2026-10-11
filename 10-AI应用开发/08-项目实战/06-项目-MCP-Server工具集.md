@@ -6,7 +6,7 @@ tags:
   - 主题/MCP
   - 阶段/05
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 规划中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -47,11 +47,11 @@ repo: 未绑定
 ```mermaid
 flowchart TD
     A[MCP Client] --> B[MCP Server]
-    B --> C[Tool Registry]
+    B --> G[鉴权与参数/资源权限校验]
+    G --> C[Tool Registry]
     C --> D[文件工具]
     C --> E[数据库工具]
     C --> F[业务 API 工具]
-    B --> G[安全校验]
 ```
 
 ## 📋 实现步骤
@@ -76,13 +76,13 @@ flowchart TD
 ## ✅ 验收标准
 
 - MCP Inspector 能列出全部工具，并成功调用每个工具的正常路径。
-- 每个工具都有参数 schema、权限边界、失败返回和最小调用样例。
+- 每个工具均覆盖正常调用、参数校验失败、权限不足与下游执行异常等场景；按照 MCP 规范准确区分协议层 JSON-RPC 错误与业务层工具执行错误（`isError: true`）。
 - 至少一个 MCP Client 能完成端到端调用演示。
 - README 写清本地启动、Inspector 调试和客户端接入配置。
 
 ## 🎯 面试讲法
 
-可以把 MCP Server 类比成“给 Agent 用的工具网关”：服务端注册工具和 schema，客户端发现工具并发起调用，Inspector 用来验证协议和参数。重点讲清安全边界和错误返回，避免只停留在“能列出工具”。
+MCP Server 的核心作用是将业务能力封装为标准化的工具服务：服务端统一注册工具描述与参数 Schema，客户端通过标准协议发现并发起调用，开发阶段配合 MCP Inspector 验证协议交互与安全边界。重点讲清权限控制、参数校验与错误返回设计。
 
 ## 🔗 关联笔记
 

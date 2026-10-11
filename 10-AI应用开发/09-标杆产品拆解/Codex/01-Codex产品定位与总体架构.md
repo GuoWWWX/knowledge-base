@@ -2,7 +2,7 @@
 title: Codex产品定位与总体架构
 tags: [领域/AI应用, 类型/知识, 主题/Codex, 主题/产品拆解]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -10,7 +10,7 @@ mastery: ⭐☆☆☆☆
 # Codex 产品定位与总体架构
 
 > [!abstract] 一句话总结
-> Codex 不是单一聊天工具，而是一个覆盖 CLI、IDE、桌面 app、云端和集成入口的软件工程 Agent 平台。
+> Codex 是覆盖 CLI、IDE、桌面端、云端与协作平台入口的软件工程 Agent 平台。
 
 ## 官方定位
 
@@ -37,19 +37,21 @@ Codex 不是只有一个入口，而是多 surface：
 | Cloud/Web | 远程环境执行任务 | 适合 offload 和后台任务 |
 | GitHub/Slack/Linear 等集成 | 在协作工具里触发 | 让 Agent 进入团队流程 |
 
+下图展示了 Codex 各核心模块在任务执行过程中的协作关系：
+
 ## 架构抽象
 
 ```mermaid
 flowchart TD
-    A[用户入口: CLI/IDE/App/Cloud] --> B[任务线程 Thread]
-    B --> C[上下文装配]
-    C --> D[模型推理与计划]
-    D --> E[工具执行层]
-    E --> F[文件系统/Shell/Git/MCP/Browser]
-    F --> G[验证与总结]
-    G --> H[Diff/Commit/PR/Review]
-    C --> I[AGENTS.md/Skills/Rules]
-    E --> J[Sandbox + Approval]
+    A["用户入口: CLI / IDE / App / Cloud"] --> B["任务线程 Thread"]
+    B --> C["上下文装配"]
+    C --> D["模型推理与计划"]
+    D --> E["工具执行层"]
+    E --> F["文件系统 / Shell / Git / MCP / Browser"]
+    F --> G["验证与总结"]
+    G --> H["Diff / Commit / PR / Review"]
+    C --> I["AGENTS.md / Skills / Rules"]
+    E --> J["Sandbox + Approval"]
 ```
 
 ## 关键产品取舍
@@ -84,13 +86,13 @@ Codex 不可能内置所有团队工具，所以提供两类扩展：
 
 ## 对我们做 AI 应用的启发
 
-做任何企业 Agent，都可以借 Codex 这套思路：
+构建企业级 Agent 时，可以借鉴 Codex 的核心设计原则：
 
-- 不要只做聊天框，要嵌入真实工作流。
-- 不要只返回答案，要返回可验证结果。
-- 不要只靠 prompt，要有持久规则和权限治理。
-- 不要把工具全内置，要提供扩展协议。
-- 不要让 Agent 一次性跑完所有事，要支持线程、恢复和并行。
+- **深度嵌入工作流**：从高频业务环境切入，而非停留在独立聊天窗口。
+- **交付可验证结果**：提供 Diff、测试报告或引用依据，支持人工审查。
+- **固化规则与权限治理**：通过规则文件管理长期上下文，配合沙箱与审批管控风险。
+- **标准化能力扩展**：通过 MCP 与 Skills 机制动态接入外部工具与领域工作流。
+- **支持持续会话与并行执行**：以任务线程管理长周期状态，并提供隔离的并行执行环境。
 
 ## 面试讲法
 
@@ -107,4 +109,3 @@ Codex 不可能内置所有团队工具，所以提供两类扩展：
 
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
 - [OpenAI Codex Manual](https://developers.openai.com/codex/codex-manual.md)
-

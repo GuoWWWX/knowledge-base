@@ -6,7 +6,7 @@ tags:
   - 主题/SpringAI
   - 阶段/02
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -102,15 +102,15 @@ source.onerror = () => {
 | 适合场景 | LLM 文本流、通知 | 实时协作、双向控制 |
 | HTTP 兼容 | 好 | 需要升级协议 |
 
-AI 聊天的“模型往前端吐字”优先选 SSE；如果需要用户中途打断、多人协作、复杂状态同步，再考虑 WebSocket。
+AI 聊天的“模型往前端吐字”优先选 SSE；停止生成也可通过 AbortController 取消 fetch 或单独的取消接口实现；只有持续双向通信等需求再考虑 WebSocket。
 
 ## ⚙️ 工程注意点
 
-☑ 网关 / Nginx 不要缓存 SSE
-☑ 关闭响应缓冲，否则前端看不到逐 token 输出
-☑ 前端要处理断线和重试
-☑ 后端要记录请求 ID，方便追踪流式请求
-☑ 敏感内容审核要考虑流式场景
+- **关闭代理层响应缓冲**：网关或 Nginx 需关闭响应缓冲（如 `proxy_buffering off;`），避免分块事件被缓存后一次性返回给前端。
+- **区分 SSE 事件与模型 Token**：服务端推送的每个 SSE 事件对应模型流式返回的一个增量文本片段（Chunk），与底层分词器的单个 Token 并非严格一一对应。
+- **前端鉴权与请求方式选择**：浏览器原生 `EventSource` 仅支持 `GET` 请求且不支持自定义请求头；若需发送 `POST` JSON 请求体或携带 `Authorization` Header，前端通常使用 `fetch` API 读取 `ReadableStream`（或使用 `@microsoft/fetch-event-source`）。
+- **断线重连与幂等防重**：大模型生成具有非确定性且消耗算力，客户端断线后不应盲目自动重发生成请求，应结合请求 ID（`requestId`）做状态查询、去重或取消控制。
+- **结果落库与内容审核**：流式推送过程中应累加文本片段进行增量安全审核，并在流结束时一次性持久化完整回答，避免按片段高频写入数据库。
 
 ---
 
@@ -118,15 +118,15 @@ AI 聊天的“模型往前端吐字”优先选 SSE；如果需要用户中途�
 
 - [ ] 能写出 `produces = MediaType.TEXT_EVENT_STREAM_VALUE`
 - [ ] 能用 `ChatClient.stream().content()` 输出 `Flux<String>`
-- [ ] 能说明 SSE 和 WebSocket 的区别
-- [ ] 能解释为什么流式输出改善用户体验
+- [ ] 能说明 SSE 和 WebSocket 的区别及前端请求方式选型
+- [ ] 能解释为什么流式输出能改善首字延迟体验
 
 ## ⚠️ 常见坑
 
-- [ ] **用了 Spring MVC 却返回 Flux**：流式体验建议配 WebFlux 或确认容器支持。
+- [ ] **用了 Spring MVC 却返回 Flux**：流式体验建议配 WebFlux 或确认容器异步支持。
 - [ ] **Nginx 缓冲**：代理层缓冲会导致前端一次性收到全部内容。
-- [ ] **异常只在日志里**：流中报错要给前端一个可识别结束状态。
-- [ ] **逐 token 存库**：通常只在结束后存完整答案，避免大量小写入。
+- [ ] **异常只在日志里**：流中报错要给前端一个可识别的错误事件或结束状态。
+- [ ] **逐片段存库**：通常只在流结束后保存完整答案，避免大量小写入。
 
 ## 🎯 面试速记
 
@@ -146,4 +146,3 @@ AI 聊天的“模型往前端吐字”优先选 SSE；如果需要用户中途�
 
 - [Spring AI Chat Client Streaming](https://docs.spring.io/spring-ai/reference/api/chatclient.html)
 - [Spring Framework WebFlux](https://docs.spring.io/spring-framework/reference/web/webflux.html)
-

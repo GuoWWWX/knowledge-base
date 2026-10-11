@@ -2,7 +2,7 @@
 title: 从Codex和Claude-Code反推企业Agent设计
 tags: [领域/AI应用, 类型/知识, 主题/产品拆解, 主题/企业Agent]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -12,14 +12,14 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > Codex 和 Claude Code 的产品设计可以迁移到企业 Agent：先嵌入真实工作流，再设计上下文、工具、权限、验证和复用机制。
 
-## 不要从“聊天框”开始
+## 从真实业务工作流切入
 
-很多 AI 应用失败，是因为先做聊天框，再想怎么接业务。Codex 和 Claude Code 给出的反例是：
+构建企业级 AI 应用时，比起单纯提供一个通用对话窗口，更有效的方式是直接切入高频业务工作流：
 
-- 先找高频工作流。
-- 再让 Agent 站到工作流里。
-- 再给它上下文和工具。
-- 最后用权限和验证控制风险。
+- 先梳理高频业务流程。
+- 将 Agent 嵌入关键作业节点。
+- 装配业务上下文与受控工具。
+- 通过权限分级与结果验证管控风险。
 
 ## 映射到企业场景
 
@@ -40,21 +40,22 @@ mastery: ⭐☆☆☆☆
 
 ```mermaid
 flowchart TD
-    A[业务入口<br/>客服/办公/数据/研发] --> B[任务线程]
-    B --> C[业务上下文装配]
-    C --> D[规则/SOP/权限/历史记录]
-    D --> E[Agent 决策]
-    E --> F[工具网关]
-    F --> G{风险等级}
-    G -->|只读| H[直接查询]
-    G -->|低风险| I[自动执行]
-    G -->|高风险| J[人工审批]
-    G -->|禁止| K[拒绝或转工单]
-    H --> L[结果验证]
+    A["业务入口 (客服 / 办公 / 数据 / 研发)"] --> B["任务线程"]
+    B --> C["业务上下文装配"]
+    C --> D["规则 / SOP / 权限 / 历史记录"]
+    D --> E["Agent 决策"]
+    E --> F["工具网关"]
+    F --> G{"风险等级"}
+    G -->|只读| H["直接查询"]
+    G -->|低风险| I["自动执行"]
+    G -->|高风险| J["人工审批"]
+    G -->|禁止| K["拒绝或转工单"]
+    H --> L["结果验证"]
     I --> L
-    J --> L
+    J -->|批准并重新校验| I
+    J -->|拒绝| K
     K --> L
-    L --> M[审计/Trace/反馈]
+    L --> M["审计 / Trace / 反馈"]
 ```
 
 ## 设计步骤
@@ -126,7 +127,7 @@ flowchart TD
 
 ## 讲给面试官的版本
 
-> 我会借鉴 Codex 和 Claude Code 的设计做企业 Agent。它们的成功点不是模型本身，而是把 Agent 放进真实工作流：自动加载项目规则，按需读取上下文，通过工具执行动作，用权限和审批控制风险，最后用测试、diff 或 trace 验证结果。企业场景可以把代码库换成业务系统，把 AGENTS.md/CLAUDE.md 换成 SOP，把 shell/test 换成业务校验和审批流。
+> 设计企业 Agent 时可借鉴 Codex 和 Claude Code 的工程架构：将 Agent 嵌入核心业务流程，自动加载组织级规则，按需检索业务上下文，通过受控工具网关执行操作，配合权限分级与人工审批管控风险，最后通过业务校验、变更预览与审计轨迹保障交付质量。在企业场景中，代码库对应业务系统与知识库，AGENTS.md/CLAUDE.md 对应岗位 SOP，shell/test 对应业务规则校验与审批流。
 
 ## 关联
 
@@ -141,4 +142,3 @@ flowchart TD
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
 - [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification)
-

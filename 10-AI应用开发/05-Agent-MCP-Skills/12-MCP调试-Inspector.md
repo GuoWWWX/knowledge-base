@@ -32,7 +32,7 @@ Inspector 是 MCP 官方调试工具，用来模拟 MCP Client：
 - **确认 server 是否能被发现**：连接参数、命令、环境变量、HTTP 地址是否正确。
 - **确认 schema 是否清楚**：参数描述是否让 Agent 能正确填值。
 - **确认 handler 是否可执行**：业务异常、鉴权、超时能否按预期返回。
-- **确认传输问题**：stdio、Streamable HTTP 的启动方式和日志位置不同（SSE 为已废弃的旧传输）。
+- **确认传输问题**：stdio 与 Streamable HTTP 的启动方式、会话管理及日志输出位置不同。
 
 ## 🧩 调试顺序
 

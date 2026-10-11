@@ -6,7 +6,7 @@ tags:
   - 主题/RAG
   - 阶段/03
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 强化中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -15,7 +15,7 @@ repo: 未绑定
 # 企业知识库 RAG 系统
 
 > [!info] 项目简介
-> 用 Spring Boot 3 + Spring AI + 向量库实现企业文档问答，覆盖文档解析、切分、Embedding、检索、重排、生成、引用溯源、权限隔离、评估和可观测。面试目标是证明这不是“调大模型接口”，而是一个可评估、可追踪、可治理的 AI 应用系统。
+> 用 Spring Boot 3 + Spring AI + 向量库实现企业文档问答，覆盖文档解析、切分、Embedding、检索、重排、生成、引用溯源、权限隔离、评估和可观测。核心目标是构建一个可评估、可追踪、可治理的企业级 AI 知识问答系统。
 
 ## 🎯 本节定位
 
@@ -75,6 +75,8 @@ flowchart TD
 
 ## 🗂️ 数据模型
 
+以下以 MySQL 语法为例展示核心元数据表结构（若使用 PostgreSQL / pgvector，可将对应字段类型调整为 `BIGSERIAL`、`TIMESTAMPTZ` 与 `JSONB`），其中权限与版本等关键字段需同步写入向量库的检索 metadata。
+
 ### 文档表
 
 ```sql
@@ -91,7 +93,7 @@ CREATE TABLE kb_document (
   created_by BIGINT NOT NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
-  UNIQUE KEY uk_tenant_hash(tenant_id, file_hash)
+  UNIQUE KEY uk_tenant_space_hash(tenant_id, space_id, file_hash)
 );
 ```
 
@@ -134,19 +136,19 @@ CREATE TABLE rag_eval_case (
 ### 1. Query Rewrite
 
 - 多轮对话中把“这个政策呢？”改写成完整问题。
-- 提取租户、产品、时间范围、文档类型等过滤条件。
+- 模型负责从问题中提取产品、时间范围等业务检索条件；租户标识与访问权限则由服务端从认证上下文中强制注入。
 - 对缩写、别名、业务术语做规范化。
 
 ### 2. Hybrid Search
 
 ```mermaid
 flowchart LR
-A[用户问题] --> B[向量检索 TopK]
-A --> C[关键词/BM25 检索]
+A[已认证用户 + 授权过滤条件] --> B[带权限过滤的向量检索 TopK]
+A --> C[带权限过滤的关键词/BM25 检索]
 B --> D[候选合并]
 C --> D
 D --> E[去重]
-E --> F[权限过滤]
+E --> F[权限复核]
 F --> G[Rerank]
 G --> H[TopN 上下文]
 ```
@@ -181,22 +183,25 @@ G --> H[TopN 上下文]
 
 ## 🔐 权限隔离
 
-权限过滤必须发生在检索阶段或检索前，不能先召回再让模型判断能不能看。
+权限过滤必须发生在检索阶段或检索前，确保未授权文档不会进入模型上下文。
 
 过滤条件示例：
 
 ```java
-// in 需要带引号的数组字面量（Spring AI filter expression 语法）
-String acl = "'" + String.join("','", userAclTags) + "'";   // 如 ['finance','legal']
+// 示例采用空间级授权：tenantId 来自认证上下文，authorizedSpaceId 已由服务端核准。
+var b = new FilterExpressionBuilder(); // org.springframework.ai.vectorstore.filter
 SearchRequest request = SearchRequest.builder()
     .query(question)
     .topK(30)
-    .filterExpression("tenant_id == " + tenantId + " && acl_tags in " + acl)
+    .filterExpression(b.and(
+        b.eq("tenant_id", tenantId),
+        b.eq("space_id", authorizedSpaceId)
+    ).build())
     .build();
 ```
 
 > [!warning] 注意
-> 不要把 Java List 直接拼进 filterExpression——`in` 需要带单引号的数组字面量（如 `acl_tags in ['a','b']`），直接拼 List 会生成非法表达式。
+> 过滤表达式应通过 Builder API 参数化构造，避免直接拼接用户输入或模型生成的字符串。上述示例展示了空间级（`space_id`）过滤；若需实现细粒度文档级 ACL（如多角色数组交集匹配），需结合具体向量库与关键词检索引擎的数组过滤语法，在向量与关键词两路召回中同步执行权限过滤。
 
 关键原则：
 
@@ -262,7 +267,7 @@ H -->|是| J[答案格式或引用问题]
 
 ## 👀 Langfuse Trace 字段
 
-每次问答至少记录：
+在满足敏感信息脱敏与访问控制要求的前提下，记录以下关键链路字段：
 
 - `userId / tenantId / sessionId`
 - 原始问题、改写后问题
@@ -280,7 +285,7 @@ H -->|是| J[答案格式或引用问题]
 - 只做向量检索，漏掉错误码、编号、专有名词。
 - 没有评估集就调参数，本质是在凭感觉。
 - 权限过滤放在模型之后，存在越权泄露风险。
-- 文档更新后未重建索引，回答旧知识。
+- 文档更新、撤权或删除要同步到元数据、向量、关键词索引和缓存；新版本索引完整后再切换，避免混用新旧 chunk。
 - Prompt 只写“不要幻觉”但没有资料不足拒答规则。
 
 ## ✅ 验收标准
@@ -296,7 +301,7 @@ H -->|是| J[答案格式或引用问题]
 
 ### 30 秒版
 
-这个 RAG 系统不是简单向量库问答，而是包含文档解析、结构化切分、Hybrid Search、Rerank、引用溯源、权限过滤、评估和可观测的完整链路。回答错误时可以定位到是解析、召回、排序、Prompt 还是模型生成的问题。
+该 RAG 系统覆盖了文档解析、结构化切分、Hybrid Search、Rerank、引用溯源、权限过滤、离线评估与全链路可观测。当回答出现偏差时，可以逐层定位到解析、召回、排序、Prompt 组装或模型生成阶段。
 
 ### 2 分钟版
 

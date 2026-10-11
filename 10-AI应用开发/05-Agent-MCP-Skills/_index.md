@@ -11,7 +11,7 @@ updated: 2026-08-03
 # 🤖 05 · Agent · MCP · Skills
 
 > [!info] 本区说明
-> 对应学习路径 **阶段五**。系统攻坚大模型从“对话框”走向“数字化员工”的核心三要素：Agent 决策模式、MCP 开放总线协议与 Skills 领域技能包。
+> 对应学习路径 **阶段五**。系统拆解大模型从单轮对话走向自主工具调用与复杂任务编排的核心三要素：Agent 决策模式、MCP 开放通信协议与 Skills 领域技能包。
 
 ---
 
@@ -19,7 +19,7 @@ updated: 2026-08-03
 
 ```mermaid
 flowchart TD
-    M0["00-Agent-MCP-Skills全景心智模型<br/>（从动嘴的顾问到干活的数字员工）"] --> S1
+    M0["00-Agent-MCP-Skills全景心智模型<br/>（架构分层、协议原语与工程控制）"] --> S1
 
     subgraph S1["第一阶：Agent 决策模式与状态编排"]
         A1["01-模式详解 & 02-Tool Use工具实践"]
@@ -28,7 +28,7 @@ flowchart TD
         A3 --> A4["07-LangGraph图编排 & 08-Agents SDK"]
     end
 
-    subgraph S2["第二阶：MCP 开放协议 (AI 时代的 USB 接口)"]
+    subgraph S2["第二阶：MCP 开放协议 (Model Context Protocol)"]
         B1["09-MCP协议详解 (Resources/Tools/Prompts)"]
         B1 --> B2["10-MCP Server开发 (Java) & 11-Client接入"]
         B2 --> B3["12-MCP Inspector可视化调试"]
@@ -55,7 +55,7 @@ flowchart TD
 ## 📚 知识笔记清单
 
 ### 00 · 全景心智
-- [ ] [[00-Agent-MCP-Skills全景与心智模型]] 🌟（数字员工心智模型、三大支柱解耦、MCP USB-C 革命）
+- [ ] [[00-Agent-MCP-Skills全景与心智模型]] 🌟（三大核心支柱架构解耦、MCP 协议原语与安全治理）
 
 ### 01 · Agent 核心设计模式
 - [ ] [[01-Agent设计模式详解]]（七大模式：ReAct/Plan-Solve/Reflection/Multi-Agent）
@@ -78,7 +78,7 @@ flowchart TD
 - [ ] [[14-设计自己的Skill实战]]（手写标准化自动化排障/代码生成 Skill）
 - [ ] [[15-Skills在企业落地的模式]]（版本治理、分发中心与企业私有技能仓库）
 - [ ] [[16-AGENTS规范详解]]（AGENTS.md 项目级边界指令与代码规范）
-- [ ] [[17-Agent-MCP-Skills组合实战]]（大脑+接口+技能包终极联动）
+- [ ] [[17-Agent-MCP-Skills组合实战]]（Agent 编排、MCP 工具与 Skills 规范协同实战）
 
 ### 04 · 生产治理与可观测
 - [ ] [[18-Agent可观测]]（Langfuse 轨迹追踪、耗时分析与 Token 归因）

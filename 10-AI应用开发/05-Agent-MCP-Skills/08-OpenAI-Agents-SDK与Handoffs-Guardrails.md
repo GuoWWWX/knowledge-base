@@ -2,7 +2,7 @@
 title: OpenAI Agents SDK 与 Handoffs Guardrails
 tags: [领域/AI应用, 类型/知识, 主题/Agent, 主题/OpenAI]
 created: 2026-07-05
-updated: 2026-07-05
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -17,7 +17,7 @@ mastery: ⭐☆☆☆☆
 
 ## 为什么要学
 
-应用开发岗位越来越少问“怎么调一次模型”，更多问“怎么让 Agent 稳定执行任务”。Agents SDK 里的四个词要背熟：
+应用开发岗位越来越少问“怎么调一次模型”，更多问“怎么让 Agent 稳定执行任务”。Agents SDK 里的五个概念要分清：
 
 - **Agent**：带 instructions、tools、handoffs 的执行单元。
 - **Tool**：模型可调用的函数或外部能力。
@@ -27,7 +27,7 @@ mastery: ⭐☆☆☆☆
 
 ## Handoffs 的工程意义
 
-Handoff 不是“多叫几个模型聊天”，而是任务所有权转移。
+在多 Agent 协作架构中，**Handoff（会话交接）** 表示任务控制权的正式移交：当前 Agent 完成意图分流或前置处理后，将后续会话主导权转移给具备特定领域指令与工具集的目标 Agent，并在交接阶段按需过滤历史消息与脱敏上下文。这与 **Agent-as-Tool（将子 Agent 封装为工具）** 形成互补：后者属于主从子过程调用，子 Agent 执行完毕后将结果交回主控 Agent，由主控 Agent 继续把控整体流程。
 
 | 场景 | 主 Agent | 被交接 Agent |
 | ---- | -------- | ------------ |
@@ -38,11 +38,13 @@ Handoff 不是“多叫几个模型聊天”，而是任务所有权转移。
 
 ## Guardrails 的工程意义
 
-Prompt 不是安全边界。护栏要在代码层做：
+安全控制需要落实在代码拦截层与工具执行层，形成多级护栏（Guardrails）：
 
-- 输入护栏：识别越权、注入、敏感数据、违法内容。
-- 输出护栏：检查泄露、幻觉、格式错误、危险建议。
-- 工具护栏：执行前做权限、额度、幂等和审批。
+- **输入护栏（Input Guardrails）**：在入口处识别越权请求、提示词注入、敏感数据与违规内容。
+- **输出护栏（Output Guardrails）**：在响应交付前校验敏感信息泄露、结构化格式合规性与事实一致性。
+- **工具护栏（Tool Guardrails）**：在工具函数执行前完成服务端鉴权、配额检查、幂等控制与高风险操作审批。
+
+在 OpenAI Agents SDK 的执行模型中，输入护栏挂载于任务链路的入口 Agent，输出护栏作用于生成最终响应的出口 Agent。输入护栏默认支持与主模型推理并行执行（Optimistic Execution）以降低首字延迟；而在涉及资金、权限变更或外部副作用的场景下，应将其配置为同步阻塞模式（`run_in_parallel=False`），确保安全校验通过后再触发模型推理与工具调用。
 
 ## Java 后端怎么落地
 
@@ -98,4 +100,3 @@ Spring AI 更适合作为 Java 侧模型调用和工具调用基础设施；Agen
 - [OpenAI Agents SDK：Handoffs](https://openai.github.io/openai-agents-python/handoffs/)
 - [OpenAI Agents SDK：Guardrails](https://openai.github.io/openai-agents-python/guardrails/)
 - [OpenAI Agents SDK：Tracing](https://openai.github.io/openai-agents-python/tracing/)
-

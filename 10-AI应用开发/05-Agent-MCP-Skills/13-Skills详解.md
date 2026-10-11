@@ -6,7 +6,7 @@ tags:
   - 主题/Skills
   - 阶段/05
 created: 2026-05-31
-updated: 2026-05-31
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,7 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 📌 这是什么
 
-一个 Skill 就是一个 **文件夹**，告诉 Agent「做某类任务时，应该按什么流程、用什么工具、套什么模板」。
+一个 Skill 就是一个 **文件夹**，告诉 Agent“做某类任务时，应该按什么流程、用什么工具、套什么模板”。
 
 ```text
 my-skill/
@@ -66,8 +66,8 @@ description: 当用户上传发票时，提取信息并填入财务系统
 
 ### 最关键设计：渐进式上下文披露（Progressive Disclosure）
 
-> [!important] 这是 Skills 的灵魂
-> Agent 启动时**只读所有 SKILL.md 的元数据**（name + description），任务匹配时**才加载完整指令**，任务结束后**丢弃上下文**。
+> [!important] 这是 Skills 的核心加载机制
+> Agent 启动时**仅读取所有 SKILL.md 的元数据**（name + description），当具体任务匹配时**才加载完整正文指令**，并在执行过程中按需读取 `scripts/`、`templates/` 或 `references/` 下的资源；任务完成后由宿主环境根据上下文策略管理窗口生命周期。
 
 ```mermaid
 flowchart TD
@@ -76,14 +76,14 @@ flowchart TD
     C --> D{匹配哪个 Skill?}
     D --> E[加载完整 SKILL.md 指令]
     E --> F[按指令执行<br/>调用 scripts/templates]
-    F --> G[任务结束<br/>丢弃上下文]
+    F --> G[任务结束<br/>由宿主管理上下文]
     
     style B fill:#e1f5ff
     style E fill:#fce4ec
     style G fill:#c8e6c9
 ```
 
-这样即使有 100 个 Skill，启动时也只占很少上下文（每个就一行描述）。
+这样即使挂载上百个 Skill，启动阶段也仅占用极少量的元数据上下文。
 
 ---
 
@@ -93,12 +93,12 @@ flowchart TD
 
 | 维度 | Skills | MCP |
 | ---- | ------ | --- |
-| **本质** | 程序化知识 / 工作流剧本 | 连接外部系统的协议 |
+| **本质** | 程序化知识 / 作业流程规范（SOP） | 连接外部系统的开放通信协议 |
 | **回答** | "**怎么做**这件事" | "**用什么**做这件事" |
-| **形式** | Markdown 文件夹 | JSON-RPC 协议 |
-| **加载** | 渐进式按需加载 | 实时调用 |
-| **典型场景** | 周报生成、合同审查模板 | 查 DB、调 API |
-| **类比** | 员工手册 | 工具箱 |
+| **形式** | Markdown 文件夹与配套脚本 | JSON-RPC 2.0 协议服务 |
+| **加载** | 渐进式按需加载 | 运行时远程或本地调用 |
+| **典型场景** | 周报生成、合同审查、故障排查规约 | 查数据库、调内部 API、读写文件 |
+| **工程定位** | 领域 SOP 与指令模板封装 | 标准化工具与上下文通信层 |
 
 > 详细对比和组合用法见 [[17-Agent-MCP-Skills组合实战]]
 
@@ -128,7 +128,7 @@ description: 当用户要写周报时，从 Jira 和 Git 收集本周工作，�
 2. 调用 Git MCP Server，查询本周 commit
 
 ## 第二步：归类
-按「已完成 / 进行中 / 下周计划」三类整理
+按“已完成 / 进行中 / 下周计划”三类整理
 
 ## 第三步：套模板
 使用 templates/weekly-template.md 的格式
@@ -169,6 +169,7 @@ description: 当用户要写周报时，从 Jira 和 Git 收集本周工作，�
 - [ ] **别写太长**：SKILL.md 正文要精简，详细资料放 references/
 - [ ] **一个 Skill 一件事**：别把多个任务塞一个 Skill
 - [ ] **Skill 调 MCP 要确保 Server 在线**：组合使用时的依赖
+- [ ] **外部 Skill 与脚本需安全审查**：渐进式加载解决的是上下文体积管理，引入第三方 Skill 时仍需评审其指令内容，并对 `scripts/` 的执行权限进行沙箱与授权限制
 
 ---
 

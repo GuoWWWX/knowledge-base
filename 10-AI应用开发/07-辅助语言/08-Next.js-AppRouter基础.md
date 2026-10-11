@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -28,7 +28,7 @@ App Router 的阅读入口很固定：
 - `app/page.tsx`：当前路由页面。
 - `app/layout.tsx`：全局布局。
 - `app/api/*/route.ts`：服务端 API。
-- `"use client"`：声明组件需要在浏览器端运行。
+- `"use client"`：声明客户端组件模块边界，使组件支持浏览器端状态与交互（首次加载时仍会在服务端进行预渲染）。
 - `components/`：可复用 UI 组件。
 
 ## 🧠 Java 对照
@@ -37,16 +37,16 @@ App Router 的阅读入口很固定：
 | ----------------- | ------------------ | ------ |
 | Controller route | `app/api/x/route.ts` | 后端接口 |
 | Thymeleaf / 前端页面 | `app/page.tsx` | 页面组件 |
-| Filter / layout | `app/layout.tsx` | 包住子页面 |
+| 页面布局 | `app/layout.tsx` | 共享外层 UI 结构 |
 | `@PostMapping` | `export async function POST` | HTTP 方法函数 |
-| DTO 解析 | `await req.json()` | 手动读请求体 |
+| JSON 解析 | `await req.json()` | 解析请求体 JSON（需配合运行时校验） |
 
 ## ⚙️ 环境命令
 
 ```bash
 pnpm create next-app ai-chat-demo --ts
 cd ai-chat-demo
-pnpm add ai @ai-sdk/openai
+pnpm add ai@5 @ai-sdk/openai@2 @ai-sdk/react@2
 pnpm dev
 ```
 
@@ -93,7 +93,7 @@ export default function Page() {
 ## 🤖 AI 生态落点
 
 - `/api/chat/route.ts`：放模型调用、流式输出和工具调用。
-- `page.tsx`：放聊天页面壳子。
+- `page.tsx`：承载聊天页面主体布局。
 - 客户端组件：使用 `useChat`、输入框、消息列表。
 - 服务端代码：读取环境变量、调用模型、访问数据库或向量库。
 
@@ -101,11 +101,11 @@ export default function Page() {
 
 ## ⚠️ 踩坑与注意事项
 
-- 使用 React Hook 的组件必须加 `"use client"`。
+- 使用 `useState`、事件监听和浏览器 API 的组件需归属在 `"use client"` 边界内（父组件声明后，其导入的子组件会自动纳入客户端模块）。访问 `window` 等浏览器专属 API 时应放在事件回调或 `useEffect` 中，避免服务端预渲染阶段报错。
 - API Route 默认运行在服务端，但如果指定 Edge Runtime，要确认 SDK 和依赖兼容。
 - `req.json()` 只能读一次，请求体读完后不能重复解析。
-- 环境变量暴露到前端必须以 `NEXT_PUBLIC_` 开头；模型 Key 不要这样命名。
-- 流式接口不能随便包一层 `Response.json`，要返回 stream response。
+- 带有 `NEXT_PUBLIC_` 前缀的环境变量会被打包进浏览器端代码，因此 API Key 等服务端敏感配置不得使用该前缀，也不应通过组件 props 或接口响应下发。同时，Route Handler 与 Server Action 作为独立的服务端入口，需要各自实现完整的权限校验与入参验证。
+- 流式接口应直接返回流式响应对象（如 `toUIMessageStreamResponse()`），避免使用 `Response.json` 一次性包装。
 
 ## 🎯 面试 / 项目用途
 
@@ -113,7 +113,7 @@ export default function Page() {
 > - Q: App Router 里 API 接口写在哪里？
 >   - A: 写在 `app/api/<name>/route.ts`，导出 `GET`、`POST` 等函数。
 > - Q: `"use client"` 是什么？
->   - A: 它声明该文件是客户端组件，可以使用浏览器 API 和 React Hook。
+>   - A: 用于标记服务端到客户端的模块边界，使组件可以使用状态 Hook 与交互事件；客户端组件在首屏仍会参与服务端预渲染，敏感逻辑与鉴权则应保留在服务端接口中。
 > - Q: AI Chat 为什么常用 Next.js？
 >   - A: 页面、服务端 API、流式响应和部署链路放在一个项目里，原型开发快。
 

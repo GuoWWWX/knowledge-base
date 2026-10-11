@@ -6,7 +6,7 @@ tags:
   - 主题/LangChain4j
   - 阶段/02
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,7 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 10 课，LangChain4j 对照**。前置：前 9 课建立的 Spring AI 心智；本节以对照视角看 LangChain4j 的核心抽象（`ChatLanguageModel`、`AiServices` 等）。
+- **本章第 10 课，LangChain4j 对照**。前置：前 9 课建立的 Spring AI 心智；本节以对照视角看 LangChain4j 的核心抽象（`ChatModel`、`AiServices` 等）。
 - **延伸**：选型结论在下一课 [[../01-SpringAI与LangChain4j对比]]。
 
 > [!info] 版本现状（2026-08）
@@ -29,7 +29,7 @@ mastery: ⭐☆☆☆☆
 LangChain4j 面向 Java 开发者，目标是简化 LLM 应用开发。它不像 Spring AI 那样强绑定 Spring 生态，而是提供一组普通 Java 抽象，也能和 Spring Boot 集成。
 
 ```text
-ChatLanguageModel
+ChatModel
   + AiServices
   + ChatMemory
   + Tools
@@ -41,8 +41,8 @@ ChatLanguageModel
 
 | 概念                           | 作用          | Spring AI 对照              |
 | ---------------------------- | ----------- | ------------------------- |
-| `ChatLanguageModel`          | 同步聊天模型      | `ChatModel`               |
-| `StreamingChatLanguageModel` | 流式聊天模型      | `ChatClient.stream()`     |
+| `ChatModel`          | 同步聊天模型      | `ChatModel`               |
+| `StreamingChatModel` | 流式聊天模型      | `ChatClient.stream()`     |
 | `AiServices`                 | 用接口声明 AI 服务 | `ChatClient` + 业务 Service |
 | `ChatMemory`                 | 对话记忆        | `ChatMemory`              |
 | `@Tool`                      | 工具调用        | `@Tool` / Tool Calling    |
@@ -55,7 +55,7 @@ ChatLanguageModel
 ## 💻 最小调用
 
 ```java
-ChatLanguageModel model = OpenAiChatModel.builder()
+ChatModel model = OpenAiChatModel.builder()
         .apiKey(System.getenv("OPENAI_API_KEY"))
         .modelName("gpt-4.1-mini")
         .build();
@@ -73,7 +73,7 @@ interface Assistant {
 }
 
 Assistant assistant = AiServices.builder(Assistant.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .build();
 
 String answer = assistant.chat("解释 RAG");
@@ -101,7 +101,7 @@ class WeatherTools {
 }
 
 Assistant assistant = AiServices.builder(Assistant.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .tools(new WeatherTools())
         .build();
 ```
@@ -129,7 +129,7 @@ Document
 
 ## ✅ 学习检查点
 
-- [ ] 能说出 `ChatLanguageModel` 和 `AiServices` 的关系
+- [ ] 能说出 `ChatModel` 和 `AiServices` 的关系
 - [ ] 能用接口声明一个 AI 服务
 - [ ] 能解释 `EmbeddingStore` 和 Spring AI `VectorStore` 的对应关系
 - [ ] 能说明 LangChain4j 更偏普通 Java 抽象
@@ -159,4 +159,3 @@ Document
 
 - [LangChain4j Documentation](https://docs.langchain4j.dev/)
 - [LangChain4j Tutorials](https://docs.langchain4j.dev/category/tutorials/)
-

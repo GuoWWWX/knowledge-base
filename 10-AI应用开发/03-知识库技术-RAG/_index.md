@@ -21,7 +21,7 @@ mastery: ⭐⭐⭐☆☆
 
 ```mermaid
 flowchart TD
-    M0["00-RAG全景与心智模型<br/>（大模型的外挂开卷图书馆）"] --> S1
+    M0["00-RAG全景与心智模型<br/>（非参数化检索增强架构）"] --> S1
 
     subgraph S1["第一阶：数据准备与向量化 (Ingestion)"]
         L1["01-RAG基础与全链路"] --> L2["02-文档解析 & 03-多模态RAG"]
@@ -30,7 +30,7 @@ flowchart TD
         L4 --> L5["06-向量检索与TopK"]
     end
 
-    subgraph S2["第二阶：召回翻倍黑科技 (Retrieval & Rerank)"]
+    subgraph S2["第二阶：召回增强与重排序 (Retrieval & Rerank)"]
         A1["08-混合检索 (向量+BM25)"] --> A2["07-Rerank重排序 (Cross-Encoder)"]
         A2 --> A3["09-Multi-Query与HyDE改写"]
         A3 --> A4["10-父子块策略 & 11-引用溯源"]
@@ -45,7 +45,7 @@ flowchart TD
 
     S1 --> S2
     S2 --> S3
-    S3 --> FIN["99-本章总结与复习<br/>（大厂30秒绝杀与生产十诫）"]
+    S3 --> FIN["99-本章总结与复习<br/>（核心拓扑、高频问答与生产规范）"]
 
     style M0 fill:#e1f5fe,stroke:#0288d1,stroke-width:1px
     style S2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
@@ -57,7 +57,7 @@ flowchart TD
 ## 📚 知识笔记清单
 
 ### 00 · 全景心智
-- [ ] [[00-RAG全景与心智模型]] 🌟（开卷考试心智模型、RAG vs 微调第一性原理、双飞轮全景图）
+- [ ] [[00-RAG全景与心智模型]] 🌟（非参数化检索增强原理、RAG vs 微调对比、双流水线全景图）
 
 ### 01 · 经典 RAG 核心链路
 - [ ] [[01-RAG基础与全链路]]（高维几何距离推导、时序图与工业五步排障 SOP）
@@ -68,7 +68,7 @@ flowchart TD
 - [ ] [[06-向量检索与TopK]]（ANN 近似最近邻与相似度阈值过滤）
 
 ### 02 · 召回增强与重排序
-- [ ] [[07-Rerank重排序]]（交叉编码器 Cross-Encoder 终审评分）
+- [ ] [[07-Rerank重排序]]（交叉编码器 Cross-Encoder 相关性精排）
 - [ ] [[08-混合检索-Hybrid-Search]]（Dense 语义向量 + Sparse BM25，RRF 融合算法）
 - [ ] [[09-Multi-Query与HyDE]]（假设性文档以文搜文，抹平问答语义鸿沟）
 - [ ] [[10-父子块策略]]（小块定位高精召回，大块注入完整上下文）
@@ -88,7 +88,7 @@ flowchart TD
 - [ ] [[20-Agentic-RAG智能体RAG]]（智能体自主规划、检索自检与反思纠错）
 
 ### 99 · 本章通关总结
-- [ ] [[99-本章总结与复习]]（全章核心拓扑、大厂 30 秒必杀 10 连问、生产落地十诫）
+- [ ] [[99-本章总结与复习]]（全章核心拓扑、高频面试 10 连问、生产落地规范）
 
 ---
 

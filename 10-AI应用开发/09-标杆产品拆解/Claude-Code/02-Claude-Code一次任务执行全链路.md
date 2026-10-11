@@ -2,7 +2,7 @@
 title: Claude-Code一次任务执行全链路
 tags: [领域/AI应用, 类型/知识, 主题/ClaudeCode, 主题/产品拆解]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -26,6 +26,8 @@ mastery: ⭐☆☆☆☆
 - 修改或新增测试。
 - 运行测试。
 - 解释改动。
+
+以下通过时序图梳理一次典型编码任务的端到端执行链路：
 
 ## 全链路时序
 
@@ -82,7 +84,7 @@ Claude Code 会利用项目记忆来理解“这个项目怎么做事”。这�
 - 禁止修改的区域。
 - 团队偏好。
 
-这一步解决的是：Agent 不应该每次都像新员工入职。
+这一步使得项目级规范能够跨会话持久复用，避免在每次对话中重复输入背景说明。
 
 ### 3. 代码库探索
 
@@ -93,11 +95,11 @@ Agent 会通过工具查找相关文件：
 - 查看错误日志或测试失败输出。
 - 理解依赖关系。
 
-这一步对应人类开发者的“先摸清上下文”。
+这一步对应开发过程中的上下文调研阶段。
 
 ### 4. 工具执行和 hooks 约束
 
-Claude Code 的工具调用可以被 hooks 和 permissions 约束。Hooks 的意义不是让 Agent 更聪明，而是让它进入工程治理：
+Claude Code 的工具调用受 permissions 与 hooks 机制的统一管控。通过在特定生命周期节点挂载确定性脚本，Hooks 将 Agent 行为纳入工程治理体系：
 
 - 工具调用前拦截危险操作。
 - 文件修改后自动格式化。
@@ -174,4 +176,3 @@ flowchart TD
 - [Claude Code Memory](https://code.claude.com/docs/memory)
 - [Claude Code Hooks](https://code.claude.com/docs/hooks)
 - [Claude Code MCP](https://code.claude.com/docs/mcp)
-

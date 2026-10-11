@@ -6,7 +6,7 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -92,10 +92,14 @@ String replyWithBudget(String question, AgentBudget budget) {
                 .call()
                 .content();
     } catch (BudgetExceededException | ResourceAccessException ex) {
-        return "当前自动处理资源不足，已为你转人工并保留问题摘要。";
+        return "当前自动处理资源不足，请使用人工服务入口。";
     }
 }
 ```
+
+> [!important] 预算结算与降级一致性要点
+> - **全链路原子预算控制**：任务级预算应覆盖主控 Agent、子 Agent、模型重试及外部工具调用的累计开销；在并发场景下采用“调用前预留额度 + 调用后按实际消耗结算”的原子机制，防止并发请求穿透配额上限。
+> - **降级响应与业务状态一致**：触发人工兜底降级时，应先调用工单接口完成工单创建并持久化上下文，确认创建成功后再向用户返回“已转交人工处理”及对应工单号。
 
 ## ⚠️ 工程坑
 

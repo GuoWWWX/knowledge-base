@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -23,7 +23,7 @@ mastery: ⭐☆☆☆☆
 
 ## 📌 这是什么
 
-`asyncio` 的核心不是“让 CPU 算得更快”，而是在一个线程里把大量等待网络返回的时间利用起来。
+`asyncio` 的核心机制是在单线程内通过事件循环复用网络 I/O 等待时间，从而提升并发吞吐量。
 
 Python 写法通常是：
 
@@ -37,7 +37,7 @@ Python 写法通常是：
 | Java | Python asyncio | 记忆点 |
 | ---- | -------------- | ------ |
 | `CompletableFuture<T>` | coroutine / `Task` | 都表示未来完成的结果 |
-| `future.get()` | `await task` | 等待结果 |
+| `future.get()` | `await task` | 前者阻塞线程；后者在等待时可让出事件循环 |
 | `CompletableFuture.allOf` | `asyncio.gather` | 并发等待多个任务 |
 | Servlet 线程池 | event loop | asyncio 主要靠事件循环调度 |
 | 阻塞 HTTP Client | `httpx.AsyncClient` | 异步代码要配异步库 |
@@ -67,6 +67,7 @@ import httpx
 async def fetch_title(url: str) -> str:
     async with httpx.AsyncClient(timeout=10) as client:
         response = await client.get(url)
+        response.raise_for_status()
         return response.text[:30]
 
 async def main() -> None:
@@ -80,7 +81,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-关键点：只有 `await client.get(...)` 这种 I/O 等待可以让出执行权；普通 CPU 循环不会自动并发。
+关键点：直接调用 `async def` 函数会返回一个协程对象，需通过 `await` 或封装为 `Task` 才会进入事件循环执行。当遇到未完成的异步 I/O 操作时，`await` 会挂起当前协程并让出执行权；纯 CPU 计算循环则始终占用当前线程，需通过进程池等方式处理。
 
 ## 🤖 AI 生态落点
 
@@ -99,11 +100,12 @@ async def answer(question: str) -> dict[str, object]:
 
 ## ⚠️ 踩坑与注意事项
 
-- `async def` 里调用阻塞库不会变快，例如同步 `requests.get` 会卡住事件循环。
-- Jupyter、FastAPI 已经有事件循环，内部不要随手再写 `asyncio.run(...)`。
-- 并发不是无限开；调用模型或 Embedding API 时要加信号量限制并发数。
-- 异常会从 `await` 处抛出，`gather` 中一个任务失败会影响整体结果，必要时用 `return_exceptions=True`。
-- CPU 密集任务应考虑进程池、任务队列或专门服务，不要硬塞进 asyncio。
+- `async def` 里调用同步阻塞库（如 `requests.get`）会阻塞整个事件循环，应改用 `httpx.AsyncClient` 等异步客户端。
+- Jupyter、FastAPI 内部已经运行着事件循环，在协程内直接 `await` 即可，无需再次调用 `asyncio.run(...)`。
+- 调用模型或 Embedding API 时需配合 `asyncio.Semaphore` 限制最大并发数，避免触发上游限流。
+- `asyncio.gather` 在默认模式下遇到首个异常即向调用方抛出，其余未完成任务仍会继续运行；设置 `return_exceptions=True` 可将异常作为结果返回以便逐项处理。若需在单个任务失败时自动取消同组其余任务，推荐使用 Python 3.11+ 的 `asyncio.TaskGroup`。
+- 处理超时或任务取消时，应在 `finally` 块中释放资源并向上传递 `CancelledError`。注意客户端本地取消协程仅中断本地等待，远端模型服务可能仍在继续生成并计费。
+- CPU 密集型任务应交由进程池（`ProcessPoolExecutor`）、任务队列或独立计算服务处理。
 
 ## 🎯 面试 / 项目用途
 

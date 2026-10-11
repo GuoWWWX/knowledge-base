@@ -6,7 +6,7 @@ tags:
   - 主题/RAG
   - 阶段/06
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -43,6 +43,8 @@ Ragas 不是线上监控平台，而是评估工具。它通常和 Langfuse、Di
 | Context Precision | 排在前面的 context 是否有用。 | 调 TopK、rerank 和检索排序。 |
 | Context Recall | 标准答案需要的信息是否被召回。 | 判断知识库是否漏召回。 |
 | Answer Correctness | 答案和参考答案是否一致。 | 有标准答案的数据集适用。 |
+
+**指标组合解读原则**：`Faithfulness` 衡量生成内容与所给检索上下文的一致性（用于检测模型幻觉），而最终答案的业务正确性同时取决于召回上下文自身是否完整准确；因此生产评估需将检索指标（`Context Precision` / `Context Recall`）与生成指标（`Faithfulness` / `Answer Correctness`）联合分析，并按各指标的数据契约传入对应字段（如无标注标准答案的场景可选用仅依赖 `question`、`contexts` 与 `answer` 的指标）。
 
 ## ⚙️ 评估流程
 
@@ -87,8 +89,8 @@ result = evaluate(
 print(result)
 ```
 
-> [!note] 版本提示
-> 以上为 Ragas 0.2+ 的类名 API。旧版（0.1.x）用函数式 API（如 `from ragas.metrics import faithfulness, answer_relevancy`），0.3+ 已移除，直接按新写法即可。
+> [!note] 依赖与环境配置说明
+> 以上示例基于 `ragas==0.2.15` 与 `datasets` 库编写。运行评估时需显式配置裁判模型（Evaluator LLM）与 Embedding 模型凭证，并将评估过程自身的 Token 消耗纳入预算；跨版本升级 Ragas 时应对照官方迁移指南同步更新 Dataset 字段名与指标构造接口。
 
 ## ⚠️ 生产坑
 
@@ -96,7 +98,7 @@ print(result)
 - 评估模型和生产模型混用成本高且有偏差，要记录 evaluator model 版本。
 - context 中混入过多无关片段，答案碰巧正确，但 context precision 会暴露检索噪声。
 - 只看平均分会掩盖关键业务问题，必须查看低分样例和高风险主题。
-- 没有固定随机种子、Prompt 和模型版本，导致两次评估不可比。
+- 评估实验未锁定裁判模型版本、温度参数与数据集快照，或忽略远程推理的采样波动；关键架构变更应在固定配置下执行多次评测取均值，并配合人工复核坏例。
 
 ## 🎯 面试 / 选型
 
@@ -104,7 +106,7 @@ print(result)
 > - Q: Ragas 如何判断 RAG 失败点？
 >   - A: context recall/precision 低多半是检索问题，faithfulness 低是答案没有被 context 支持，answer relevancy 低是回答没有对准问题。
 > - Q: 没有标准答案能评估吗？
->   - A: 可以用无参考指标，如 faithfulness、answer relevancy、context precision；但高风险场景仍要抽样人工复核。
+>   - A: 可以用 faithfulness、answer relevancy，以及专门的 `LLMContextPrecisionWithoutReference`；示例中的 `ContextPrecision` 需要参考答案，但高风险场景仍要抽样人工复核。
 > - Q: Ragas 和 Langfuse 怎么分工？
 >   - A: Langfuse 采集、管理和展示样例与分数；Ragas 计算评估指标。
 

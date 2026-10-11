@@ -5,7 +5,7 @@ tags:
   - 类型/索引
   - 阶段/02
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -29,7 +29,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🧭 学习路线
 
-1. **总览（01）**：`ChatLanguageModel` + `AiServices` + 记忆 + 工具 + 检索 = Java AI 应用。
+1. **总览（01）**：`ChatModel` + `AiServices` + 记忆 + 工具 + 检索 = Java AI 应用。
 2. **特色（02）**：`AiServices` 接口声明式——定义接口即获得 AI 服务，重点对比 `ChatClient` 的链式风格。
 3. **能力（03→05）**：记忆与 RAG 组件（对照 Spring AI 的 `ChatMemory`/`VectorStore`），流式与结构化输出（对照 Spring AI 的 SSE/Structured Output）。
 4. **工程（04→06）**：Spring Boot 集成方式、多模型接入与切换，最后读选型对比收尾。
@@ -39,5 +39,3 @@ mastery: ⭐☆☆☆☆
 - 上级：[[../_index|02 · 框架总览]]
 - 对照：[[../SpringAI/_index|Spring AI 子区]]
 - 选型：[[../01-SpringAI与LangChain4j对比|两框架对比]]
-
-

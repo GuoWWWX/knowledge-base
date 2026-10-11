@@ -6,7 +6,7 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 规划中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -31,7 +31,7 @@ repo: 未绑定
 - [ ] 实现 Thought / Action / Observation 的基本循环
 - [ ] 接入搜索、计算、文件、数据库、HTTP API 等工具
 - [ ] 限制最大轮次，避免无限循环
-- [ ] 记录每一步推理、工具调用和最终回答
+- [ ] 记录结构化决策摘要、工具调用参数与最终回答
 
 ## 🛠️ 技术栈
 
@@ -48,7 +48,7 @@ repo: 未绑定
 flowchart TD
     A[用户目标] --> B[Agent Loop]
     B --> C[Thought]
-    C --> D[Action: 选择工具]
+    C --> D["Action: 选择工具"]
     D --> E[Tool Executor]
     E --> F[Observation]
     F --> G{完成?}
@@ -71,7 +71,7 @@ flowchart TD
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[../02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用]]
 - [[../05-Agent-MCP-Skills/18-Agent可观测]]
-- 循环终止条件必须明确，否则容易无限调用工具。
+- 通过最大轮次、总耗时与 Token 预算三重阈值控制执行边界；当检测到同一工具与参数被重复调用且无状态进展时主动中止循环，由服务端状态与模型输出共同判定任务终态。
 - 工具参数需要结构化校验，不能把模型输出直接交给业务接口。
 - 执行轨迹要区分内部调试信息和用户可见答案。
 
@@ -98,4 +98,3 @@ flowchart TD
 - [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
 - [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/)
 - [Langfuse Documentation](https://langfuse.com/docs)
-

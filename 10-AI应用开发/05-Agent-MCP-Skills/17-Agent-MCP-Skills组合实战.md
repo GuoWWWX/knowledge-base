@@ -16,7 +16,7 @@ mastery: ⭐☆☆☆☆
 # 🧩 Agent × MCP × Skills 组合实战
 
 > [!abstract] 一句话总结
-> Agent、MCP、Skills 不是三选一，而是 **三层协同**：Agent 是大脑（决策），Skills 是方法论（怎么做），MCP 是工具箱（用什么做）。三者组合是 2026 年企业级 AI 应用的主流架构。
+> Agent、MCP、Skills 并非互斥选项，而是 **三层架构协同**：Agent 负责推理与控制循环（决策层），Skills 封装领域作业流程与指令模板（方法层），MCP 提供标准化的外部工具与数据通信接入（能力层）。三者组合是企业级 AI 应用的主流架构。
 
 > [!info] 前置阅读
 > 建议先读完单项详解，再读本文：
@@ -68,11 +68,11 @@ flowchart TB
 
 ### 各层职责
 
-| 层 | 组件 | 职责 | 类比公司 |
+| 层 | 组件 | 职责 | 工程形态 |
 | -- | ---- | ---- | -------- |
-| 决策层 | **Agent** | 理解目标、规划步骤、决定下一步 | 员工（大脑） |
-| 方法层 | **Skills** | 提供标准作业流程（SOP） | 员工手册 |
-| 能力层 | **MCP / Function Calling** | 实际访问系统、执行动作 | 工具箱 |
+| 决策层 | **Agent** | 理解目标、规划步骤、决定下一步动作 | ReAct / Plan-and-Execute / 状态图编排 |
+| 方法层 | **Skills** | 提供领域标准作业流程（SOP）与模板 | `SKILL.md` 指令包 + `scripts/templates` |
+| 能力层 | **MCP / Function Calling** | 实际访问外部系统、读写数据与执行动作 | MCP Server 远程/本地服务与 `@Tool` 函数 |
 
 ---
 
@@ -162,7 +162,7 @@ flowchart TD
 
 📦 方法层
    - Skills 目前以 Claude.ai / Claude Code / Agent SDK 为主
-   - Java 侧可把 SKILL.md 内容作为「流程 Prompt 模板」注入
+   - Java 侧可把 SKILL.md 内容作为“流程 Prompt 模板”注入
    - 或用 Spring AI Advisor 实现"加载对应流程"的逻辑
 
 🧠 决策层

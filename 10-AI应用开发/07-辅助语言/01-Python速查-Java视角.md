@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,7 +14,7 @@ mastery: ⭐☆☆☆☆
 # Python速查-Java视角
 
 > [!abstract] 一句话总结
-> 不是转 Python，而是能看懂 GitHub 上的 Python AI 项目，能用 uv 跑通 FastAPI / LangChain / RAG 示例。
+> 掌握 Python 核心语法与工程工具，读懂 GitHub 上的 Python AI 项目，并用 uv 跑通 FastAPI、LangChain 与 RAG 示例。
 
 ## 🎯 本节定位
 
@@ -37,7 +37,7 @@ mastery: ⭐☆☆☆☆
 | `Map<String, Object>` | `dict[str, Any]` | `Any` 来自 `typing` |
 | `null` | `None` | 判断用 `is None` |
 | `true / false` | `True / False` | 首字母大写 |
-| `&& / || / !` | `and / or / not` | 逻辑运算符更像英文 |
+| `&& / \|\| / !` | `and / or / not` | 逻辑运算符更像英文 |
 | `try-catch` | `try-except` | 捕获异常用 `except` |
 | `record / DTO` | `dataclass` / `BaseModel` | FastAPI 常用 Pydantic |
 | `CompletableFuture` | `async def` + `await` | 异步模型不同，但目的类似 |
@@ -47,7 +47,8 @@ mastery: ⭐☆☆☆☆
 ```bash
 uv init ai-demo
 cd ai-demo
-uv add fastapi uvicorn pydantic openai
+uv add fastapi uvicorn pydantic openai httpx
+uv add --dev pytest ruff
 uv run python main.py
 uv run uvicorn main:app --reload
 ```
@@ -89,7 +90,7 @@ elif top_k > 20:
 ## 🧩 Pydantic：Python 里的 DTO
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class ChatRequest(BaseModel):
     user_id: str
@@ -98,10 +99,12 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: list[str] = []
+    sources: list[str] = Field(default_factory=list)
 ```
 
 > [!tip] FastAPI 会用 `BaseModel` 自动做 JSON 解析、参数校验和接口文档生成，很像 Spring Controller + DTO + Validation 的组合。
+
+Python 原生类型注解仅用于静态分析，运行时的数据解析、类型转换与校验由 Pydantic 完成。此外，定义普通函数时应避免使用 `items=[]` 这类可变默认参数（会在多次调用间共享状态），推荐使用 `None` 作为默认值并在函数体内初始化新列表。
 
 ## ⚡ async / await
 
@@ -109,8 +112,9 @@ class ChatResponse(BaseModel):
 import httpx
 
 async def call_llm(prompt: str) -> str:
-    async with httpx.AsyncClient() as client:
-        response = await client.post("/chat", json={"prompt": prompt})
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=30) as client:
+        response = await client.post("/chat", json={"message": prompt})
+        response.raise_for_status()
         return response.json()["answer"]
 ```
 

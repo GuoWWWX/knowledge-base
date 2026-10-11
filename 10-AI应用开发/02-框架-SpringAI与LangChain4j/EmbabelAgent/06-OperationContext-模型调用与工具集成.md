@@ -129,7 +129,7 @@ public LearningRequest understand(
 1. Embabel 根据 `LearningRequest` 生成输出 schema。
 2. 模型返回结构化结果。
 3. 数据绑定为 Java record。
-4. 绑定失败会进入数据绑定重试；持续失败会让 Action 失败，并由 Action 重试策略处理。重试耗尽后通常是 Process 失败，不等同于自动切换另一条规划路径。
+4. 若反序列化绑定失败，框架先执行数据绑定重试；持续失败则交由 Action 重试策略处理，重试耗尽后终止当前 Process。
 5. 成功对象写入 Blackboard。
 
 这比让模型返回 JSON 字符串再手动解析更稳，因为类型、绑定和测试都由统一 API 管理。

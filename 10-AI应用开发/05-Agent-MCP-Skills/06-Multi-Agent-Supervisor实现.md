@@ -6,7 +6,7 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -42,7 +42,7 @@ Multi-Agent Supervisor 包含：
 | Order Agent | 订单状态、支付状态 | 查询非当前用户订单。 |
 | Shipping Agent | 物流节点、预计到达 | 修改订单状态。 |
 | Support Agent | 创建工单、补偿申请 | 未确认直接退款。 |
-| Safety Agent | 权限、注入、敏感信息检查 | 替业务 Agent 执行工具。 |
+| Safety Agent | 敏感内容与越狱意图审查 | 替代服务端做最终业务权限校验。 |
 
 ## ⚙️ 实现步骤
 

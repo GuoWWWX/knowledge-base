@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -41,7 +41,7 @@ mastery: ⭐☆☆☆☆
 | 异步模型 | 线程、`CompletableFuture`、Reactor | `Promise`、`async/await` |
 | 构建工具 | Maven / Gradle | pnpm / npm / Vite / Next |
 | 前端能力 | 需要单独前端栈 | React/Next 原生 |
-| 企业治理 | 强 | 中等，依赖团队规范 |
+| 企业治理 | Spring 生态组件完备 | 依托 NestJS / 中间件与团队工程规范实现 |
 
 ## ⚙️ 环境命令
 
@@ -82,7 +82,7 @@ type Order = {
 };
 
 async function getOrder(orderId: string): Promise<Order> {
-  const response = await fetch(`${process.env.JAVA_API_BASE_URL}/orders/${orderId}`, {
+  const response = await fetch(`${process.env.JAVA_API_BASE_URL}/orders/${encodeURIComponent(orderId)}`, {
     headers: { Authorization: `Bearer ${process.env.INTERNAL_TOKEN}` },
   });
 
@@ -93,6 +93,8 @@ async function getOrder(orderId: string): Promise<Order> {
   return response.json();
 }
 ```
+
+在生产环境的跨服务调用中，TypeScript 侧应对返回的 JSON 数据做运行时 Schema 校验，同时传入当前用户的身份上下文，由 Java 后端完成细粒度的订单归属与权限校验。
 
 Java 主系统调用 TS AI 服务时，边界可以保持 HTTP JSON：`POST /api/chat`，请求里放 `userId`、`message`、`conversationId`。
 

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -33,12 +33,12 @@ mastery: ⭐☆☆☆☆
 | Java | TypeScript | 记忆点 |
 | ---- | ---------- | ------ |
 | `String name` | `const name: string` | 类型写在变量后面 |
-| `Integer / Double` | `number` | JS 只有统一数字类型 |
+| `Integer / Double` | `number` | 双精度浮点；大整数可用 `bigint`，金额另选精确表示 |
 | `boolean` | `boolean` | 基本一致 |
 | `List<String>` | `string[]` | 数组写法更短 |
 | `Map<String, Object>` | `Record<string, unknown>` | 对象字典 |
 | `Object` | `unknown` | 比 `any` 更安全 |
-| `Optional<T>` | `T | undefined` | 联合类型表达可选 |
+| `Optional<T>` | `T \| undefined` | 联合类型表达可选 |
 | `CompletableFuture<T>` | `Promise<T>` | 异步结果 |
 | `interface` | `interface` / `type` | TS 是结构化类型 |
 
@@ -89,16 +89,24 @@ type ChatResponse = {
 };
 ```
 
+**TypeScript 类型在编译后会被擦除**：`as ChatResponse` 仅提供编译期类型断言，处理接口入参与模型输出等外部 JSON 数据时，需配合 Zod 等库进行运行时校验。
+
 ## 🧩 函数、异步、解构
 
 ```ts
 async function callLLM(prompt: string): Promise<string> {
   const response = await fetch("/api/chat", {
     method: "POST",
-    body: JSON.stringify({ prompt }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: prompt }),
   });
 
-  const data = await response.json();
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data: unknown = await response.json();
+  if (typeof data !== "object" || data === null ||
+      !("answer" in data) || typeof data.answer !== "string") {
+    throw new Error("响应格式错误");
+  }
   return data.answer;
 }
 ```
@@ -146,49 +154,16 @@ export async function POST(req: Request) {
 
 ## 🤖 Vercel AI SDK 最小心智
 
-服务端流式接口：
+本节与后续两篇统一基于 **AI SDK 5**（`ai@5`、`@ai-sdk/react@2`、`@ai-sdk/openai@2`）编写，采用 `sendMessage`、`message.parts` 与 `toUIMessageStreamResponse` 等新版 API（替代 v4 的 `handleSubmit`、`message.content` 与 `toDataStreamResponse`）。
 
-```ts
-import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
+数据流是：组件用 `sendMessage` 提交 UI 消息 → 服务端校验并用 `convertToModelMessages` 转换 → `streamText` 调模型 → `toUIMessageStreamResponse` 返回 → 前端渲染 `message.parts`。
 
-export async function POST(req: Request) {
-  const { messages } = await req.json();
-
-  const result = streamText({
-    model: openai("gpt-4.1-mini"),
-    messages,
-  });
-
-  return result.toDataStreamResponse();
-}
-```
-
-前端聊天 Hook：
-
-```tsx
-"use client";
-
-import { useChat } from "@ai-sdk/react";
-
-export function ChatBox() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat();
-
-  return (
-    <form onSubmit={handleSubmit}>
-      {messages.map((m) => (
-        <div key={m.id}>{m.content}</div>
-      ))}
-      <input value={input} onChange={handleInputChange} />
-    </form>
-  );
-}
-```
+完整可运行的配套示例见 [[09-Vercel-AI-SDK核心]] 和 [[10-Vercel-AI-SDK-useChat流式UI]]。
 
 | 关键词 | 作用 |
 | ------ | ---- |
 | `streamText` | 服务端调用 LLM 并流式返回 |
-| `toDataStreamResponse` | 转成前端可消费的数据流 |
+| `toUIMessageStreamResponse` | 转成前端可消费的数据流 |
 | `useChat` | 前端聊天状态管理 |
 | `"use client"` | 声明 React 客户端组件 |
 

@@ -6,7 +6,7 @@ tags:
   - 主题/AGENTS
   - 阶段/05
 created: 2026-05-31
-updated: 2026-05-31
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,11 +14,11 @@ mastery: ⭐☆☆☆☆
 # 📄 AGENTS.md 规范详解
 
 > [!abstract] 一句话总结
-> AGENTS.md 是放在项目根目录、**给编程 Agent（Cursor / Claude Code / Codex CLI / 通义灵码）看的项目说明书**。vendor-neutral 开放标准，告诉 AI 怎么 build、怎么 test、有什么规范和边界。
+> AGENTS.md 是放在项目根目录、**供 AI 编程 Agent 读取的项目级工程规范文件**。作为中立的开放约定，它集中声明项目的构建与测试命令、代码风格规范及文件修改边界。
 
 ## 📌 这是什么
 
-一个项目根目录的 Markdown 文件，专门承载「AI 编程助手需要知道、但不适合放进给人看的 README」的信息。
+一个项目根目录的 Markdown 文件，专门承载“AI 编程助手需要知道、但不适合放进给人看的 README”的信息。
 
 ## 🤔 解决什么问题
 
@@ -65,10 +65,12 @@ mastery: ⭐☆☆☆☆
 
 ```text
 ☑ 放在项目根目录，命名 AGENTS.md
-☑ Cursor / Claude Code / Codex CLI / 通义灵码 会自动读取
-☑ 多模块项目可以每个子模块放一个
-☑ 跟着代码一起进 Git，团队共享
+☑ 主流编程 Agent（如 Cursor、Codex、OpenCode、Antigravity 等）会自动识别并注入上下文
+☑ 多模块项目可在子模块目录下放置局部 AGENTS.md，按就近原则补充或覆盖根目录约定
+☑ 随代码库一起纳入 Git 版本控制，供团队共享维护
 ```
+
+在实际工程中，`AGENTS.md` 的目录作用域与嵌套合并策略由宿主工具解析执行；它负责提供项目编码规范与构建指引，而具体的文件读写范围与命令执行权限仍受宿主环境的安全沙箱与用户授权策略约束。
 
 ---
 

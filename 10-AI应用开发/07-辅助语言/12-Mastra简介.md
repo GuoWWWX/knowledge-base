@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -56,15 +56,15 @@ pnpm build
 新项目或示例项目通常还需要：
 
 ```bash
-pnpm add mastra
-pnpm add zod
+pnpm add @mastra/core zod
+pnpm add -D mastra
 ```
 
-具体 CLI 以项目 README 为准，因为 Mastra 项目模板和版本可能变化较快。
+`@mastra/core` 提供框架 API，`mastra` 是 CLI；具体版本和 CLI 用法以项目 README 为准，因为 Mastra 项目模板和版本可能变化较快。
 
 ## 💻 最小示例
 
-下面是阅读心智示例，重点看 Agent 如何绑定模型和工具：
+下面通过结构化示例展示 Tool 输入定义与 Agent 指令组装的核心要素（实际开发中通过 `@mastra/core` 的 `createTool` 与 `Agent` 类声明）：
 
 ```ts
 import { z } from "zod";

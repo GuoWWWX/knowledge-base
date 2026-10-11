@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -70,7 +70,6 @@ app = FastAPI()
 
 class ChatRequest(BaseModel):
     message: str
-    stream: bool = False
 
 class ChatResponse(BaseModel):
     answer: str
@@ -82,10 +81,10 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 测试：
 
-```bash
-curl -X POST http://127.0.0.1:8000/chat ^
-  -H "Content-Type: application/json" ^
-  -d "{\"message\":\"解释 RAG\"}"
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/chat -Method Post `
+  -ContentType "application/json; charset=utf-8" `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes('{"message":"解释 RAG"}'))
 ```
 
 ## 🤖 AI 生态落点
@@ -110,9 +109,9 @@ app/
 ## ⚠️ 踩坑与注意事项
 
 - 路由文件拆分后要记得 `app.include_router(...)`，否则接口不会注册。
-- `async def` 路由里不要调用同步慢操作；同步 SDK 会阻塞事件循环。
+- `async def` 路由运行在主事件循环中，应配合异步 SDK 使用；若必须执行同步阻塞 I/O，可定义为普通 `def` 路由（由 FastAPI 自动放入外部线程池执行），或在协程中使用 `run_in_executor` 显式调度。
 - Pydantic 默认会校验请求体，422 往往是字段名或类型不对。
-- 生产环境不要只用 `--reload`，它是开发热重载参数。
+- 生产环境应移除 `--reload` 参数，并将耗时任务交由后台任务队列处理。多 worker 部署时各进程内存相互独立，会话状态与配额统计需保存在 Redis 或数据库等外部存储中。
 - 模型 API Key 不要写死在代码里，放 `.env` 或部署平台环境变量。
 
 ## 🎯 面试 / 项目用途

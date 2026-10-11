@@ -21,19 +21,19 @@ mastery: ⭐⭐⭐☆☆
 
 ```mermaid
 flowchart TD
-    M0["00-Java-AI框架全景与心智模型<br/>（大模型时代的 JDBC 与 Spring Data）"] --> S1
+    M0["00-Java-AI框架全景与心智模型<br/>（统一抽象与分层架构）"] --> S1
     M0 --> S2
 
     subgraph S1["主线专栏：Spring AI 企业级生态"]
         B1["01-工程搭建与Starter"] --> B2["02-ChatClient与ChatModel"]
         B2 --> B3["03-PromptTemplate与04-SSE流式"]
         B3 --> B4["05-多模型切换与06-Function Calling"]
-        B4 --> B5["07-Advisor拦截器(AOP核心)"]
+        B4 --> B5["07-Advisor拦截器(切面增强)"]
         B5 --> B6["08-ChatMemory与09-VectorStore"]
     end
 
     subgraph S2["对照专栏：LangChain4j 声明式生态"]
-        C1["01-核心概念与驱动"] --> C2["02-AiServices声明式接口(Feign风格)"]
+        C1["01-核心概念与驱动"] --> C2["02-AiServices声明式接口"]
         C2 --> C3["03-记忆与RAG & 04-Spring集成"]
     end
 
@@ -41,10 +41,10 @@ flowchart TD
         D1["01-概览选型"] --> D2["03-Blackboard状态与05-Planner规划"]
     end
 
-    S1 --> CMP["01-SpringAI与LangChain4j终极对比选型"]
+    S1 --> CMP["01-SpringAI与LangChain4j对比与选型"]
     S2 --> CMP
     CMP --> S3
-    S3 --> FIN["99-本章总结与复习<br/>（大厂30秒必杀与生产十诫）"]
+    S3 --> FIN["99-本章总结与复习<br/>（核心拓扑、高频问答与工程规范）"]
 
     style M0 fill:#e1f5fe,stroke:#0288d1,stroke-width:1px
     style CMP fill:#fff3e0,stroke:#e65100,stroke-width:1px
@@ -56,35 +56,37 @@ flowchart TD
 ## 📚 知识导航清单
 
 ### 00 · 全景心智
-- [ ] [[00-Java-AI框架全景与心智模型]] 🌟（大模型时代的 JDBC、Spring Data 哲学与企业级优势）
+- [ ] [[00-Java-AI框架全景与心智模型]]（统一模型抽象、分层架构与 Java 工程生态优势）
 
-### 01 · 框架终极对比与选型
-- [ ] [[01-SpringAI与LangChain4j对比]] ⚖️（底层哲学、Fluent 链式 vs 声明式 Feign 风格硬核对比）
+### 01 · 框架对比与选型
+- [ ] [[01-SpringAI与LangChain4j对比]]（设计理念、Fluent 链式 API 与声明式接口对比及选型策略）
 
-### 02 · Spring AI 专区（企业生产首选主线）
+### 02 · Spring AI 专区（主线）
 - [ ] [[SpringAI/_index|Spring AI 体系总览索引]]
-  - [ ] [[SpringAI/01-Spring-AI项目搭建|01-Spring-AI项目搭建]]（BOM 依赖与多 Provider 接入）
-  - [ ] [[SpringAI/02-ChatClient与ChatModel|02-ChatClient与ChatModel]]（底层驱动与 Fluent API 门面）
-  - [ ] [[SpringAI/03-PromptTemplate|03-PromptTemplate]]（结构化模板与动态入参管理）
-  - [ ] [[SpringAI/04-流式输出-SSE|04-流式输出-SSE]]（响应式 Flux 与打字机长连接）
-  - [ ] [[SpringAI/05-多模型接入与切换|05-多模型接入与切换]]（@Qualifier 装配与业务动态路由）
-  - [ ] [[SpringAI/06-Function-Calling工具调用|06-Function-Calling工具调用]]（@Tool 注解与多轮反射自闭环）
-  - [ ] [[SpringAI/07-Advisor拦截器|07-Advisor拦截器]]（Spring AI 的 AOP 灵魂，脱敏与审计实战）
-  - [ ] [[SpringAI/08-ChatMemory记忆|08-ChatMemory记忆]]（滑动窗口淘汰与 Redis/JDBC 持久化）
-  - [ ] [[SpringAI/09-VectorStore向量存储|09-VectorStore向量存储]]（PGVector/Milvus 驱动与相似度检索）
+  - [ ] [[SpringAI/01-Spring-AI项目搭建|01-Spring-AI项目搭建]]（BOM 依赖管理与 Provider 接入）
+  - [ ] [[SpringAI/02-ChatClient与ChatModel|02-ChatClient与ChatModel]]（底层模型接口与 Fluent API 门面）
+  - [ ] [[SpringAI/03-PromptTemplate|03-PromptTemplate]]（结构化模板与动态参数渲染）
+  - [ ] [[SpringAI/04-流式输出-SSE|04-流式输出-SSE]]（响应式 Flux 与 SSE 流式传输）
+  - [ ] [[SpringAI/05-多模型接入与切换|05-多模型接入与切换]]（@Qualifier 装配与多模型路由降级）
+  - [ ] [[SpringAI/06-Function-Calling工具调用|06-Function-Calling工具调用]]（@Tool 注解与多轮工具调用闭环）
+  - [ ] [[SpringAI/07-Advisor拦截器|07-Advisor拦截器]]（请求/响应责任链拦截器，日志审计与安全控制）
+  - [ ] [[SpringAI/08-ChatMemory记忆|08-ChatMemory记忆]]（滑动窗口管理与 Redis/JDBC 持久化）
+  - [ ] [[SpringAI/09-VectorStore向量存储|09-VectorStore向量存储]]（PGVector/Milvus 接入与相似度检索）
 
-### 03 · LangChain4j 专区（声明式优雅对照）
+### 03 · LangChain4j 专区（对照）
 - [ ] [[LangChain4j/_index|LangChain4j 体系总览索引]]
   - [ ] [[LangChain4j/01-LangChain4j核心概念|01-核心概念与架构]]
-  - [ ] [[LangChain4j/02-AiServices声明式AI服务|02-AiServices声明式服务]]（如同 OpenFeign 的极致接口体验）
+  - [ ] [[LangChain4j/02-AiServices声明式AI服务|02-AiServices声明式服务]]（基于动态代理的声明式接口设计）
   - [ ] [[LangChain4j/03-记忆与RAG|03-记忆与RAG]]
   - [ ] [[LangChain4j/04-与Spring生态集成|04-与Spring生态集成]]
+  - [ ] [[LangChain4j/05-流式输出与结构化输出|05-流式输出与结构化输出]]
+  - [ ] [[LangChain4j/06-多模型接入与配置|06-多模型接入与配置]]
 
 ### 04 · Embabel Agent 进阶专区
-- [ ] [[EmbabelAgent/_index|Embabel Agent 编排专区索引]]（面向 JVM 的强类型状态机与多 Agent 规划）
+- [ ] [[EmbabelAgent/_index|Embabel Agent 编排专区索引]]（面向 JVM 的强类型状态机与多步骤 Agent 规划）
 
-### 99 · 本章通关总结
-- [ ] [[99-本章总结与复习]]（全章核心拓扑、大厂 30 秒必杀 10 连问、生产落地十诫）
+### 99 · 本章总结与复习
+- [ ] [[99-本章总结与复习]]（全章核心拓扑、高频面试问答、生产工程规范）
 
 ---
 

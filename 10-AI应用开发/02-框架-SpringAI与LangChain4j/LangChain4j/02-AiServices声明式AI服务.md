@@ -6,7 +6,7 @@ tags:
   - 主题/LangChain4j
   - 阶段/02
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
@@ -35,7 +35,7 @@ interface Assistant {
 
 // ② 用 AiServices 生成实现
 Assistant assistant = AiServices.builder(Assistant.class)
-        .chatLanguageModel(model)        // 模型
+        .chatModel(model)        // 模型
         .tools(new CalculatorTool())     // 工具（可多个）
         .chatMemory(chatMemory)          // 记忆
         .contentRetriever(retriever)     // RAG 检索
@@ -60,7 +60,7 @@ String answer = assistant.chat("什么是虚拟线程？");
 | `AiServices.builder(接口.class)` | 生成接口实现 | 运行时代理，自动编排调用链 |
 | `@SystemMessage` / `@UserMessage` | 方法上的 Prompt 模板 | 方法参数自动填入占位符 |
 | `@Tool` | 暴露工具方法 | 方法名+参数描述生成 JSON Schema |
-| `.chatLanguageModel(model)` | 装配模型 | 同步模型 |
+| `.chatModel(model)` | 装配模型 | 同步模型 |
 | `.chatMemory(memory)` | 装配记忆 | 自动带上历史并写回 |
 | `.contentRetriever(...)` | 装配 RAG | 自动检索注入上下文 |
 
@@ -83,7 +83,7 @@ class OrderTool {
 
 // 装配
 SupportAgent agent = AiServices.builder(SupportAgent.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .tools(new OrderTool())
         .build();
 
@@ -100,12 +100,12 @@ String reply = agent.answer("极客科技", "我的订单 12345 到哪了？");
 | 业务集成 | Spring Bean + 注入                         | 接口代理，也可配 Spring Boot Starter     |
 | 心智模型 | 显式编排调用链                                  | 隐式代理编排                           |
 
-## ⚠️ 踩坑与注意事项
+## ⚠️ 工程注意事项
 
-- `@SystemMessage` 里的占位符用 `{{xxx}}`，参数用 `@V("xxx")` 注入——写错占位符不会编译报错，但运行期替换失败。
-- `@Tool` 方法**必须是 public**，且参数/返回值要能被序列化成 JSON Schema 的简单类型。
-- 工具方法抛异常时，把错误信息返回给模型比直接抛更稳（模型可以换个参数重试）。
-- `AiServices` 生成的代理对 `final` 类/方法无效（同动态代理限制）。
+- **模板占位符绑定**：`@SystemMessage` 与 `@UserMessage` 中的占位符采用 `{{xxx}}` 语法，需与方法参数上的 `@V("xxx")` 名称保持一致（单参数且未标注 `@V` 时默认绑定 `@UserMessage`），建议通过单元测试覆盖模板渲染。
+- **工具方法签名与描述**：建议使用职责单一、签名清晰的 `public` 方法标注 `@Tool`，并在注解与 `@P` / `@ToolParam` 中明确说明参数格式与适用条件，以便框架准确生成 JSON Schema。
+- **工具异常处理与写操作幂等**：对于参数校验不通过等可恢复业务错误，可返回脱敏后的提示文本供模型修正参数；对于权限不足或底层系统异常，应直接抛出异常中止调用链。涉及写操作的工具方法需保证业务幂等性。
+- **基于接口的动态代理**：`AiServices` 基于 JDK 动态代理（`java.lang.reflect.Proxy`）在运行期生成实现，服务契约需声明为 Java `interface`。
 
 ## 🧪 最小验证
 
@@ -114,7 +114,7 @@ interface Greeter {
     String greet(@UserMessage String name);
 }
 Greeter greeter = AiServices.builder(Greeter.class)
-        .chatLanguageModel(OpenAiChatModel.builder()
+        .chatModel(OpenAiChatModel.builder()
                 .apiKey(System.getenv("OPENAI_API_KEY"))
                 .modelName("gpt-4o-mini")
                 .build())
@@ -138,5 +138,3 @@ System.out.println(greeter.greet("小明"));   // 一个普通接口方法，背
 
 - [LangChain4j 官方文档](https://docs.langchain4j.dev/)
 - [LangChain4j AiServices 教程](https://docs.langchain4j.dev/tutorials/ai-services)
-
-

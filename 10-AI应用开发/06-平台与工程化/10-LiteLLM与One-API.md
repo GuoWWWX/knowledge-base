@@ -6,7 +6,7 @@ tags:
   - 主题/LLM
   - 阶段/06
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -73,7 +73,7 @@ model_list:
       api_key: os.environ/DASHSCOPE_API_KEY
   - model_name: chat-backup
     litellm_params:
-      model: openai/doubao-seed-1-6
+      model: openai/REPLACE_WITH_ARK_MODEL_OR_ENDPOINT
       api_base: https://ark.cn-beijing.volces.com/api/v3
       api_key: os.environ/ARK_API_KEY
 
@@ -81,6 +81,8 @@ router_settings:
   fallbacks:
     - chat-prod: [chat-backup]
 ```
+
+接入火山方舟等平台时，将配置中的 `REPLACE_WITH_ARK_MODEL_OR_ENDPOINT` 替换为控制台已开通的具体模型名称或推理接入点（Endpoint ID，如 `ep-2026xxxx`）即可完成路由绑定。
 
 业务侧：
 

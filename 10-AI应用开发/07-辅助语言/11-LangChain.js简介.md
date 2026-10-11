@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -43,7 +43,7 @@ mastery: ⭐☆☆☆☆
 ## ⚙️ 环境命令
 
 ```bash
-pnpm add langchain @langchain/openai
+pnpm add langchain @langchain/core @langchain/openai
 pnpm add zod
 pnpm dev
 ```

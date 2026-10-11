@@ -6,7 +6,7 @@ tags:
   - 主题/LLM
   - 阶段/04
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -71,6 +71,7 @@ flowchart LR
 ## 💻 Spring AI / Redis / VectorStore 落地点
 
 ```java
+// 示例假设片段可独立选择；工具调用与结果必须先组成不可拆分的选择单元。
 record ContextSegment(String id, String source, Message message, int priority, int tokens) {}
 
 List<Message> cut(List<ContextSegment> segments, int modelWindow, int outputReserve) {
@@ -80,6 +81,9 @@ List<Message> cut(List<ContextSegment> segments, int modelWindow, int outputRese
         .toList();
     int used = fixed.stream().mapToInt(ContextSegment::tokens).sum();
 
+    if (budget <= 0 || used > budget) {
+        throw new IllegalArgumentException("固定内容超出输入预算，需拒绝或拆分请求");
+    }
     List<ContextSegment> selected = new ArrayList<>(fixed);
     List<ContextSegment> candidates = segments.stream()
         .filter(s -> s.priority() < 100)
@@ -92,7 +96,11 @@ List<Message> cut(List<ContextSegment> segments, int modelWindow, int outputRese
         }
     }
 
-    return selected.stream().map(ContextSegment::message).toList();
+    var selectedIds = selected.stream().map(ContextSegment::id)
+            .collect(java.util.stream.Collectors.toSet());
+    // 按输入的合法消息顺序还原，不能按优先级直接发送给模型
+    return segments.stream().filter(s -> selectedIds.contains(s.id()))
+            .map(ContextSegment::message).toList();
 }
 ```
 

@@ -2,7 +2,7 @@
 title: Claude-Code上下文工程-CLAUDE-md-Memory
 tags: [领域/AI应用, 类型/知识, 主题/ClaudeCode, 主题/上下文工程]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -23,7 +23,11 @@ mastery: ⭐☆☆☆☆
 - 线上风险边界在哪里。
 - 团队希望先问还是直接改。
 
-如果每次都靠用户手动说，体验会崩。Memory 的产品意义是把这些规则长期化。
+Memory 机制的核心作用是将这些项目规范持久化为自动加载的上下文，避免每次会话重复输入。
+
+其中，`CLAUDE.md` 由开发者显式编写与维护，用于声明稳定的项目级指令；Auto Memory 则由 Claude 在协作过程中自动提炼并记录经验要点。在实际维护中，建议定期清理过期规则，避免写入敏感凭证，并将强安全限制配置在 Permissions 权限策略中。
+
+此外，新版工具链已逐步兼容 `AGENTS.md` 规范，具体加载优先级取决于工作区内的现有配置文件及项目指令设置。
 
 ## CLAUDE.md 应该写什么
 
@@ -100,4 +104,3 @@ Memory 不只适用于编程。任何企业 Agent 都需要类似机制：
 - [Claude Code Memory](https://code.claude.com/docs/memory)
 - [Claude Code Settings](https://code.claude.com/docs/settings)
 - [[../../05-Agent-MCP-Skills/16-AGENTS规范详解]]
-

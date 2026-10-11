@@ -2,7 +2,7 @@
 title: 标杆产品对比-Codex-vs-Claude-Code
 tags: [领域/AI应用, 类型/知识, 主题/产品拆解, 主题/编程Agent]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -10,17 +10,17 @@ mastery: ⭐☆☆☆☆
 # 标杆产品对比：Codex vs Claude Code
 
 > [!abstract] 一句话总结
-> Codex 更像“多 surface 的软件工程 Agent 平台”，Claude Code 更像“terminal-native 的代码协作 Agent”。两者共同说明：成功的编程 Agent 核心不是模型本身，而是上下文、工具、权限和工作流产品化。
+> Codex 侧重于构建覆盖多端入口（CLI、IDE、桌面端、云端）的软件工程 Agent 平台；Claude Code 则以终端原生（terminal-native）体验为核心，并逐步扩展至 IDE、桌面与 Web 端。两者的演进路径共同表明：编程 Agent 的核心竞争力在于上下文装配、工具调用、权限治理与开发工作流的深度整合。
 
 ## 快速对比
 
 | 维度 | Codex | Claude Code |
 | ---- | ----- | ----------- |
 | 产品定位 | OpenAI 的 coding agent，覆盖 CLI、IDE、桌面 app、云端等多个 surface | Anthropic 的 agentic coding tool，核心体验围绕终端和代码库 |
-| 主要入口 | Codex app、CLI、IDE extension、cloud/web、GitHub/Slack/Linear 等集成 | CLI、IDE 集成、GitHub Actions、MCP 等 |
-| 项目规则 | `AGENTS.md`，支持全局、仓库、子目录层级 | `CLAUDE.md` / memory，支持项目记忆和团队约定 |
+| 主要入口 | Codex app、CLI、IDE extension、cloud/web、GitHub/Slack/Linear 集成 | CLI、IDE 扩展、桌面端、Web 与 GitHub 集成 |
+| 项目规则 | `AGENTS.md`（支持全局、仓库、子目录多级覆盖） | `CLAUDE.md` 与 auto memory（新版亦逐步兼容 `AGENTS.md`） |
 | 扩展机制 | Skills、Plugins、MCP、Hooks、Subagents、Automations | MCP、Hooks、Subagents、Skills、Slash commands、Settings |
-| 安全模型 | sandbox mode + approval policy + workspace/worktree/cloud 隔离 | permissions/settings/hooks 等控制工具执行与行为 |
+| 安全与隔离 | Sandbox 环境限制 + Approval 审批策略（配合 Git worktree 隔离并行工作副本） | Permissions 权限分级、Sandbox 隔离、Settings 配置与 Hooks 生命周期拦截 |
 | 工作流重点 | 多线程、worktree、自动化、review、可并行代理 | terminal-native、深度代码库上下文、可脚本化 hooks |
 | 对我们启发 | 适合学习“AI 工程平台”设计 | 适合学习“开发者工作流 Agent”设计 |
 
@@ -105,4 +105,3 @@ flowchart TD
 
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
 - [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
-

@@ -6,7 +6,7 @@ tags:
   - 主题/评估与可观测
   - 阶段/06
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -65,28 +65,26 @@ flowchart LR
 
 ## 💻 接入示例
 
+以下示例基于 Langfuse Python SDK v3 的上下文管理器 API（`start_as_current_observation`）编写；运行时通过环境变量配置 `LANGFUSE_PUBLIC_KEY`、`LANGFUSE_SECRET_KEY` 与服务地址（需注意与 v2 版本 `langfuse.trace()` 接口的用法区分）。
+
 ```python
-from langfuse import Langfuse
+from langfuse import get_client
 
-langfuse = Langfuse()
-
-trace = langfuse.trace(
-    name="contract-qa",
-    user_id="u-1001",
-    metadata={"tenant": "demo", "app_version": "2026-07-04"},
-)
-
-generation = trace.generation(
-    name="answer",
-    model="qwen-plus",
-    input=[{"role": "user", "content": "付款条件是什么？"}],
-)
-
-# 调用模型后补全结果
-generation.end(
-    output="合同约定验收后 30 日内付款。",
-    usage={"input": 1200, "output": 80},
-)
+langfuse = get_client()
+with langfuse.start_as_current_observation(
+    as_type="span", name="contract-qa",
+) as span:
+    span.update(metadata={"tenant": "demo"})
+    with langfuse.start_as_current_observation(
+        as_type="generation", name="answer", model="qwen-plus",
+        input=[{"role": "user", "content": "付款条件是什么？"}],
+    ) as generation:
+        # 仅演示埋点；真实调用后填入模型返回的 output 和 usage
+        generation.update(
+            output="示例：验收后 30 日内付款。",
+            usage_details={"input": 1200, "output": 80},
+        )
+langfuse.flush()  # 短脚本退出前等待上报，服务中不要每次请求都阻塞 flush
 ```
 
 ## ⚠️ 生产坑

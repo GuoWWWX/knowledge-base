@@ -32,7 +32,7 @@ mastery: ⭐☆☆☆☆
 
 ## Java 后端怎么理解
 
-把 LangGraph 类比成“AI 版流程编排引擎”：
+从状态机与工作流编排引擎的视角理解 LangGraph 的核心概念：
 
 - `State` 类似流程实例上下文。
 - `Node` 类似流程节点或 Spring Service 方法。

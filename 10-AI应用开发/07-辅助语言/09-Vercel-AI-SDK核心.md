@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -39,12 +39,12 @@ mastery: ⭐☆☆☆☆
 | Streaming response | `streamText` | 流式输出 |
 | Tool / Function calling | `tool(...)` | 工具声明 |
 | DTO validation | `z.object(...)` | 参数 schema |
-| Controller 返回流 | `toDataStreamResponse()` | 给前端消费的流 |
+| Controller 返回流 | `toUIMessageStreamResponse()` | 给前端消费的流 |
 
 ## ⚙️ 环境命令
 
 ```bash
-pnpm add ai @ai-sdk/openai zod
+pnpm add ai@5 @ai-sdk/openai@2 zod@3
 pnpm dev
 pnpm typecheck
 ```
@@ -56,6 +56,8 @@ OPENAI_API_KEY=sk-...
 ```
 
 ## 💻 最小示例
+
+以下以 **AI SDK 5** 为基线，provider 包配套安装。UI 接口接收的是 `UIMessage[]`，转成模型消息后再调用模型。
 
 一次性生成：
 
@@ -74,7 +76,7 @@ console.log(result.text);
 Next.js 流式接口：
 
 ```ts
-import { streamText } from "ai";
+import { convertToModelMessages, streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 export async function POST(req: Request) {
@@ -82,10 +84,10 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: openai("gpt-4.1-mini"),
-    messages,
+    messages: await convertToModelMessages(messages),
   });
 
-  return result.toDataStreamResponse();
+  return result.toUIMessageStreamResponse();
 }
 ```
 
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
 
 - Chat UI：后端 `streamText`，前端 `useChat`。
 - Tool calling：把数据库查询、订单查询、搜索接口封成 tool。
-- RAG：先检索文档，再把 context 放进 `system` 或 `prompt`。
+- RAG：先检索外部知识片段，再作为参考上下文注入 Prompt，并与系统级指令（System Prompt）保持清晰隔离。
 - 模型网关：同一层里切换 OpenAI、Anthropic、本地兼容接口。
 
 工具调用示意：
@@ -104,18 +106,20 @@ import { z } from "zod";
 
 const getWeather = tool({
   description: "查询城市天气",
-  parameters: z.object({ city: z.string() }),
-  execute: async ({ city }) => ({ city, weather: "sunny" }),
+  inputSchema: z.object({ city: z.string() }),
+  execute: async ({ city }) => ({ city, weather: "晴，25°C" }),
 });
 ```
+
+在实际生产环境中，服务端接口还需补充身份鉴权、会话归属验证与消息体大小限制，并在服务端统一管理 System Prompt 与工具执行结果。
 
 ## ⚠️ 踩坑与注意事项
 
 - `streamText` 返回的是流，不要用 `Response.json` 包住。
 - provider 包和 `ai` 主包版本要兼容。
-- 工具参数必须写 schema，否则模型容易传错字段。
+- 工具调用除了通过 Schema 校验参数格式外，还应在 `execute` 函数内校验当前用户的操作权限与业务约束。启用多步工具调用时，建议通过 `stopWhen`（如 `stepCountIs(5)`）显式限制最大步数，并做好超时控制与写操作幂等处理。
 - 不要在客户端组件里直接调用带 Key 的 provider。
-- RAG 上下文要限制长度，否则流式再顺也会慢且贵。
+- RAG 上下文要限制长度，避免单次请求 Token 消耗过高或增加首字延迟。
 
 ## 🎯 面试 / 项目用途
 
@@ -134,7 +138,7 @@ const getWeather = tool({
 - 能写出 `generateText` 和 `streamText` 的最小代码。
 - 能解释 provider、model、messages、system 的关系。
 - 能把流式结果返回给 Next.js 前端。
-- 能给一个 tool 写出 `description`、`parameters`、`execute`。
+- 能给一个 tool 写出 `description`、`inputSchema`、`execute`。
 
 ## 🔗 关联笔记
 

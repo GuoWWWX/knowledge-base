@@ -6,7 +6,7 @@ tags:
   - 主题/MCP
   - 阶段/05
 created: 2026-05-31
-updated: 2026-07-06
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
@@ -189,8 +189,8 @@ Client 发现 Server 暴露的：
 
 ## 传输方式：stdio vs Streamable HTTP
 
-> [!note] 版本说明
-> 2025-06-18 规范已移除旧的 **SSE（Server-Sent Events）** 传输，2025-11-25 规范新增了 **HTTP（无状态/带状态两种模式）** 传输。当前标准传输为 **stdio**（本地进程）与 **HTTP/Streamable HTTP**（远程）。部分旧框架仍兼容 SSE，但新项目不应再使用。
+> [!note] 传输协议演进说明
+> MCP 规范（如 2025-11-25 版）定义了 **stdio** 与 **Streamable HTTP** 两种标准传输机制。其中 Streamable HTTP 演进自早期（2024-11-05 版）的 `HTTP+SSE` 双端点方案，将客户端通信统一收拢至单一 HTTP 端点，并支持在需要流式通知或分块返回时动态升级为 SSE 流。
 
 ### stdio
 
@@ -216,7 +216,7 @@ stdio 是本地进程通信。
 
 ### Streamable HTTP / HTTP
 
-Streamable HTTP 更适合远程部署的 MCP Server；2025-11-25 规范进一步引入 **HTTP 传输**（无状态 + 带状态两种模式，统一走 HTTP，替代旧 SSE 流式）。对使用者来说，远程部署一律用 HTTP 类传输即可。
+Streamable HTTP 面向远程服务化部署设计，支持通过单一 HTTP 端点承载标准 JSON-RPC 响应或 SSE 流式推送，既可结合 `Mcp-Session-Id` 实现有状态会话管理与断线续传，也可按无状态微服务模式横向扩展。
 
 适合：
 
@@ -262,8 +262,9 @@ MCP 的消息层建立在 JSON-RPC 2.0 之上，这意味着它天然具备：
 
 一个最小的请求/响应示例（`tools/call`）：
 
+请求（Client → Server）：
+
 ```json
-// 请求（Client → Server）
 {
   "jsonrpc": "2.0",
   "id": 1,
@@ -274,7 +275,11 @@ MCP 的消息层建立在 JSON-RPC 2.0 之上，这意味着它天然具备：
   }
 }
 
-// 响应（Server → Client）
+```
+
+响应（Server → Client）：
+
+```json
 {
   "jsonrpc": "2.0",
   "id": 1,
@@ -288,7 +293,7 @@ MCP 的消息层建立在 JSON-RPC 2.0 之上，这意味着它天然具备：
 > [!note] 看懂这三行
 > - `id` 用于把请求与响应配对（请求是 1，响应也要回 1）。
 > - `method` 是协议方法名（`tools/list`、`tools/call`、`resources/read`、`prompts/get` 等）。
-> - 出错时返回 `error` 对象（含 `code` 与 `message`），而不是 `result`；且 `params` 里的 `name`/`arguments` 由模型按工具 schema 生成，服务端必须做校验。
+> - **两层错误语义分离**：连接异常、未知方法或非法 JSON 等协议层错误通过顶层 JSON-RPC `error` 字段返回；而工具内部业务逻辑异常、参数校验不通过或下游接口超时等执行期失败，则在 `result` 中返回结构化说明并标记 `isError: true`，以便模型读取错误上下文并决定修正参数或终止调用。
 
 ## 鉴权与授权
 
@@ -443,7 +448,7 @@ ChatClient chatClient = ChatClient.builder(chatModel)
 
 ```mermaid
 flowchart LR
-    A[Function Calling<br/>应用内工具调用] --> B[MCP<br/>跨应用标准协议]
+    A[Function Calling<br/>模型提出工具调用] --> B[MCP<br/>跨应用标准协议]
 
     style A fill:#fff3e0
     style B fill:#c8e6c9
@@ -514,7 +519,7 @@ flowchart LR
 > - **Q: stdio 和 Streamable HTTP 怎么选？**
 >   - A: 本地开发和 IDE 集成用 stdio；企业远程平台化治理更适合 Streamable HTTP。
 > - **Q: MCP 和 Function Calling 的区别？**
->   - A: Function Calling 是应用内调用机制，MCP 是跨应用标准协议。
+>   - A: Function Calling 定义模型如何提出工具名和参数，执行器可以调用本地或远程能力；MCP 规范 Host/Client 与能力服务的发现和通信，两者可组合。
 > - **Q: MCP Server 上线重点看什么？**
 >   - A: 鉴权、租户隔离、限流、错误处理、审计和可观测。
 >

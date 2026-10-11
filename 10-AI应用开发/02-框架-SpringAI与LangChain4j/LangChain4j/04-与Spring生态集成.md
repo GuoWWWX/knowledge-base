@@ -6,7 +6,7 @@ tags:
   - 主题/LangChain4j
   - 阶段/02
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
@@ -54,9 +54,9 @@ langchain4j:
 启动后自动注入：
 
 ```java
-@Autowired ChatLanguageModel chatLanguageModel;          // 模型
-@Autowired EmbeddingModel embeddingModel;                // 向量化
-// 工具类 @Tool 方法所在 Bean 自动被发现（配合 AiServices）
+@Autowired ChatModel chatLanguageModel;          // 自动装配的对话模型 Bean
+// 若需注入 EmbeddingModel，可在配置文件中同步配置 langchain4j.open-ai.embedding-model.*
+// 标注了 @Tool 方法的 Spring Bean 可直接装配至 AiServices
 ```
 
 ## 🤔 解决什么问题 / 为什么需要
@@ -71,9 +71,9 @@ langchain4j:
 | ---- | ---- | ---- |
 | Starter | `spring-ai-starter-model-openai` | `langchain4j-open-ai-spring-boot-starter` |
 | 配置前缀 | `spring.ai.openai.*` | `langchain4j.open-ai.*` |
-| 自动配置的 Bean | `ChatClient.Builder`、`ChatModel` 等 | `ChatLanguageModel`、`EmbeddingModel` 等 |
+| 自动配置的 Bean | `ChatClient.Builder`、`ChatModel` 等 | `ChatModel`、`EmbeddingModel` 等 |
 | 核心调用对象 | `ChatClient`（链式） | `AiServices`（声明式）或直接用模型 Bean |
-| 非 Spring 可用性 | 不能脱离 Spring | 可纯 Java 使用 |
+| 运行环境适配 | 深度集成 Spring Boot（也支持手动构造组件） | 核心库框架中立，支持纯 Java、Spring Boot 与 Quarkus |
 | 生态归属 | Spring 官方 | 社区 + Spring 集成 |
 
 ## 💻 代码实践
@@ -82,8 +82,8 @@ langchain4j:
 // 方式一：直接用自动配置的模型 Bean（轻量）
 @RestController
 class ChatController {
-    private final ChatLanguageModel model;
-    ChatController(ChatLanguageModel model) { this.model = model; }
+    private final ChatModel model;
+    ChatController(ChatModel model) { this.model = model; }
 
     @GetMapping("/chat")
     String chat(String msg) {
@@ -95,15 +95,15 @@ class ChatController {
 @Component
 class OrderTool {
     @Tool("查询订单状态")
-    public String getStatus(@ToolParam("订单号") String id) { ... }
+    public String getStatus(@P("订单号") String id) { ... }
 }
 
 @Configuration
 class AssistantConfig {
     @Bean
-    Assistant assistant(ChatLanguageModel model, OrderTool orderTool) {
+    Assistant assistant(ChatModel model, OrderTool orderTool) {
         return AiServices.builder(Assistant.class)
-                .chatLanguageModel(model)
+                .chatModel(model)
                 .tools(orderTool)          // Spring Bean 直接传入
                 .build();
     }
@@ -123,7 +123,7 @@ class AssistantConfig {
 # 一个能跑的 Spring Boot + LangChain4j 最小工程：
 # 1. 加 langchain4j-spring-boot-starter + langchain4j-open-ai-spring-boot-starter
 # 2. yaml 配 api-key
-# 3. 注入 ChatLanguageModel 写一个 /chat 接口
+# 3. 注入 ChatModel 写一个 /chat 接口
 # 4. curl "http://localhost:8080/chat?msg=你好" 看到回复即通
 ```
 
@@ -143,5 +143,3 @@ class AssistantConfig {
 
 - [LangChain4j Spring Boot 集成](https://docs.langchain4j.dev/tutorials/spring-boot-integration)
 - [LangChain4j 官方文档](https://docs.langchain4j.dev/)
-
-

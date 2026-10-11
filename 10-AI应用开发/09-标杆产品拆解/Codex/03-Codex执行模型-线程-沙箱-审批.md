@@ -2,7 +2,7 @@
 title: Codex执行模型-线程-沙箱-审批
 tags: [领域/AI应用, 类型/知识, 主题/Codex, 主题/Agent安全]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -33,7 +33,7 @@ Codex 以 thread 承载一次持续任务。一个 thread 里包含：
 | Worktree | 在 Git worktree 中隔离修改 | 并行任务、实验性改动 |
 | Cloud | 在远程环境执行 | 后台任务、云端依赖、异步工作 |
 
-Worktree 是成功产品的关键设计。它把“并行 Agent”从概念变成可控工程实践：每个任务有自己的工作副本，冲突更容易管理。
+Worktree 通过独立的文件目录与分支隔离代码修改，适合多任务并行开发；由于各工作区仍共享本地端口、数据库与外部服务环境，运行时安全隔离仍需依赖 Sandbox 机制，且分支合并时需处理潜在的代码冲突。
 
 ## Sandbox：技术边界
 
@@ -44,7 +44,7 @@ Codex 官方手册强调 sandbox mode 控制模型生成命令能做什么，例
 - 是否能访问网络。
 - 是否能碰工作区外文件。
 
-这对应企业 Agent 里的“最小权限原则”。Agent 不是因为聪明就可信，它必须被运行环境约束。
+这对应企业 Agent 里的“最小权限原则”。Agent 的执行范围必须由底层运行环境实施硬性约束。
 
 ## Approval：人工决策边界
 
@@ -55,7 +55,7 @@ Approval policy 决定 Codex 什么时候必须停下来问用户，例如：
 - 需要执行高风险命令。
 - MCP 或 app tool 声明有副作用。
 
-审批不是体验负担，而是风险分层：低风险动作自动做，高风险动作让用户确认。
+审批触发行为由当前配置的 Approval Policy 决定：在严格策略下，越界请求会被直接拒绝；在受控审批策略下，高风险命令会暂停并等待用户确认。此外，本地沙箱主要约束本机文件与进程边界，针对远程 MCP Server 或外部业务系统的写操作，仍需在对应服务端实施独立的身份鉴权与权限控制。
 
 ## 执行循环
 
@@ -63,10 +63,11 @@ Approval policy 决定 Codex 什么时候必须停下来问用户，例如：
 flowchart TD
     A[用户目标] --> B[读取上下文]
     B --> C[形成计划]
-    C --> D[修改文件/运行命令]
+    C --> D[提出修改/命令请求]
     D --> E{是否越过沙箱或高风险}
-    E -->|否| F[继续执行]
-    E -->|是| G[请求审批]
+    E -->|策略允许| F[执行工具]
+    E -->|策略要求确认| G[请求审批]
+    E -->|策略禁止| I[调整方案]
     G --> H{用户同意}
     H -->|是| F
     H -->|否| I[调整方案]
@@ -106,4 +107,3 @@ Codex 的 sandbox / approval 可以抽象成企业 Agent 的三级控制：
 
 - [OpenAI Codex Manual：Approvals, Sandboxing, and Security](https://developers.openai.com/codex/codex-manual.md#approvals-sandboxing-and-security)
 - [OpenAI Codex Manual：Codex app features](https://developers.openai.com/codex/codex-manual.md#surface-behavior)
-

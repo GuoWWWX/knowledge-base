@@ -6,7 +6,7 @@ tags:
   - 主题/LangChain4j
   - 阶段/02
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
@@ -27,24 +27,22 @@ mastery: ⭐⭐⭐☆☆
 ### 记忆：ChatMemory / MessageWindowChatMemory
 
 ```java
-// 窗口记忆（与 Spring AI 2.0 的 MessageWindowChatMemory 同名同思路）
-ChatMemory chatMemory = MessageWindowChatMemory.builder()
-        .maxMessages(20)      // 保留最近 20 条
-        .build();
+// model 为已配置的 ChatModel；MessageWindowChatMemory 按消息条数（Message 数量）维护滑动窗口
+interface Assistant {
+    String chat(@MemoryId String conversationId, @UserMessage String message);
+}
 
-// 装配进 AiServices：每轮对话自动带上历史并写回
 Assistant assistant = AiServices.builder(Assistant.class)
-        .chatLanguageModel(model)
-        .chatMemory(chatMemory)
+        .chatModel(model)
+        .chatMemoryProvider(id -> MessageWindowChatMemory.withMaxMessages(20))
         .build();
 
-// 多会话：用 chatMemoryId 区分不同会话
-String reply1 = assistant.chat("user-1001", "我叫小李");
-String reply2 = assistant.chat("user-1001", "我叫什么？");   // 记得住
-String reply3 = assistant.chat("user-1002", "我叫什么？");   // 新会话，不知道
+String reply1 = assistant.chat("session-1001", "我叫小李");
+String reply2 = assistant.chat("session-1001", "我叫什么？");
+String reply3 = assistant.chat("session-1002", "我叫什么？");
 ```
 
-**注意**：LangChain4j 的 `AiServices` 接口方法若带 `chatMemoryId` 参数，框架自动用它做会话隔离——这对应 Spring AI 2.0 显式 `conversationId` 的设计，但写法更省事。
+**多会话隔离机制**：通过方法参数上的 `@MemoryId` 注解配合 `.chatMemoryProvider(...)`，框架会按会话 ID 为不同用户或会话分配独立的 `ChatMemory` 实例（若仅调用 `.chatMemory(...)` 传入固定实例，则所有调用共享同一份记忆）。在生产环境中，`conversationId` 应由服务端结合登录态生成并校验，且针对同一会话 ID 的并发请求需做好串行化控制。
 
 ### RAG：EmbeddingStore + ContentRetriever
 
@@ -72,7 +70,7 @@ ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
 
 // ③ 装配进 AiServices：问答时自动检索并注入上下文
 Assistant assistant = AiServices.builder(Assistant.class)
-        .chatLanguageModel(model)
+        .chatModel(model)
         .contentRetriever(retriever)
         .build();
 ```
@@ -87,9 +85,9 @@ Assistant assistant = AiServices.builder(Assistant.class)
 | 组件 | 作用 | Spring AI 对照 |
 | ---- | ---- | ---- |
 | `ChatMemory` / `MessageWindowChatMemory` | 多轮上下文窗口 | `ChatMemory` / `MessageWindowChatMemory` |
-| `chatMemoryId` 方法参数 | 会话隔离 | `ChatMemory.CONVERSATION_ID` |
+| `@MemoryId` + `chatMemoryProvider` | 会话隔离 | `ChatMemory.CONVERSATION_ID` |
 | `Document` / `TextSegment` | 文档与切分片段 | `Document` |
-| `DocumentSplitters.recursive` | 递归切分器 | 无内置等价（用 LangChain4j 概念） |
+| `DocumentSplitters.recursive` | 递归切分器 | `TextSplitter`（切分规则不同） |
 | `EmbeddingModel` / `EmbeddingStore` | 向量化 / 存储检索 | `EmbeddingModel` / `VectorStore` |
 | `EmbeddingStoreContentRetriever` | 检索插槽 | `QuestionAnswerAdvisor` |
 
@@ -98,14 +96,15 @@ Assistant assistant = AiServices.builder(Assistant.class)
 ```java
 // 完整链路：切分 → 向量化 → 入库 → 检索问答
 // 离线（一次性）：
-List<Document> docs = docs.stream()
-        .map(d -> DocumentSplitters.recursive(500, 100).split(d))
-        .flatMap(List::stream)
-        .map(seg -> { store.add(embeddingModel.embed(seg).content(), seg); return seg; })
-        .toList();
+// documents 为已加载的 List<Document>，切分产物是 TextSegment
+for (Document doc : documents) {
+    for (TextSegment segment : DocumentSplitters.recursive(500, 100).split(doc)) {
+        store.add(embeddingModel.embed(segment).content(), segment);
+    }
+}
 
 // 在线（每次问答）：
-String answer = assistant.chat("根据知识库回答：什么是 CAG？");
+String answer = assistant.chat("session-1001", "根据知识库回答：什么是 CAG？");
 ```
 
 - 检索结果太少 → 调大 `maxResults` / 换更好的 embedding 模型；太多 → 调小或加 rerank（见 RAG 章）。
@@ -116,7 +115,7 @@ String answer = assistant.chat("根据知识库回答：什么是 CAG？");
 
 - `InMemoryEmbeddingStore` 只适合学习 demo，**进程重启即丢**；生产用持久化向量库。
 - 切分大小与重叠（500/100 之类的参数）直接影响检索质量，别照抄数字，按文档类型调（RAG 章有完整策略）。
-- `chatMemoryId` 是接口方法的特殊参数，框架识别后**不会传给模型**——别在业务参数里混用。
+- 标注 `@MemoryId` 的参数用于记忆路由，框架识别后**不会传给模型**——别在业务参数里混用。
 - 记忆与检索同时装配时，Prompt 会同时包含历史与知识片段，注意总量别撑爆上下文窗口（见 01 章上下文工程）。
 
 ## 🧪 最小验证
@@ -129,7 +128,7 @@ String answer = assistant.chat("根据知识库回答：什么是 CAG？");
 
 ## ✅ 精通检查清单
 
-- 能写出 `MessageWindowChatMemory` + `chatMemoryId` 的多会话示例。
+- 能写出 `MessageWindowChatMemory` + `@MemoryId` + `chatMemoryProvider` 的多会话示例。
 - 能说清 `Document → TextSegment → EmbeddingStore → ContentRetriever` 的 RAG 组件链。
 - 能对照 Spring AI 的记忆/向量组件说出两边概念映射。
 
@@ -142,6 +141,5 @@ String answer = assistant.chat("根据知识库回答：什么是 CAG？");
 ## 📚 参考资料
 
 - [LangChain4j 官方文档](https://docs.langchain4j.dev/)
+- [AI Services：记忆隔离与并发边界](https://docs.langchain4j.dev/tutorials/ai-services/)
 - [LangChain4j RAG 教程](https://docs.langchain4j.dev/tutorials/rag)
-
-

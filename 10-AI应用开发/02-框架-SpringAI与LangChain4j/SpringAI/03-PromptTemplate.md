@@ -40,30 +40,28 @@ Prompt 是给模型的输入，Template 是可填变量的 Prompt。Spring AI �
 | 难测试 | 可单独渲染检查 |
 | 容易把业务数据和提示词混在一起 | 结构更清楚 |
 
-> [!tip] 为什么不用 `String.format("...%s...", var)`？三个硬伤
-> 1. **顺序耦合**：占位符一多，参数顺序写反编译不报错，运行期 prompt 就错了；`{name}` 命名占位符顺序无关、一眼可读。
-> 2. **`%` 冲突**：prompt 里若本身有"提升 50% 的性能"，`String.format` 会把 `%` 当占位符（抛异常或输出错乱，要 `%%` 转义）；`{var}` 模板无此问题。
-> 3. **String.format 只能拼字符串**，`PromptTemplate.create()` 返回的是 **`Prompt` 消息对象**——能生成多条消息（system+user+历史）、能与工具/记忆/结构化输出集成（这些组件消费 Prompt 而非 String）。
->
-> 另外两点工程价值：模板可放 `resources/prompts/*.st` 与代码分离（改话术不重新编译）；模板加载时能提前发现占位符缺失/多余（String.format 运行时才炸）。
-> **String.format 何时够用**：一次性、不维护的简单拼接（日志、调试）；"prompt 是产品内容"的场景一律用 PromptTemplate——它换来的不是"能占位"，而是"prompt 工程化"。
+> [!tip] 为什么推荐使用 `PromptTemplate` 而非 `String.format`？
+> 1. **具名占位符解耦顺序**：`String.format` 依赖位置参数（`%s`），占位符较多时容易传错顺序；`PromptTemplate` 使用 `{name}` 具名占位符，与参数顺序无关且可读性更好。
+> 2. **避免 `%` 符号转义冲突**：提示词文本中常包含百分比（如“提升 50%”），在 `String.format` 中未转义会抛出 `UnknownFormatConversionException`；`{var}` 语法不会产生此类冲突。
+> 3. **直接生成结构化 `Prompt` 对象**：`String.format` 仅拼接字符串，而 `PromptTemplate.create()` 返回标准的 **`Prompt` 消息对象**，可直接承载多角色消息并与 `ChatClient`、工具调用及结构化输出组件衔接。
+> 4. **支持外部化管理与静态校验**：模板可独立存放在 `resources/prompts/*.st` 或配置中心，实现提示词迭代与代码发布解耦，并在渲染阶段统一校验缺失变量。
 
-> [!info] 模板放哪？一个谱系，不是单选题
-> | 存放方式 | 场景 | 特点 |
+> [!info] 提示词模板的存储方式选型
+> | 存放方式 | 适用场景 | 工程特点 |
 > | ---- | ---- | ---- |
-> | 代码内字符串 | 原型、一次性 | 最快，改代码 |
-> | `.st` 资源文件 | 中小项目、模板稳定 | 打包进 jar，**发布 = 改版**，不灵活 |
-> | **数据库 / 配置中心** | **正经生产项目** | 运营可改、A/B 测试、多租户不同话术、热更新无需发版 |
+> | 代码内字符串 / Text Block | 原型验证、简短固定指令 | 开发直接，修改需重新编译发版 |
+> | `resources/prompts/*.st` 资源文件 | 中小型项目、长提示词版本化管理 | 随 Git 仓库做 Code Review，随应用打包发布 |
+> | **数据库 / 配置中心（Nacos/Apollo）** | **多租户生产环境、高频运营调优** | 支持按租户定制、A/B 测试与热更新，无需重新发版 |
 >
-> **关键区分**：`PromptTemplate` 是**渲染引擎**（模板字符串 → `Prompt` 对象），与模板**存哪无关**。生产从 DB/配置中心读出模板后，照样要用它渲染：
+> **工程提示**：`PromptTemplate` 本身是**模板渲染组件**（将模板文本与变量合成为 `Prompt` 对象），与模板的存储位置正交。从数据库或配置中心读取模板字符串后，同样通过 `PromptTemplate` 渲染：
 >
 > ```java
-> String templateText = templateService.get("customer_service", tenantId, version); // 从 DB 取
-> Prompt prompt = new PromptTemplate(templateText)                                // 还是 PromptTemplate
+> String templateText = templateService.get("customer_service", tenantId, version); // 从配置中心或 DB 读取
+> Prompt prompt = new PromptTemplate(templateText)
 >         .create(Map.of("company", c, "user", u, "question", q));
 > ```
 >
-> 存 DB 的注意点：按 `场景 key + 租户 + 版本 + 内容` 存，模板是"配置"也要版本管理；读取走缓存；**兜底**——DB 未配置时回退内置默认模板，别让配置缺失变成线上事故。
+> 采用外部存储时，建议按 `场景标识 + 租户 + 版本号` 维度管理并配合本地缓存；同时在代码中保留内置默认模板作为降级兜底，防止因配置缺失导致调用失败。
 
 ---
 
@@ -123,54 +121,52 @@ Context：检索结果、历史摘要、工具返回
 ### 1. ChatClient 内联模板（日常最高频）
 
 ```java
-// s 是 SystemSpec(系统消息构建器),u 是 UserSpec(用户消息构建器)
-// 它们是 .system()/.user() 传入的 Consumer 回调参数——作用域隔离,
-// system 和 user 可以各自有 {company} 等占位符而不冲突
+// s 是 SystemSpec(系统消息构建器), u 是 UserSpec(用户消息构建器)
+// 它们是 .system()/.user() 传入的 Consumer 回调参数——作用域隔离，
+// system 和 user 可以各自声明 {company} 等占位符而不冲突
 String answer = chatClient.prompt()
         .system(s -> s.text("你是 {company} 的客服，语气 {tone}")
                 .param("company", c).param("tone", t))
         .user(u -> u.text("用户问题：{question}").param("question", q))
         .call()
         .content();
-// 每条消息各自有模板和参数，互不干扰
+// 每条消息各自维护模板和参数，互不干扰
 ```
 
-### 2. SpEL 表达式：占位符能取对象字段
+### 2. 对象属性访问
 
 ```java
 record User(String name, String city) {}
 
 Prompt prompt = new PromptTemplate("用户 {user.name} 来自 {user.city}")
         .create(Map.of("user", new User("小明", "上海")));
-// {user.name} 自动拆箱取字段——业务对象直接传，不用提前拆成 Map
+// 支持通过属性路径直接读取对象字段，无需手动拆平为 Map
 ```
 
-### 3. 多消息模板：渲染出"消息序列"而非一段文本
+### 3. 多消息模板：渲染出消息序列
 
 ```java
 Prompt prompt = new PromptTemplate(multiMessageTemplate).create(vars);
-prompt.getInstructions();   // List<Message>：system + user 带角色
-// 结构化 prompt（开场白 + 任务 + 示例）整体模板化
+prompt.getInstructions();   // List<Message>：包含带角色的消息列表
 ```
 
-### 4. 动态选择模板（模板 = 路由产物）
+### 4. 动态选择模板（结合配置中心做灰度）
 
 ```java
 String key = user.isVip() ? "vip-greeting" : "normal-greeting";
-String template = templateService.get(key);          // DB/配置中心
+String template = templateService.get(key);          // 从 DB 或配置中心加载
 Prompt prompt = new PromptTemplate(template).create(vars);
-// 模板 + 配置中心 = prompt 的 A/B 测试与运营迭代
 ```
 
-### 5. 其他实用姿势
+### 5. 其他工程实践
 
-- **模板组合**：先渲染子模板，结果再当变量注入父模板。
-- **结构化输出提示**：把输出 JSON 的 schema 说明放模板里，配合结构化输出。
-- **RAG/记忆注入**：检索片段、对话历史作为变量注入（最常见的业务场景）。
-- **模板单测**：`template.render()` 单独渲染检查，不调模型。
+- **模板组合**：先渲染子模块文本，再作为变量注入主模板。
+- **结构化输出提示**：结合 `BeanOutputConverter` 生成的格式说明注入模板。
+- **RAG 与记忆注入**：将检索到的文档片段与历史摘要作为上下文变量填入模板。
+- **模板单元测试**：在单元测试中直接调用 `template.render()` 校验渲染结果，无需发起真实模型调用。
 
-> [!warning] 诚实边界
-> Spring AI 模板**不是模板引擎**（不像 Jinja2/FreeMarker）：**没有 if/for/过滤器**。复杂条件、循环、格式化在代码里算好再传变量，模板保持简单。
+> [!note] 模板语法边界
+> Spring AI 默认基于 StringTemplate（ST4）实现变量替换，主要面向静态文本占位填充。复杂的条件分支、循环过滤或数据格式化建议在 Java 业务代码中处理完毕后，再作为标准变量传入模板。
 
 ---
 

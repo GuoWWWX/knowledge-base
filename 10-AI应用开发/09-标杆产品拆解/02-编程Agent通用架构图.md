@@ -2,7 +2,7 @@
 title: 编程Agent通用架构图
 tags: [领域/AI应用, 类型/知识, 主题/产品拆解, 主题/编程Agent]
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -12,18 +12,20 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > Codex 和 Claude Code 可以抽象成同一类系统：入口层接收目标，上下文层装配信息，Agent 层规划决策，工具层执行动作，治理层控制风险，交付层输出可验证结果。
 
+以下基于公开产品能力提炼出编程 Agent 的**六层通用参考架构**，用于梳理各核心模块的职责边界与协作关系：
+
 ## 六层架构
 
 ```mermaid
 flowchart TD
-    A[1 用户入口层<br/>CLI / IDE / App / Cloud / GitHub] --> B[2 上下文装配层<br/>Prompt / Rules / Memory / Files / History]
-    B --> C[3 Agent 决策层<br/>规划 / 路由 / 工具选择 / 自检]
-    C --> D[4 工具执行层<br/>文件 / Shell / Git / MCP / Browser / IDE]
-    D --> E[5 治理安全层<br/>Sandbox / Permissions / Hooks / Approval / Audit]
-    E --> F[6 交付验证层<br/>Tests / Diff / Trace / Summary / PR]
-    F --> G{是否完成}
+    A["1 用户入口层 (CLI / IDE / App / Cloud / GitHub)"] --> B["2 上下文装配层 (Prompt / Rules / Memory / Files / History)"]
+    B --> C["3 Agent 决策层 (规划 / 路由 / 工具选择 / 自检)"]
+    C --> E["5 治理安全层 (执行前鉴权 / Sandbox / Approval)"]
+    E -->|允许| D["4 工具执行层 (文件 / Shell / Git / MCP / Browser / IDE)"]
+    D --> F["6 交付验证层 (Tests / Diff / Trace / Summary / PR)"]
+    F --> G{"是否完成"}
     G -->|否| B
-    G -->|是| H[交付给用户]
+    G -->|是| H["交付给用户"]
 ```
 
 ## 1. 用户入口层
@@ -85,7 +87,7 @@ flowchart TD
 | 风险 | 控制手段 |
 | ---- | -------- |
 | 误删文件 | sandbox、可写目录限制 |
-| 危险命令 | approval、hooks、命令黑名单 |
+| 危险命令 | 最小权限沙箱、命令白名单与人工审批机制 |
 | 泄露密钥 | secret scan、输出脱敏 |
 | 越权工具 | MCP 权限过滤、工具白名单 |
 | 并行冲突 | worktree、任务写范围隔离 |
@@ -106,7 +108,7 @@ flowchart TD
 
 | 架构层 | Codex | Claude Code |
 | ------ | ----- | ----------- |
-| 入口层 | CLI / IDE / app / cloud / integrations | CLI / IDE / GitHub |
+| 入口层 | CLI / IDE / app / cloud / integrations | CLI / IDE / Desktop / Web / GitHub |
 | 上下文层 | AGENTS.md / Skills / MCP / thread | CLAUDE.md / memory / settings / MCP |
 | 决策层 | coding agent + subagents | agentic coding tool + subagents |
 | 工具层 | 文件、shell、Git、MCP、浏览器等 | 文件、shell、Git、MCP 等 |
@@ -115,7 +117,7 @@ flowchart TD
 
 ## 能讲清楚的核心话术
 
-> 编程 Agent 的通用架构不是“模型加代码编辑器”，而是六层系统：入口层嵌入用户工作流，上下文层装配项目规则和文件，Agent 层规划和选择工具，工具层执行读写和命令，治理层控制权限和风险，交付层用测试、diff、trace 证明结果可靠。
+> 编程 Agent 的通用架构可分为六层：入口层嵌入开发者工作流，上下文层动态装配项目规则与代码文件，Agent 决策层负责规划与工具选择，工具层执行文件读写与命令调用，治理层把控权限与安全边界，交付层通过自动化测试、Diff 与执行轨迹验证结果可靠性。
 
 ## 关联
 
@@ -128,4 +130,3 @@ flowchart TD
 - [OpenAI Codex Documentation](https://developers.openai.com/codex/)
 - [OpenAI Codex Manual](https://developers.openai.com/codex/codex-manual.md)
 - [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
-

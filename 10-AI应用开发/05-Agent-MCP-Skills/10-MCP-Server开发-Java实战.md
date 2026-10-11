@@ -6,7 +6,7 @@ tags:
   - 主题/MCP
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -38,7 +38,7 @@ MCP Server 是 Agent 访问外部能力的标准化服务端。对 Java 团队�
 | ---- | -------------- | -------- |
 | Tool schema | 参数名、类型、描述、必填项 | 描述必须具体，避免模型误填。 |
 | Handler | 调用领域服务 | 鉴权、幂等、超时、异常映射。 |
-| Transport | stdio / Streamable HTTP（SSE 已废弃） | 本地开发和生产部署分开配置。 |
+| Transport | stdio / Streamable HTTP（支持普通响应与 SSE 流式传输） | 本地开发和生产部署分开配置。 |
 | Audit | tool call 日志 | 记录用户、租户、参数摘要、结果。 |
 | Version | server 与 tool 版本 | 避免客户端缓存旧 schema。 |
 
