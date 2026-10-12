@@ -70,6 +70,25 @@ public class TrieNode {
 
 ## 2. 三大核心操作手撕代码（Insert / Search / StartsWith）
 
+#### 代表母题：LeetCode 208. 实现 Trie (前缀树)
+> **题目描述**：
+> 请你实现 `Trie` 类：
+> - `Trie()` 初始化前缀树对象。
+> - `void insert(String word)` 向前缀树中插入字符串 `word` 。
+> - `boolean search(String word)` 如果字符串 `word` 在前缀树中，返回 `true`（即在此之前已经插入）；否则，返回 `false` 。
+> - `boolean startsWith(String prefix)` 如果之前已经插入的字符串 `word` 的前缀之一为 `prefix` ，返回 `true` ；否则，返回 `false` 。
+>
+> **输入输出示例**：
+> ```java
+> Trie trie = new Trie();
+> trie.insert("apple");
+> trie.search("apple");   // 返回 True
+> trie.search("app");     // 返回 False
+> trie.startsWith("app"); // 返回 True
+> trie.insert("app");
+> trie.search("app");     // 返回 True
+> ```
+
 ```java
 public class Trie {
     private final TrieNode root;
@@ -163,6 +182,19 @@ public class Trie {
 
 ## 4. 01-Trie 与最大异或极值
 
+#### 代表母题：LeetCode 421. 数组中两个数的最大异或值
+> **题目描述**：
+> 给你一个整数数组 `nums` ，返回 `nums[i] XOR nums[j]` 的最大运算结果，其中 `0 <= i <= j < n` 。
+> 要求设计时间复杂度为 $O(N)$ 的算法。
+>
+> **输入输出示例**：
+> - 示例 1：
+>   - 输入：`nums = [3,10,5,25,2,8]`
+>   - 输出：`28`（最大结果是 $5 \oplus 25 = 28$）
+> - 示例 2：
+>   - 输入：`nums = [14,70,53,83,49,91,36,80,92,51,66,70]`
+>   - 输出：`127`
+
 01-Trie 是将整数的二进制表示（如 32 位整型从高位到低位的每个 bit 位 0 或 1）作为字符构建的二叉字典树。每个节点仅有 `children[0]` 和 `children[1]` 两个分支。
 
 ### 4.1 贪心最大异或极值原理
@@ -242,6 +274,9 @@ public class BinaryTrie {
 ### 代表性题目实现
 
 > [!example]- 展开查看：LeetCode 421. 数组中两个数的最大异或值（01-Trie 完整解答）
+> **题目描述**：给你一个整数数组 `nums` ，返回 `nums[i] XOR nums[j]` 的最大运算结果，其中 `0 <= i <= j < n` 。
+> **示例**：输入 `nums = [3,10,5,25,2,8]`，输出 `28`（$5 \oplus 25 = 28$）。
+> **思路**：将所有数字的 31 位二进制从高位到低位存入 01-Trie。再次遍历每个数字，在 Trie 中优先向相反的 bit 走以贪心获取当前位异或为 1 的最大贡献。
 > ```java
 > class Solution {
 >     static class TrieNode {
@@ -291,6 +326,9 @@ public class BinaryTrie {
 > ```
 
 > [!example]- 展开查看：LeetCode 211. 添加与搜索单词（支持通配符 `.` 的 DFS）
+> **题目描述**：请你设计一个词典数据结构，支持添加新单词，和查找字符串是否与任何此前添加的单词匹配。匹配时字符 `.` 可以表示任何一个字母。
+> **示例**：依次 `addWord("bad")`，`addWord("dad")`，`search("pad")` 返回 `false`；`search("bad")` 返回 `true`；`search(".ad")` 返回 `true`；`search("b..")` 返回 `true`。
+> **思路**：基于标准 Trie 树构建。普通字符顺着字母分支匹配；遇到 `.` 时，枚举当前节点的所有 26 个非空子节点进行 DFS 分支探索。
 > ```java
 > class WordDictionary {
 >     private static class Node {
