@@ -1,347 +1,282 @@
 ---
-title: BFS 广度优先搜索
+title: 07 · BFS 广度优先搜索：层序推进、无权最短路与多源扩散
 tags:
   - 领域/算法
-  - 类型/算法思想
+  - 类型/核心知识
   - 算法/BFS
   - 算法/搜索
   - 算法/最短路径
 created: 2026-07-04
-updated: 2026-10-04
+updated: 2026-10-26
 status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
 
-# BFS 广度优先搜索
+# 07 · BFS 广度优先搜索：层序推进、无权最短路与多源扩散
 
-> **核心定义**：
-> 广度优先搜索（Breadth-First Search, BFS）是一种按层推进的状态空间遍历算法。其物理模型类似于**水波纹的同心圆扩散**：从起始状态出发，先访问所有距离为 1 的状态，再访问所有距离为 2 的状态，依次递增。在**无权图或边权全等**的环境中，BFS 能够严格保证首次探索到目标节点时所经历的路径步数最少。
-
----
-
-## 1. 为什么 BFS 首次到达目标必然是最短路径？
-
-在无权图（所有边权均为 1）中，“BFS 首次出队的目标状态即为全局最短路径”是由**队列的单调性与两段性定理**严格保证的。
-
-```mermaid
-flowchart LR
-    subgraph QueueState["BFS 队列的单调性与两段性"]
-        direction LR
-        Head["队头 出队"] --> D1["状态 (距离 d)"]
-        D1 --> D2["状态 (距离 d)"]
-        D2 --> D3["状态 (距离 d+1)"]
-        D3 --> D4["状态 (距离 d+1)"] --> Tail["队尾 入队"]
-    end
-```
-
-### 单调性与两段性数学推导
-1. **两段性（Two-Segment Property）**：
-   - 在任意执行时刻，BFS 队列中容纳的节点至多只有两种不同的距离值：前半段节点的距离为 $d$，后半段节点的距离为 $d + 1$。
-2. **单调性（Monotonicity Property）**：
-   - 队列中节点的距离随着入队次序单调不减。即从队头到队尾，距离序列始终形如 $[d, d, \dots, d, d+1, d+1, \dots, d+1]$。
-3. **传递不变性证明**：
-   - 当从队头弹出一个距离为 $d$ 的节点 $u$，去扩展其未访问的邻居 $v$ 时，$v$ 的距离必为 $dist[v] = dist[u] + 1 = d + 1$。
-   - 新节点 $v$ 插入队尾，此时队尾距离依然为 $d + 1$。
-   - 只有当队列中所有距离为 $d$ 的节点全部出队处理完毕后，队头才会开始弹出距离为 $d + 1$ 的节点，进而扩展出距离为 $d + 2$ 的新节点。
-4. **结论**：
-   - 算法严格按照距离从小到大的顺序考察每一个节点。任何节点若第一次被加入队列并访问，其对应的搜索树深度必为从源点出发的最短可能跳数。
+> [!abstract] 一句话第一性原理
+> **广度优先搜索（Breadth-First Search, BFS）** 的本质是**利用先进先出（FIFO）队列在状态空间上执行“按层向外辐射（水波纹扩散）”的穷举遍历**。在无权图或边权均等场景中，队列的单调性与两段性从数学上严格保证了**首次访问到目标状态所经历的步数必为全局最短路径**。
 
 ---
 
-## 2. 分层遍历标准模板（Layer-by-Layer Template）
-
-通过在 `while (!queue.isEmpty())` 内部固定 `int size = queue.size()`，可以在逻辑上将连续队列严格切割为离散的“层”。
-
-```java
-public class BFSTemplate {
-
-    public int bfs(Node start, Node target) {
-        Queue<Node> queue = new ArrayDeque<>();
-        Set<Node> visited = new HashSet<>();
-
-        // 1. 初始化起点入队并标记
-        queue.offer(start);
-        visited.add(start);
-
-        int step = 0; // 当前扩散步数/层数
-
-        // 2. 层序遍历
-        while (!queue.isEmpty()) {
-            int size = queue.size(); // 必须固定当前层的节点数量
-
-            // 批量处理当前层的全部节点
-            for (int i = 0; i < size; i++) {
-                Node cur = queue.poll();
-
-                // 目标检查
-                if (cur.equals(target)) {
-                    return step;
-                }
-
-                // 扩展所有邻居
-                for (Node neighbor : cur.getNeighbors()) {
-                    // 入队即打标：防止同一节点被当前层或后续节点重复压入
-                    if (!visited.contains(neighbor)) {
-                        visited.add(neighbor);
-                        queue.offer(neighbor);
-                    }
-                }
-            }
-            step++; // 扩散完一层，步数加 1
-        }
-        return -1; // 目标不可达
-    }
-}
-```
-
-> [!IMPORTANT] 黄金法则：入队即打标
-> 必须在**将节点加入队列的瞬间**就将它标记为已访问，严禁推迟到出队时再打标。如果出队时才打标，同一层的多个兄弟节点可能会同时发现并重复入队同一个邻居，导致队列长度呈指数级暴增，极易引发 `OutOfMemoryError`。
-
----
-
-## 3. 三大进阶拓扑形态
+## 知识全景图
 
 ```mermaid
 flowchart TD
-    subgraph Variants["BFS 进阶拓扑架构"]
-        Multi["1. 多源 BFS (Multi-Source BFS)\n虚拟超级源点\n第 0 步将所有源点同时推入队列扩散\n适用于: 距离场、最近火源、腐烂扩散"]
-        BiDir["2. 双向 BFS (Bidirectional BFS)\n双集合轮流交替扩展\n搜索空间由 O(b^d) 骤降至 O(2 * b^(d/2))\n适用于: 起点与终点明确的最小转换路径"]
-        ZeroOne["3. 0-1 BFS (Deque BFS)\n双端队列代替优先队列\n边权为 0 插入队头，边权为 1 插入队尾\n时间复杂度由 O(E log V) 降为 O(V + E)"]
+    subgraph CoreFlow["1. BFS 物理扩散机制"]
+        A["起点入队并打标"] --> B["逐层出队: 先进先出 FIFO 队列推进"]
+        B --> C["同心圆扩散: 处理完当前层距离 d，再产生下一层 d+1"]
+        C --> D["首次命中即终点: 无权图中首次摸到目标必定是最短步数"]
     end
+
+    subgraph TwoScenes["2. 核心入门应用范式"]
+        T1["二叉树层序遍历 (如 LC 102)
+固定 int size = queue.size() 批量切分层级"]
+        T2["多源扩散最短时间 (如 LC 994 腐烂橘子)
+第 0 步将所有源点一次性全部推入队列同步扩散"]
+    end
+
+    subgraph Advanced["3. 高阶攻坚与拓展"]
+        P1["双向 BFS: 起点终点对向相撞，搜索量由 O(b^d) 骤降至 O(b^(d/2))"]
+        P2["0-1 BFS: 边权为 0 插队头、为 1 插队尾，Deque 替代优先队列达到 O(V+E)"]
+        P3["入队即打标铁律: 防止同一节点被重复推入引发内存撑爆 (OOM)"]
+    end
+
+    CoreFlow --> TwoScenes
+    TwoScenes --> Advanced
 ```
-
-### 3.1 多源 BFS（Multi-Source BFS）
-- **核心思维：虚拟超级源点（Super Source）**
-  - 当题目存在多个起始点（如矩阵中有多个腐烂的橘子），求任意空格到“最近起点”的最短距离时，若对每个起点分别做一次单源 BFS，总耗时为 $O(k \cdot MN)$，必定超时。
-  - **正解**：假设存在一个虚拟超级源点 $S^*$，它到所有真实源点的边权均为 0。
-  - **工程落地**：在算法初始化阶段，**将全部真实源点在第 0 步一次性全部入队**，并全部打上访问标记。随后执行标准的分层 BFS，各源点会同步向外扩散，谁先到达某格子，谁就是距离该格子最近的源点。
-
-### 3.2 双向 BFS（Bidirectional BFS）
-- **数学本质：搜索树指数爆炸剪枝**
-  - 设搜索树的每个分支因子为 $b$（每个节点平均有 $b$ 个邻居），最短路径深度为 $d$。
-  - **单向 BFS**：访问节点规模为 $O(b^d)$。
-  - **双向 BFS**：从起点与终点同时向中间对向扩展，两波水波纹在 $d/2$ 深度相遇。总访问节点数仅为 $O(2 \cdot b^{d/2})$。
-  - **数量级差距**：若 $b = 10, d = 6$，单向需遍历 $10^6 = 1,000,000$ 个状态；双向仅需 $2 \times 10^3 = 2,000$ 个状态，运算量骤减 500 倍！
-- **双向集合轮换技巧（Two-Set Optimization）**：
-  - 维护两个哈希集合 `beginSet` 与 `endSet`。
-  - 每次循环开始时，检查两集合大小：`if (beginSet.size() > endSet.size()) swap(beginSet, endSet);`。
-  - **永远只从较小的集合侧进行扩展**，保证搜索树的分支数始终受到最严格抑制。
-
-### 3.3 0-1 BFS（双端队列加权最短路）
-- **适用场景**：图中的边权非负，且**边权仅有 0 和 1 两种**（例如：沿当前方向移动代价为 0，转向或翻转代价为 1）。
-- **破局逻辑**：普通 Dijkstra 算法由于优先队列内部堆调整，复杂度为 $O(E \log V)$。而边权为 0 和 1 时，可以通过 `Deque`（双端队列）替代最小堆：
-  - 若经过当前边产生的增量距离为 **0**：通过 `deque.addFirst(neighbor)` 将其插入**队头**（优先在当前距离批次中处理）；
-  - 若经过当前边产生的增量距离为 **1**：通过 `deque.addLast(neighbor)` 将其插入**队尾**（在下一批次处理）；
-- **效果**：依然严格维持了队列中节点的单调性与两段性，使得总时间复杂度退化至完美的线性 $O(V + E)$。
 
 ---
 
-## 4. 经典母题手撕：LeetCode 127. 单词接龙（双向 BFS 双集合模板）
+## 一、 破除玄学：BFS 到底是怎么动起来的？
 
-> **题目描述**：
-> 字典 `wordList` 中从单词 `beginWord` 到 `endWord` 的 **转换序列** 是一个按下述规格形成的序列：
-> 1. 序列中第一个单词是 `beginWord`；
-> 2. 序列中最后一个单词是 `endWord`；
-> 3. 每次转换只能改变一个字母；
-> 4. 转换过程中的每个中间单词必须是字典 `wordList` 中的单词。
->
-> 给你两个单词 `beginWord` 和 `endWord` 以及一个字典 `wordList`。请你找出从 `beginWord` 到 `endWord` 的**最短转换序列中的单词数目**。如果不存在这样的转换序列，返回 `0`。
->
-> **输入输出示例**：
-> - 示例 1：
->   - 输入：`beginWord = "hit", endWord = "cog", wordList = ["hot","dot","dog","lot","log","cog"]`
->   - 输出：`5`
->   - 解释：一个最短转换序列是 `"hit" -> "hot" -> "dot" -> "dog" -> "cog"`，总共包含 5 个单词。
-> - 示例 2：
->   - 输入：`beginWord = "hit", endWord = "cog", wordList = ["hot","dot","dog","lot","log"]`
->   - 输出：`0`
->   - 解释：`endWord` `"cog"` 不在字典中，所以不存在有效转换序列。
+### 1.1 核心动作：“水波纹同心圆扩散”
+BFS 的运动轨迹就像朝平静的湖面扔下一块石头，水波纹一圈一圈向外荡开：
+1. **第 0 层**：只有起始节点自己（距离为 0）；
+2. **第 1 层**：所有与起点直接相邻的一步可达节点（距离为 1）；
+3. **第 2 层**：从第 1 层节点出发走一步可达的新节点（距离为 2）；
+4. ……每扩展一圈，搜索深度（步数）严格加 1。
 
-### 4.1 算法建模与双向搜索优势
-- **隐式图建模**：每个单词为一个节点，若两个单词仅相差 1 个字母，则存在一条无权边（距离为 1）。求最短序列长度本质就是求无权图中的单源最短路径。
-- **单向 vs 双向的指数差距**：若单向从 `hit` 扩展，若深度为 $d$，搜索规模为 $O(26^L \dots)$；采用双向 BFS，维护 `beginSet` 与 `endSet`，每次选择元素数量较小的集合向对向扩展，当两端波纹发生交集时搜索立刻终止，搜索空间直接开根号（从 $O(b^d)$ 降至 $O(b^{d/2})$）。
+---
 
-### 4.2 标准 Java 实现（双向 Set 优化）
+### 1.2 为什么 BFS 首次到达目标必然是“最短步数”？
+很多初学者背熟了“BFS 找最短路”，但不知道底层为什么必然是最短路：
+- 计算机在利用队列遍历时，队列内部始终维持着**单调性**：
+  - 队列里只可能同时存在两批节点：前半截距离全是 $d$，后半截距离全是 $d + 1$；
+  - **所有的 $d$ 步节点没有完全处理完之前，绝不可能产生任何 $d + 2$ 步的节点**！
+- 因此，当我们在队列中**第一次**摸到终点目标时，走过的步数必定是全图最小步数。
+
+---
+
+### 1.3 黄金生死法则：“入队即标记（防止重复入队）”
+初学者写 BFS 最容易引发 **内存溢出（OOM）或超时（TLE）** 的陷阱：
+- **错误写法**：节点从队列**弹出来的时候**才标记 `visited`。
+  - 后果：在网格或图里，一个节点可能同时被 4 个邻居在同一层看见，结果被重复放进队列 4 次！下一层又裂变为 16 次，队列瞬间爆炸！
+- **正确铁律**：**只要把一个节点塞进队列（`offer`），必须在同一时间立刻打上 `visited` 标记！** 抢先占位，绝不允许任何其他节点再把它重复推入队列。
+
+---
+
+## 二、 BFS 通用代码骨架（分层遍历标准模板）
+
+绝大多数求最短步数、层序遍历的问题，都严格使用以下分层模板：
 
 ```java
-public class SolutionWordLadder {
+public int bfs(Node start, Node target) {
+    Queue<Node> queue = new ArrayDeque<>();
+    Set<Node> visited = new HashSet<>();
 
-    public int ladderLength(String beginWord, String endWord, List<String> wordList) {
-        // 1. 将 wordList 转为 HashSet 提升查询效率
-        Set<String> dict = new HashSet<>(wordList);
-        if (!dict.contains(endWord)) return 0;
+    // 1. 起点入队并立刻标记
+    queue.offer(start);
+    visited.add(start);
 
-        // 2. 双向搜索集合
-        Set<String> beginSet = new HashSet<>();
-        Set<String> endSet = new HashSet<>();
-        Set<String> visited = new HashSet<>();
+    int step = 0; // 扩散步数
 
-        beginSet.add(beginWord);
-        endSet.add(endWord);
-        visited.add(beginWord);
-        visited.add(endWord);
+    // 2. 逐层推进
+    while (!queue.isEmpty()) {
+        int size = queue.size(); // 核心关键：必须固定当前层的节点数量
 
-        int step = 1; // 序列包含起点本身，初始长度为 1
+        // 批量清空当前层的所有节点
+        for (int i = 0; i < size; i++) {
+            Node cur = queue.poll();
 
-        while (!beginSet.isEmpty() && !endSet.isEmpty()) {
-            // 核心剪枝：优先扩展体量更小的一端
-            if (beginSet.size() > endSet.size()) {
-                Set<String> temp = beginSet;
-                beginSet = endSet;
-                endSet = temp;
+            // 首次命中目标即为最短路
+            if (cur.equals(target)) {
+                return step;
             }
 
-            Set<String> nextLevelSet = new HashSet<>();
-
-            // 扩展 beginSet 中的每一个单词
-            for (String word : beginSet) {
-                char[] chs = word.toCharArray();
-                for (int i = 0; i < chs.length; i++) {
-                    char old = chs[i];
-                    // 尝试替换 26 个小写英文字母
-                    for (char c = 'a'; c <= 'z'; c++) {
-                        if (c == old) continue;
-                        chs[i] = c;
-                        String nextWord = new String(chs);
-
-                        // 相遇判定：两个扩散波纹相交，返回总距离
-                        if (endSet.contains(nextWord)) {
-                            return step + 1;
-                        }
-
-                        // 合法过渡状态加入下一层
-                        if (dict.contains(nextWord) && !visited.contains(nextWord)) {
-                            visited.add(nextWord);
-                            nextLevelSet.add(nextWord);
-                        }
-                    }
-                    chs[i] = old; // 还原字符数组
+            // 遍历所有邻居节点
+            for (Node neighbor : cur.getNeighbors()) {
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor); // 入队即打标！
+                    queue.offer(neighbor);
                 }
             }
-
-            beginSet = nextLevelSet;
-            step++;
         }
+        step++; // 当前层全部处理完毕，步数加 1
+    }
+    return -1; // 目标不可达
+}
+```
 
-        return 0; // 无法相遇
+---
+
+## 三、 经典场景入门题（两大经典核心范式）
+
+### 场景 1：二叉树的层序遍历（LC 102. 最纯净分层收集）
+
+> **题目描述**：给你二叉树的根节点 `root`，返回其节点值的 **层序遍历**（即逐层地，从左到右访问所有节点）。
+> **核心机制**：利用 `int size = queue.size()`，每次循环把刚好一整层的节点一次性收集到一个列表中。
+
+```java
+class Solution102 {
+    public List<List<Integer>> levelOrder(TreeNode root) {
+        List<List<Integer>> ans = new ArrayList<>();
+        if (root == null) return ans;
+
+        Queue<TreeNode> queue = new ArrayDeque<>();
+        queue.offer(root);
+
+        while (!queue.isEmpty()) {
+            int size = queue.size(); // 当前层的节点数
+            List<Integer> currentLevel = new ArrayList<>();
+
+            for (int i = 0; i < size; i++) {
+                TreeNode node = queue.poll();
+                currentLevel.add(node.val);
+
+                if (node.left != null) queue.offer(node.left);
+                if (node.right != null) queue.offer(node.right);
+            }
+            ans.add(currentLevel); // 收集整层
+        }
+        return ans;
     }
 }
 ```
 
 ---
 
-## 5. 典型算法应用速览
+### 场景 2：腐烂的橘子（LC 994. 多源起点最短时间扩散）
 
-| 题目 | 难度 | 核心 BFS 模式 |
-| :--- | :--- | :--- |
-| **LC 994. 腐烂的橘子** | 中等 | **多源 BFS**：统计初始所有腐烂橘子入队，每分钟向四周扩散，最后校验新鲜橘子剩余数 |
-| **LC 542. 01 矩阵** | 中等 | **多源 BFS**：将所有值为 0 的格子作为超级多源入队，向值为 1 的格子反向扩散计算最近距离 |
-| **LC 1091. 二进制矩阵中最短路径** | 中等 | **单源网格 BFS**：8 个移动方向，层序遍历，首次到达右下角 `(n-1, n-1)` 即最短步数 |
-| **LC 1368. 使网格至少有一条有效路径的最小代价** | 困难 | **0-1 BFS**：按箭头指示方向走代价为 0（`addFirst`），修改箭头代价为 1（`addLast`），求到达终点最小代价 |
-| **LC 752. 打开转盘锁** | 中等 | **双向 BFS**：4 位密码锁每次旋转 1 位有 8 种子状态，双向集合搜索快速绕过死亡密码 `deadends` |
+> **题目描述**：网格中 `0` 表示空单元格，`1` 表示新鲜橘子，`2` 表示腐烂橘子。每分钟腐烂橘子会使上下左右相邻的新鲜橘子腐烂。返回直到单元格中没有新鲜橘子为止所经过的最小分钟数。
+> **核心破局（多源超级起点）**：
+> - 网格里可能有多个腐烂橘子同时开始扩散，若对每个橘子单独做 BFS 会重复遍历无数次；
+> - **正解**：第 0 分钟**把所有腐烂橘子一次性全部放进队列**，它们会像水波纹一样同步向四周同时推进一步。
 
-> [!example]- 展开查看：LC 994. 腐烂的橘子（多源 BFS 标准实现）
-> **题目描述**：在给定的 `m x n` 网格 `grid` 中，每个单元格可以有以下三个值之一：
-> - 值 `0` 代表空单元格；
-> - 值 `1` 代表新鲜橘子；
-> - 值 `2` 代表腐烂的橘子。
-> 每分钟，腐烂的橘子周围 4 个方向上相邻的新鲜橘子都会腐烂。返回直到单元格中没有新鲜橘子为止所经过的最小分钟数。如果不可能使所有新鲜橘子都腐烂，返回 `-1`。
-> **示例**：输入 `grid = [[2,1,1],[1,1,0],[0,1,1]]`，输出 `4`。
-> **思路**：将所有腐烂橘子在第 0 步同时入队作为超级多源点，按层扩散（一圈一分钟），每扩散一圈时间加 1 并更新新鲜橘子剩余数。
+```java
+class Solution994 {
+    public int orangesRotting(int[][] grid) {
+        int rows = grid.length, cols = grid[0].length;
+        Queue<int[]> queue = new ArrayDeque<>();
+        int freshCount = 0;
+
+        // 1. 扫描网格：统计新鲜橘子总数，并把所有腐烂橘子同时入队 (多源起点)
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (grid[r][c] == 2) {
+                    queue.offer(new int[]{r, c});
+                } else if (grid[r][c] == 1) {
+                    freshCount++;
+                }
+            }
+        }
+
+        if (freshCount == 0) return 0; // 无需扩散
+
+        int minutes = 0;
+        int[][] dirs = {{1,0}, {-1,0}, {0,1}, {0,-1}};
+
+        // 2. 标准分层扩散
+        while (!queue.isEmpty() && freshCount > 0) {
+            int size = queue.size();
+            for (int i = 0; i < size; i++) {
+                int[] cur = queue.poll();
+                for (int[] d : dirs) {
+                    int nr = cur[0] + d[0], nc = cur[1] + d[1];
+                    // 邻居是新鲜橘子才扩散
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] == 1) {
+                        grid[nr][nc] = 2; // 入队即打标 (直接原地标记为腐烂)
+                        freshCount--;
+                        queue.offer(new int[]{nr, nc});
+                    }
+                }
+            }
+            minutes++;
+        }
+
+        return freshCount == 0 ? minutes : -1;
+    }
+}
+```
+
+---
+
+## 四、 高阶攻坚与拓展知识（进阶查阅）
+
+### 4.1 双向 BFS（Bidirectional BFS：终极搜索剪枝）
+- **核心数学本质**：
+  - 设搜索树分叉度为 $b$，最短路径深度为 $d$。
+  - 单向 BFS 遍历节点数为 $O(b^d)$（指数级暴增）；
+  - 若从起点与终点**同时相对向中间扩散**，两波水波纹在 $d/2$ 深度相碰，遍历节点数骤减为 $O(2 \cdot b^{d/2})$！
+  - 例如 $b = 10, d = 6$，单向需访问 $10^6 = 100$ 万个节点；双向仅需 $2 \times 10^3 = 2000$ 个节点，提速 **500 倍**！
+
+> [!example]- 点击展开：LC 127. 单词接龙（双向 BFS 双集合优化完整实现）
 > ```java
-> class SolutionLC994 {
->     public int orangesRotting(int[][] grid) {
->         int m = grid.length, n = grid[0].length;
->         Queue<int[]> queue = new ArrayDeque<>();
->         int freshCount = 0;
+> class Solution127 {
+>     public int ladderLength(String beginWord, String endWord, List<String> wordList) {
+>         Set<String> dict = new HashSet<>(wordList);
+>         if (!dict.contains(endWord)) return 0;
 > 
->         // 1. 扫描矩阵，所有腐烂橘子多源入队，统计新鲜橘子数量
->         for (int i = 0; i < m; i++) {
->             for (int j = 0; j < n; j++) {
->                 if (grid[i][j] == 2) {
->                     queue.offer(new int[]{i, j});
->                 } else if (grid[i][j] == 1) {
->                     freshCount++;
->                 }
+>         Set<String> beginSet = new HashSet<>(), endSet = new HashSet<>();
+>         Set<String> visited = new HashSet<>();
+>         beginSet.add(beginWord); endSet.add(endWord);
+>         int step = 1;
+> 
+>         while (!beginSet.isEmpty() && !endSet.isEmpty()) {
+>             // 核心技巧：永远选择体量更小的一端进行扩展
+>             if (beginSet.size() > endSet.size()) {
+>                 Set<String> temp = beginSet; beginSet = endSet; endSet = temp;
 >             }
->         }
-> 
->         if (freshCount == 0) return 0;
-> 
->         int minutes = 0;
->         int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-> 
->         // 2. 多源层序扩散
->         while (!queue.isEmpty() && freshCount > 0) {
->             int size = queue.size();
->             for (int i = 0; i < size; i++) {
->                 int[] cur = queue.poll();
->                 for (int[] d : dirs) {
->                     int r = cur[0] + d[0], c = cur[1] + d[1];
->                     if (r >= 0 && r < m && c >= 0 && c < n && grid[r][c] == 1) {
->                         grid[r][c] = 2; // 腐烂并打标
->                         freshCount--;
->                         queue.offer(new int[]{r, c});
+>             Set<String> nextLevel = new HashSet<>();
+>             for (String word : beginSet) {
+>                 char[] chs = word.toCharArray();
+>                 for (int i = 0; i < chs.length; i++) {
+>                     char old = chs[i];
+>                     for (char c = 'a'; c <= 'z'; c++) {
+>                         chs[i] = c;
+>                         String target = String.valueOf(chs);
+>                         if (endSet.contains(target)) return step + 1; // 两端相撞相遇！
+>                         if (dict.contains(target) && !visited.contains(target)) {
+>                             visited.add(target);
+>                             nextLevel.add(target);
+>                         }
 >                     }
+>                     chs[i] = old;
 >                 }
 >             }
->             minutes++;
+>             beginSet = nextLevel;
+>             step++;
 >         }
-> 
->         return freshCount == 0 ? minutes : -1;
->     }
-> }
-> ```
-
-> [!example]- 展开查看：LC 1368. 使网格至少有一条有效路径的最小代价（0-1 BFS 双端队列实现）
-> **题目描述**：给你一个 `m x n` 的网格 `grid`。每个单元格都有一个数字，表示方向：`1` 向右，`2` 向左，`3` 向下，`4` 向上。你可以花费代价 `1` 修改一个单元格的方向。返回从左上角 `(0, 0)` 到右下角 `(m-1, n-1)` 的最小修改代价。
-> **示例**：输入 `grid = [[1,1,1,1],[2,2,2,2],[1,1,1,1],[2,2,2,2]]`，输出 `3`。
-> **思路**：边权只有 0（顺着箭头方向走）和 1（修改箭头走）两种。用双端队列 Deque 实现 0-1 BFS，代价为 0 加到队首，代价为 1 加到队尾，以 $O(M \times N)$ 线性时间替代 Dijkstra 的优先队列。
-> ```java
-> class SolutionLC1368 {
->     public int minCost(int[][] grid) {
->         int m = grid.length, n = grid[0].length;
->         int[][] dirs = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}}; // 右、左、下、上
->         int[][] dist = new int[m][n];
->         for (int[] row : dist) Arrays.fill(row, Integer.MAX_VALUE);
-> 
->         Deque<int[]> deque = new ArrayDeque<>();
->         deque.offerFirst(new int[]{0, 0});
->         dist[0][0] = 0;
-> 
->         while (!deque.isEmpty()) {
->             int[] cur = deque.pollFirst();
->             int r = cur[0], c = cur[1];
-> 
->             if (r == m - 1 && c == n - 1) return dist[r][c];
-> 
->             for (int i = 0; i < 4; i++) {
->                 int nr = r + dirs[i][0], nc = c + dirs[i][1];
->                 if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;
-> 
->                 // 若移动方向与格子箭头一致，代价为 0，否则代价为 1
->                 int weight = (grid[r][c] == i + 1) ? 0 : 1;
->                 if (dist[r][c] + weight < dist[nr][nc]) {
->                     dist[nr][nc] = dist[r][c] + weight;
->                     if (weight == 0) {
->                         deque.addFirst(new int[]{nr, nc}); // 0 权重放队头
->                     } else {
->                         deque.addLast(new int[]{nr, nc});  // 1 权重放队尾
->                     }
->                 }
->             }
->         }
->         return dist[m - 1][n - 1];
+>         return 0;
 >     }
 > }
 > ```
 
 ---
 
-## 6. 工程考量与核心易错点
+### 4.2 0-1 BFS（双端队列线性最短路）
+- **适用场景**：图的边权只有 `0` 和 `1` 两种（例如：向前走代价为 0，转向代价为 1）；
+- **破局逻辑**：普通最短路用 Dijkstra（小顶堆）需要 $O(E \log V)$。而用双端队列 `Deque` 可以达成 $O(V + E)$：
+  - 若边权为 **0**：通过 `deque.addFirst(neighbor)` 插到**队头**（本轮立刻处理）；
+  - 若边权为 **1**：通过 `deque.addLast(neighbor)` 插到**队尾**（下一轮批次处理）。
 
-1. **状态高维扩展（状态压缩与元组）**：
-   - 很多图论问题中，一个状态不仅是坐标 $(x, y)$，还绑定了业务属性。例如“收集所有钥匙的最小步数（LC 864）”，状态必须定义为 `(x, y, keyState)`，其中 `keyState` 为二进制位掩码。`visited` 数组必须开成三维 `boolean[m][n][1 << K]`。
-2. **Java 队列选型**：
-   - 严禁使用 `LinkedList` 作为 BFS 队列实现。`LinkedList` 内部维护大量前后指针的 `Node` 包装对象，存在高频 GC 和指针跳跃导致的 CPU 缓存行失效；
-   - 始终优先选用 `ArrayDeque`，底层为连续环形数组，内存紧凑且性能最优。
+---
+
+## 五、 常见避坑清单与自测过关
+
+1. **出队才打标引发内存爆炸**：
+   - 必须牢记：只要节点入队（`offer`），必须**当场立刻标记为已访问**。
+2. **忘记使用固定大小 `int size = queue.size()`**：
+   - 如果直接在循环条件里写 `for (int i = 0; i < queue.size(); i++)`，循环体内又有新节点入队，会导致当前层与下一层混杂，分层逻辑彻底错乱。
+3. **BFS 空间消耗特性**：
+   - BFS 的空间复杂度取决于**最宽一层的节点数**。对于高度平衡的树，最底层有 $N/2$ 个节点，内存开销为 $O(N)$；树非常深但很窄时（退化为链表），BFS 空间表现优于递归 DFS。
