@@ -26,7 +26,9 @@ updated: 2026-10-26
 | **70** | [爬楼梯 ↗](https://leetcode.cn/problems/climbing-stairs/) | 动态规划 | 简单 | ⭐☆☆☆☆ | [[09-LC0070-爬楼梯]] |
 | **94** | [二叉树中序遍历 ↗](https://leetcode.cn/problems/binary-tree-inorder-traversal/) | 二叉树 | 简单 | ⭐☆☆☆☆ | [[10-LC0094-二叉树中序遍历]] |
 | **102** | [二叉树层序遍历 ↗](https://leetcode.cn/problems/binary-tree-level-order-traversal/) | BFS | 中等 | ⭐☆☆☆☆ | [[11-LC0102-二叉树层序遍历]] |
+| **110** | [平衡二叉树 ↗](https://leetcode.cn/problems/balanced-binary-tree/) | 二叉树-DFS | 简单 | ⭐⭐⭐⭐⭐ | [[24-LC0110-平衡二叉树]] |
 | **121** | [买卖股票的最佳时机 ↗](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 贪心 | 简单 | ⭐☆☆☆☆ | [[12-LC0121-买卖股票的最佳时机]] |
+| **128** | [最长连续序列 ↗](https://leetcode.cn/problems/longest-consecutive-sequence/) | 哈希表 | 中等 | ⭐⭐⭐⭐⭐ | [[25-LC0128-最长连续序列]] |
 | **141** | [环形链表 ↗](https://leetcode.cn/problems/linked-list-cycle/) | 双指针 | 简单 | ⭐☆☆☆☆ | [[13-LC0141-环形链表]] |
 | **146** | [LRU缓存 ↗](https://leetcode.cn/problems/lru-cache/) | 哈希表+双向链表 | 中等 | ⭐☆☆☆☆ | [[14-LC0146-LRU缓存]] |
 | **200** | [岛屿数量 ↗](https://leetcode.cn/problems/number-of-islands/) | DFS-BFS | 中等 | ⭐☆☆☆☆ | [[15-LC0200-岛屿数量]] |
