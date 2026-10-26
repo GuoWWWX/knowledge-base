@@ -6,7 +6,7 @@ tags:
   - 算法/DFS
   - 算法/BFS
 created: 2026-07-04
-updated: 2026-09-12
+updated: 2026-10-12
 status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
@@ -40,7 +40,7 @@ flowchart TD
 
 ## 2. DFS 经典实战：网格图连通块“沉没算法”（LC 200 岛屿数量）
 
-在二维网格的 DFS 中，利用原数组直接修改（原地沉没）来代替额外的 `boolean[][] visited` 数组，空间复杂度直接优化到 $O(1)$（不计栈开销）：
+在二维网格的 DFS 中，利用原数组修改（原地沉没）可省去额外的 `boolean[][] visited` 数组，但递归栈仍需计入辅助空间：最坏为 $O(MN)$，不能把整个算法记为 $O(1)$ 空间。该实现会修改输入网格。
 
 ```java
 class IslandSolution {
@@ -85,7 +85,7 @@ class IslandSolution {
 
 ## 3. BFS 经典实战：无权最短路径分层扩散模板
 
-在求最短步数时，必须使用**按层剥离的 `int size = queue.size()` 结构**：
+下面按层固定 `int size = queue.size()` 来记录最短步数；也可以给每个入队状态保存距离，不必强制使用分层循环。约定 `'#'` 为障碍，输入为非空矩形网格，起终点坐标合法。
 
 ```java
 class ShortestPathBfsTemplate {
@@ -97,6 +97,7 @@ class ShortestPathBfsTemplate {
      */
     public int shortestPath(char[][] grid, int sr, int sc, int tr, int tc) {
         int m = grid.length, n = grid[0].length;
+        if (grid[sr][sc] == '#' || grid[tr][tc] == '#') return -1;
         boolean[][] visited = new boolean[m][n];
         Queue<int[]> queue = new ArrayDeque<>();
 
@@ -148,7 +149,7 @@ class ShortestPathBfsTemplate {
 当搜索树的展开分支度（Branching Factor）较大时，单向 BFS 会发生内存爆炸。
 - **单向 BFS 节点数**：$O(B^D)$（$B$ 为分支因子，$D$ 为终点深度）。
 - **双向 BFS 节点数**：从起点和终点同时用两个 `Set` 向中间对撞，节点数降为 $O(2 \times B^{D/2})$！
-- 比如 $B = 10, D = 8$：单向需搜索 $10^8 = 1$ 亿个节点；双向只需搜索 $2 \times 10^4 = 2$ 万个节点，**提速 5,000 倍**！
+- 比如 $B = 10, D = 8$：单向需搜索 $10^8 = 1$ 亿个节点；双向只需搜索 $2 \times 10^4 = 2$ 万个节点，树状近似模型中的访问量比例为 5,000 倍，并非实际耗时保证！
 
 ```java
 // 双向 BFS 经典轮换框架
@@ -183,6 +184,8 @@ while (!startSet.isEmpty() && !endSet.isEmpty()) {
 
 ---
 
+双向搜索需逐层扩展并维护两侧访问状态；有向图从终点侧应沿反向边搜索。上述为示意伪代码，实际实现还需定义邻居生成、距离和访问标记。
+
 ## 5. 大厂面试 30 秒绝杀（BFS 致命踩坑）
 
 ### Q1：在 BFS 写法中，为什么必须在“入队那一瞬间”就标记 `visited = true`？如果写在“出队 `poll()` 时”标记会有什么后果？
@@ -190,7 +193,7 @@ while (!startSet.isEmpty() && !endSet.isEmpty()) {
 > 1. **致命后果：同一个节点被重复放入队列成千上万次，导致内存 OOM 崩溃**！
 > 2. **原理解剖**：假设节点 A 有 4 个邻居 B、C、D、E，而这 4 个邻居都可以走向节点 F。
 >    - 如果在出队时才标记 `visited`：当 B、C、D、E 还在队列中排队未出队时，它们在扩散时都发现 F 没有被标记访问过，**于是 B、C、D、E 都会将 F 重复添加到队列中**！
->    - 随着层数加深，这种重复入队会呈指数级爆炸（$4^N$），导致队列迅速膨胀数百万个无用节点，JVM 当场 OOM 内存溢出。
+>    - 若重复出队的节点还继续扩展，重复工作可能沿路径数增长；若出队后先跳过已处理节点，仍能避免重复扩展，但会有额外入队。不能笼统说出队标记必然指数爆炸。
 > 3. **铁律**：**只要一发现合法邻居准备加入队列，必须在 `queue.offer()` 的同时立即将其标记为已访问**，彻底阻断其他同层邻居的重复加入！
 
 ---

@@ -219,6 +219,9 @@ class Solution994 {
   - 例如 $b = 10, d = 6$，单向需访问 $10^6 = 100$ 万个节点；双向仅需 $2 \times 10^3 = 2000$ 个节点，提速 **500 倍**！
 
 > [!example]- 点击展开：LC 127. 单词接龙（双向 BFS 双集合优化完整实现）
+> **题目描述**：字典 `wordList` 中从单词 `beginWord` 到 `endWord` 的转换序列是一个存有单词的序列，满足：每对相邻单词之间仅相差一个字母；所有中间单词都在 `wordList` 中。给你两个单词 `beginWord` 和 `endWord` ，以及一个字典 `wordList`，返回从 `beginWord` 到 `endWord` 的最短转换序列中的单词数目；若不存在则返回 0。
+> **示例**：输入 `beginWord = "hit", endWord = "cog", wordList = ["hot","dot","dog","lot","log","cog"]` $\to$ 输出 `5`（最短路径 `"hit" -> "hot" -> "dot" -> "dog" -> "cog"`，共 5 个单词）。
+> **思路**：求最短步数是经典无权图最短路（BFS）。普通单向 BFS 会因为搜索树宽度随层数指数级扩散而超时，采用**双向 BFS（双集合交替扩展）**：始终从较小规模的一端扩散，一旦两端相遇立即得到全局最短路径，时空复杂度由 $O(b^d)$ 锐减至 $O(b^{d/2})$。
 > ```java
 > class Solution127 {
 >     public int ladderLength(String beginWord, String endWord, List<String> wordList) {

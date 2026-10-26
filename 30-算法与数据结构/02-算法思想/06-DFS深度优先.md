@@ -193,6 +193,9 @@ class Solution200 {
 - **黑色（2）**：该节点及其所有后代均已遍历完毕，已证实安全出栈。后续若遇黑色节点直接跳过（剪枝）。
 
 > [!example]- 点击展开：LC 207. 课程表（三色标记法环检测完整实现）
+> **题目描述**：你这个学期必须选修 `numCourses` 门课程，记为 `0` 到 `numCourses - 1`。在选修某些课程之前需要一些先修课程。先修课程按数组 `prerequisites` 给出，其中 `prerequisites[i] = [ai, bi]` ，表示如果要学习课程 `ai` 则必须先修课程 `bi`。请判断是否可能完成所有课程的学习（即图中是否存在环）。
+> **示例**：输入 `numCourses = 2, prerequisites = [[1,0]]` $\to$ 输出 `true`（学完 0 再学 1 即可）；输入 `numCourses = 2, prerequisites = [[1,0],[0,1]]` $\to$ 输出 `false`（存在依赖循环，无法修完）。
+> **思路**：建有向图（`bi -> ai`）。使用三色标记法：0=白色（未访问）、1=灰色（当前递归调用栈中）、2=黑色（已完全探索无环）。若遍历中撞见灰色节点，说明遇到回边存在有向环，返回 `false`。
 > ```java
 > class Solution207 {
 >     private static final int WHITE = 0, GRAY = 1, BLACK = 2;
