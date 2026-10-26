@@ -30,10 +30,8 @@ flowchart TD
     end
 
     subgraph TwoScenes["2. 核心入门应用范式"]
-        T1["二叉树层序遍历 (如 LC 102)
-固定 int size = queue.size() 批量切分层级"]
-        T2["多源扩散最短时间 (如 LC 994 腐烂橘子)
-第 0 步将所有源点一次性全部推入队列同步扩散"]
+        T1["二叉树层序遍历 (如 LC 102) - 固定 size 批量切分层级"]
+        T2["多源扩散最短时间 (如 LC 994 腐烂橘子) - 第 0 步多源齐推入同步扩散"]
     end
 
     subgraph Advanced["3. 高阶攻坚与拓展"]
