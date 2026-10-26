@@ -10,7 +10,24 @@ updated: 2026-10-27
 > [!info] 本区说明
 > 按题号记录的高频经典手撕题解与大厂面试必杀题。点击“在线做题”可直达 LeetCode 官网，点击“本地题解”可查看深度解析。
 
-## 🗂️ 已刷题目
+---
+
+## 🛠️ 大厂白板高频手撕专项（数据结构设计与高频算法）
+
+面试官最喜欢要求“不借助任何现成工具库，从零纯手工手撕代码”的标杆题目集中在此：
+
+| 题号 | 题目名称 (在线做题 ↗) | 手撕考点 | 难度 | 掌握度 | 本地手撕题解笔记 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **146** | [LRU 缓存机制 ↗](https://leetcode.cn/problems/lru-cache/) | 双向链表 + 哈希表，双虚拟哨兵 | 中等 | ⭐⭐⭐⭐⭐ | [[14-LC0146-LRU缓存]] |
+| **706** | [设计哈希映射 (手撕HashMap) ↗](https://leetcode.cn/problems/design-hashmap/) | 大质数取模 + 链表桶拉链法 | 简单 | ⭐⭐⭐⭐⭐ | [[26-LC0706-设计哈希映射]] |
+| **460** | [LFU 缓存机制 ↗](https://leetcode.cn/problems/lfu-cache/) | 双哈希表 + 频次双向链表，代码最长设计题 | 困难 | ⭐⭐⭐⭐⭐ | [[29-LC0460-手撕LFU缓存]] |
+| **208** | [实现 Trie (前缀树) ↗](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 26叉树节点设计、前缀匹配与单词查找 | 中等 | ⭐⭐⭐⭐⭐ | [[28-LC0208-手撕前缀树Trie]] |
+| **912** | [手撕快速排序与归并排序 ↗](https://leetcode.cn/problems/sort-an-array/) | 随机基准值双指针对撞 vs 二分分治合并 | 中等 | ⭐⭐⭐⭐⭐ | [[27-LC0912-手撕快速排序与归并排序]] |
+| **1188** | [手撕有限阻塞队列 ↗](https://leetcode.cn/problems/design-bounded-blocking-queue/) | ReentrantLock + 双 Condition，生产者消费者 | 中等 | ⭐⭐⭐⭐⭐ | [[30-LC1188-手撕阻塞队列与生产者消费者]] |
+
+---
+
+## 🗂️ 全量经典算法题解库
 
 | 题号 | 题目名称 (在线做题 ↗) | 专题 | 难度 | 掌握度 | 本地题解笔记 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -30,16 +47,20 @@ updated: 2026-10-27
 | **121** | [买卖股票的最佳时机 ↗](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 贪心 | 简单 | ⭐☆☆☆☆ | [[12-LC0121-买卖股票的最佳时机]] |
 | **128** | [最长连续序列 ↗](https://leetcode.cn/problems/longest-consecutive-sequence/) | 哈希表 | 中等 | ⭐⭐⭐⭐⭐ | [[25-LC0128-最长连续序列]] |
 | **141** | [环形链表 ↗](https://leetcode.cn/problems/linked-list-cycle/) | 双指针 | 简单 | ⭐☆☆☆☆ | [[13-LC0141-环形链表]] |
-| **146** | [LRU缓存 (手撕LRU) ↗](https://leetcode.cn/problems/lru-cache/) | 哈希表+双向链表 | 中等 | ⭐⭐⭐⭐⭐ | [[14-LC0146-LRU缓存]] |
+| **146** | [LRU 缓存 (手撕LRU) ↗](https://leetcode.cn/problems/lru-cache/) | 手撕数据结构 | 中等 | ⭐⭐⭐⭐⭐ | [[14-LC0146-LRU缓存]] |
 | **200** | [岛屿数量 ↗](https://leetcode.cn/problems/number-of-islands/) | DFS-BFS | 中等 | ⭐☆☆☆☆ | [[15-LC0200-岛屿数量]] |
 | **206** | [反转链表 ↗](https://leetcode.cn/problems/reverse-linked-list/) | 链表 | 简单 | ⭐☆☆☆☆ | [[16-LC0206-反转链表]] |
+| **208** | [实现 Trie (前缀树) ↗](https://leetcode.cn/problems/implement-trie-prefix-tree/) | 手撕数据结构 | 中等 | ⭐⭐⭐⭐⭐ | [[28-LC0208-手撕前缀树Trie]] |
 | **215** | [数组中的第K个最大元素 ↗](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | 堆-快速选择 | 中等 | ⭐☆☆☆☆ | [[17-LC0215-数组中的第K个最大元素]] |
 | **236** | [二叉树的最近公共祖先 ↗](https://leetcode.cn/problems/lowest-common-ancestor-of-a-binary-tree/) | 二叉树 | 中等 | ⭐☆☆☆☆ | [[18-LC0236-二叉树的最近公共祖先]] |
 | **239** | [滑动窗口最大值 ↗](https://leetcode.cn/problems/sliding-window-maximum/) | 滑动窗口-单调队列 | 困难 | ⭐⭐⭐⭐⭐ | [[23-LC0239-滑动窗口最大值]] |
 | **300** | [最长递增子序列 ↗](https://leetcode.cn/problems/longest-increasing-subsequence/) | 动态规划-二分 | 中等 | ⭐☆☆☆☆ | [[19-LC0300-最长递增子序列]] |
 | **322** | [零钱兑换 ↗](https://leetcode.cn/problems/coin-change/) | 动态规划 | 中等 | ⭐☆☆☆☆ | [[20-LC0322-零钱兑换]] |
+| **460** | [LFU 缓存 (手撕LFU) ↗](https://leetcode.cn/problems/lfu-cache/) | 手撕数据结构 | 困难 | ⭐⭐⭐⭐⭐ | [[29-LC0460-手撕LFU缓存]] |
 | **560** | [和为K的子数组 ↗](https://leetcode.cn/problems/subarray-sum-equals-k/) | 前缀和 | 中等 | ⭐☆☆☆☆ | [[21-LC0560-和为K的子数组]] |
-| **706** | [设计哈希映射 (手撕HashMap) ↗](https://leetcode.cn/problems/design-hashmap/) | 数据结构手撕 | 简单 | ⭐⭐⭐⭐⭐ | [[26-LC0706-设计哈希映射]] |
+| **706** | [设计哈希映射 (手撕HashMap) ↗](https://leetcode.cn/problems/design-hashmap/) | 手撕数据结构 | 简单 | ⭐⭐⭐⭐⭐ | [[26-LC0706-设计哈希映射]] |
+| **912** | [排序数组 (手撕快排/归并) ↗](https://leetcode.cn/problems/sort-an-array/) | 手撕算法 | 中等 | ⭐⭐⭐⭐⭐ | [[27-LC0912-手撕快速排序与归并排序]] |
+| **1188** | [设计有限阻塞队列 ↗](https://leetcode.cn/problems/design-bounded-blocking-queue/) | 手撕并发结构 | 中等 | ⭐⭐⭐⭐⭐ | [[30-LC1188-手撕阻塞队列与生产者消费者]] |
 
 ## 🔥 错题集（需重刷）
 
@@ -47,3 +68,4 @@ updated: 2026-10-27
 
 ## 🔗 相关
 - 上级：[[../00-总览/学习仪表盘]]
+- 求职白板手撕：[[../../40-求职准备/16-面试-手撕代码|40 · 面试白板手撕代码]]
