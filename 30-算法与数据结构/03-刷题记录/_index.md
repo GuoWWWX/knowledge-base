@@ -2,13 +2,13 @@
 title: 03 · 刷题记录（索引）
 tags: [类型/索引, 领域/算法]
 created: 2026-05-31
-updated: 2026-10-26
+updated: 2026-10-27
 ---
 
 # 📝 03 · 刷题记录
 
 > [!info] 本区说明
-> 按题号记录的高频经典手撕题解。点击“在线做题”可直达 LeetCode 官网，点击“本地题解”可查看深度解析。
+> 按题号记录的高频经典手撕题解与大厂面试必杀题。点击“在线做题”可直达 LeetCode 官网，点击“本地题解”可查看深度解析。
 
 ## 🗂️ 已刷题目
 
@@ -30,7 +30,7 @@ updated: 2026-10-26
 | **121** | [买卖股票的最佳时机 ↗](https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/) | 贪心 | 简单 | ⭐☆☆☆☆ | [[12-LC0121-买卖股票的最佳时机]] |
 | **128** | [最长连续序列 ↗](https://leetcode.cn/problems/longest-consecutive-sequence/) | 哈希表 | 中等 | ⭐⭐⭐⭐⭐ | [[25-LC0128-最长连续序列]] |
 | **141** | [环形链表 ↗](https://leetcode.cn/problems/linked-list-cycle/) | 双指针 | 简单 | ⭐☆☆☆☆ | [[13-LC0141-环形链表]] |
-| **146** | [LRU缓存 ↗](https://leetcode.cn/problems/lru-cache/) | 哈希表+双向链表 | 中等 | ⭐☆☆☆☆ | [[14-LC0146-LRU缓存]] |
+| **146** | [LRU缓存 (手撕LRU) ↗](https://leetcode.cn/problems/lru-cache/) | 哈希表+双向链表 | 中等 | ⭐⭐⭐⭐⭐ | [[14-LC0146-LRU缓存]] |
 | **200** | [岛屿数量 ↗](https://leetcode.cn/problems/number-of-islands/) | DFS-BFS | 中等 | ⭐☆☆☆☆ | [[15-LC0200-岛屿数量]] |
 | **206** | [反转链表 ↗](https://leetcode.cn/problems/reverse-linked-list/) | 链表 | 简单 | ⭐☆☆☆☆ | [[16-LC0206-反转链表]] |
 | **215** | [数组中的第K个最大元素 ↗](https://leetcode.cn/problems/kth-largest-element-in-an-array/) | 堆-快速选择 | 中等 | ⭐☆☆☆☆ | [[17-LC0215-数组中的第K个最大元素]] |
@@ -39,6 +39,7 @@ updated: 2026-10-26
 | **300** | [最长递增子序列 ↗](https://leetcode.cn/problems/longest-increasing-subsequence/) | 动态规划-二分 | 中等 | ⭐☆☆☆☆ | [[19-LC0300-最长递增子序列]] |
 | **322** | [零钱兑换 ↗](https://leetcode.cn/problems/coin-change/) | 动态规划 | 中等 | ⭐☆☆☆☆ | [[20-LC0322-零钱兑换]] |
 | **560** | [和为K的子数组 ↗](https://leetcode.cn/problems/subarray-sum-equals-k/) | 前缀和 | 中等 | ⭐☆☆☆☆ | [[21-LC0560-和为K的子数组]] |
+| **706** | [设计哈希映射 (手撕HashMap) ↗](https://leetcode.cn/problems/design-hashmap/) | 数据结构手撕 | 简单 | ⭐⭐⭐⭐⭐ | [[26-LC0706-设计哈希映射]] |
 
 ## 🔥 错题集（需重刷）
 
