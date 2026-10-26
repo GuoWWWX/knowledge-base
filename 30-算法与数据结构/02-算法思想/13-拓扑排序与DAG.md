@@ -124,6 +124,8 @@ public class TopologicalSortTemplate {
 ## 三、 经典题型实战
 
 ### 1. LC 207. 课程表（Course Schedule）
+
+> 🔗 **LeetCode 题目直通车**：[LeetCode 207. 课程表 ↗](https://leetcode.cn/problems/course-schedule/)
 - **题目描述**：你这个学期必须选修 `numCourses` 门课程，记为 `0` 到 `numCourses - 1`。在选修某些课程之前需要一些先修课程。先修课程按数组 `prerequisites` 给出，其中 `prerequisites[i] = [ai, bi]` ，表示如果要学习课程 `ai` 则必须先修课程 `bi`。请你判断是否可能完成所有课程的学习？
 - **输入输出示例**：
   - 输入：`numCourses = 2, prerequisites = [[1,0]]` $\to$ 输出：`true`（先学 0，再学 1 即可）；
@@ -167,6 +169,8 @@ class Solution207 {
 ---
 
 ### 2. LC 210. 课程表 II（Course Schedule II）
+
+> 🔗 **LeetCode 题目直通车**：[LeetCode 210. 课程表 II ↗](https://leetcode.cn/problems/course-schedule-ii/)
 - **题目描述**：现在你总共有 `numCourses` 门课。部分课程存在先修约束 `prerequisites[i] = [ai, bi]`（`bi -> ai`）。返回你为了学完所有课程所安排的学习顺序。可能会有多个正确的顺序，你只要返回任意一种即可。如果不可能完成所有课程，返回一个空数组。
 - **输入输出示例**：
   - 输入：`numCourses = 4, prerequisites = [[1,0],[2,0],[3,1],[3,2]]` $\to$ 输出：`[0,2,1,3]`（或 `[0,1,2,3]`）；
