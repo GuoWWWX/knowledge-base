@@ -333,30 +333,118 @@ String res = sb.toString();       // 最终字符串: "cba"
 
 ---
 
-## 六、 常用数值与数组工具函数（含结果与区间闭开对比）
+## 六、 数组与 List 复制、填充与互转全指南
 
+### 1. 数组与 List 的克隆与区间截取
 ```java
-// 1. 数组一键填充默认值（初始化 DP 备忘录等）
+// =============== 数组篇 ===============
+int[] nums = {10, 20, 30, 40, 50};
+
+// ① Arrays.copyOf：克隆全新数组（指定长度，多截少补 0）
+int[] copyAll = Arrays.copyOf(nums, nums.length);
+// 输出: [10, 20, 30, 40, 50]
+int[] copyPart = Arrays.copyOf(nums, 3);
+// 输出: [10, 20, 30]
+
+// ② Arrays.copyOfRange：截取子区间（左闭右开 [from, to)）
+int[] subArr = Arrays.copyOfRange(nums, 1, 4); // 截取下标 1, 2, 3
+// 输出: [20, 30, 40]（长度等于 4 - 1 = 3，不含下标 4）
+
+// ③ System.arraycopy：原生底层拷贝（性能之王！归并排序、原地覆盖必用）
+// 语法：(源数组, 源起始, 目标数组, 目标起始, 拷贝长度)
+int[] dest = new int[5];
+System.arraycopy(nums, 0, dest, 0, 3);
+// 输出 dest: [10, 20, 30, 0, 0]
+
+// =============== List 篇 ===============
+List<Integer> list = new ArrayList<>(List.of(10, 20, 30, 40, 50));
+
+// ① 全新独立克隆：new ArrayList<>(list)（回溯收集解必备）
+List<Integer> copyList = new ArrayList<>(list);
+// 输出: [10, 20, 30, 40, 50]
+
+// ② 截取子列表：list.subList(fromIndex, toIndex)（左闭右开 [from, to)）
+List<Integer> subList = list.subList(1, 4);
+// 输出: [20, 30, 40]
+// ⚠️ 避坑：subList 是原列表的“视图”，修改 subList 会直接影响原 list！
+// 若要完全独立，必须套一层：List<Integer> independent = new ArrayList<>(list.subList(1, 4));
+```
+
+---
+
+### 2. 批量填充与二维 DP 防坑指南
+```java
+// =============== 数组填充 ===============
+// ① 一维数组填充
 int[] dp = new int[4];
-Arrays.fill(dp, -1); 
+Arrays.fill(dp, -1);
 // 输出: [-1, -1, -1, -1]
 
-// 2. 数组区间截取 Arrays.copyOfRange（左闭右开 [from, to)）
-int[] nums = {10, 20, 30, 40, 50}; // 下标: 0, 1, 2, 3, 4
-int[] sub = Arrays.copyOfRange(nums, 1, 4); // 截取下标 [1, 4)，即下标 1, 2, 3
-// 输出: [20, 30, 40]（长度恰好等于 to - from = 3）
+// ② ⚠️ 致命避坑：二维数组不能直接 Arrays.fill(matrix, -1)！
+// 正确姿势：遍历每一行进行填充！
+int[][] memo = new int[3][4];
+for (int[] row : memo) {
+    Arrays.fill(row, -1);
+}
+// 输出: 3 行 4 列全部填充为 -1
 
-// 3. 字符串区间截取 String.substring（左闭右开 [begin, end)）
+// =============== List 填充 ===============
+// ⚠️ 避坑警告：千万不要对空 List 调 Collections.fill！
+// Collections.fill 只会替换“已有元素”，对 size=0 的空 List 毫无作用！
+
+// ✅ 刷题神器：初始化包含 N 个相同默认值的可变 List
+List<Integer> initList = new ArrayList<>(Collections.nCopies(5, 0));
+// 输出: [0, 0, 0, 0, 0] （可任意修改、添加）
+
+// 对已填充的 List 进行批量覆盖：
+Collections.fill(initList, -1);
+// 覆盖后输出: [-1, -1, -1, -1, -1]
+```
+
+---
+
+### 3. 数组与 List 互相极速转换（力扣返回答案必备）
+```java
+// ① 二维 List 转二维数组（合并区间 LC 56 等高频必考神技！）
+List<int[]> resList = new ArrayList<>();
+resList.add(new int[]{1, 3});
+resList.add(new int[]{2, 6});
+// 极简一行流转换：
+int[][] resultMatrix = resList.toArray(new int[0][]);
+// 输出: [[1, 3], [2, 6]]
+
+// ② List<Integer> 转 int[]
+List<Integer> intList = List.of(1, 2, 3);
+int[] primitiveArr = intList.stream().mapToInt(i -> i).toArray();
+// 输出: [1, 2, 3]
+
+// ③ int[] 转 List<Integer>
+int[] rawArr = {1, 2, 3};
+List<Integer> boxedList = Arrays.stream(rawArr).boxed().toList();
+// 输出: [1, 2, 3]
+
+// ④ String[] 与 List<String> 互转
+String[] sArr = {"a", "b", "c"};
+List<String> sList = new ArrayList<>(Arrays.asList(sArr));
+String[] backToArr = sList.toArray(new String[0]);
+```
+
+---
+
+## 七、 刷题高频工具函数与防溢出必备
+
+```java
+// 1. 字符串区间截取 String.substring（左闭右开 [begin, end)）
 String str = "leetcode";
 String subStr = str.substring(0, 4); // 截取下标 0, 1, 2, 3
 // 输出: "leet"（不包含下标 4 的 'c'）
 
-// 4. 字符串分割与去除首尾空白
+// 2. 字符串分割与去除首尾空白
 String raw = "  apple, banana, orange  ";
 String[] fruits = raw.trim().split(",\\s*");
 // 输出 fruits: ["apple", "banana", "orange"]
 
-// 5. 二分查找工具 Arrays.binarySearch（必须在有序数组上使用）
+// 3. 二分查找工具 Arrays.binarySearch（必须在有序数组上使用）
 int[] sorted = {2, 5, 8, 12, 19};
 int idx1 = Arrays.binarySearch(sorted, 8);
 // 输出: 2 （找到了，返回元素下标 2）
@@ -365,4 +453,20 @@ int idx2 = Arrays.binarySearch(sorted, 10);
 // 输出: -4 （没找到！返回负数 -(插入点 + 1)）
 // 技巧推导：10 应该插入在 12 的位置（下标 3），所以返回值 = -(3 + 1) = -4
 // 还原插入点：int insertPos = -idx2 - 1 = 3！刷题查插槽神技！
+
+// 4. Character 字符判断神仙 API（验证回文串 LC 125 极速解）
+char ch = 'A';
+boolean isAlphanumeric = Character.isLetterOrDigit(ch); // true（是否为字母或数字）
+char lower = Character.toLowerCase(ch);                 // 'a'
+boolean isNum = Character.isDigit('9');                 // true
+
+// 5. 内置位运算神技（比手写 while 快数倍）
+int bitCount = Integer.bitCount(13); // 13 的二进制是 1101，输出: 3（1 的个数）
+String binStr = Integer.toBinaryString(13); // 输出: "1101"
+int fromBin = Integer.parseInt("1101", 2);  // 输出: 13
+
+// 6. 图论/DP 安全无穷大（防加法溢出变负数）
+// ⚠️ 严禁写 int INF = Integer.MAX_VALUE;（加权值会直接溢出成负数！）
+// 正确标准：
+int INF = 0x3f3f3f3f; // 约 1.06 * 10^9，两倍 INF 相加不会溢出，足够代表无穷大
 ```
