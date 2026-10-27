@@ -86,30 +86,38 @@ list.sort((a, b) -> Integer.compare(b, a));            // Lambda 降序
 
 ---
 
-### 2. 二维数组排序（升序 / 降序 / 双关键字全覆盖）
-做贪心、区间合并题时，经常需要对 `int[][] intervals` 排序：
+### 2. 二维数组排序（升序 / 降序 / 双关键字全覆盖，含结果对照）
+做贪心、区间合并题时，经常需要对 `int[][] intervals` 排序。以下以示例数组展示排序前后变化：
 
 ```java
+// 原始输入矩阵：
+// int[][] intervals = {{3, 5}, {1, 8}, {1, 2}, {2, 4}};
+
 // ① 按第 0 列升序（最常见：合并区间 LC 56）
 Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+// 输出结果: [[1, 8], [1, 2], [2, 4], [3, 5]]
 
 // ② 按第 0 列降序
 Arrays.sort(intervals, (a, b) -> Integer.compare(b[0], a[0]));
+// 输出结果: [[3, 5], [2, 4], [1, 8], [1, 2]]
 
 // ③ 按第 1 列升序（用最少数量的箭引爆气球 LC 452、无重叠区间 LC 435）
 Arrays.sort(intervals, (a, b) -> Integer.compare(a[1], b[1]));
+// 输出结果: [[1, 2], [2, 4], [3, 5], [1, 8]]
 
 // ④ 按第 1 列降序
 Arrays.sort(intervals, (a, b) -> Integer.compare(b[1], a[1]));
+// 输出结果: [[1, 8], [3, 5], [2, 4], [1, 2]]
 
-// ⑤ 双关键字排序：第一列升序，第一列相同时按第二列降序（俄罗斯套娃信封 LC 354）
-Arrays.sort(envelopes, (a, b) -> {
+// ⑤ 双关键字排序：第 0 列升序；第 0 列相同时按第 1 列降序（俄罗斯套娃信封 LC 354）
+Arrays.sort(intervals, (a, b) -> {
     if (a[0] != b[0]) {
-        return Integer.compare(a[0], b[0]); // 宽度升序
+        return Integer.compare(a[0], b[0]); // 第 0 列升序
     } else {
-        return Integer.compare(b[1], a[1]); // 高度降序
+        return Integer.compare(b[1], a[1]); // 第 1 列降序
     }
 });
+// 输出结果: [[1, 8], [1, 2], [2, 4], [3, 5]]  <-- 观察：同样是 1 开头，8 排在 2 前面！
 ```
 
 > [!danger] 致命红线：严禁用 `a - b` 做减法！
@@ -123,14 +131,18 @@ Arrays.sort(envelopes, (a, b) -> {
 
 Java 中的 `PriorityQueue` **默认是小顶堆**（堆顶是最小值）。
 
-### 1. 基础大/小顶堆声明
+### 1. 基础大/小顶堆声明与出队顺序对比
 ```java
-// 1. 小顶堆（默认）
+// 1. 小顶堆（默认：堆顶为最小值）
 PriorityQueue<Integer> minHeap = new PriorityQueue<>();
+minHeap.addAll(List.of(5, 1, 3, 9));
+// 依次 poll() 弹出顺序: 1 -> 3 -> 5 -> 9（从小到大依次出堆）
 
-// 2. 大顶堆（两种标准写法）
+// 2. 大顶堆（两种标准写法：堆顶为最大值）
 PriorityQueue<Integer> maxHeap1 = new PriorityQueue<>(Collections.reverseOrder());
 PriorityQueue<Integer> maxHeap2 = new PriorityQueue<>((a, b) -> Integer.compare(b, a));
+maxHeap1.addAll(List.of(5, 1, 3, 9));
+// 依次 poll() 弹出顺序: 9 -> 5 -> 3 -> 1（从大到小依次出堆）
 ```
 
 ### 2. 存复合对象 / 数组的堆（前 K 个高频元素 LC 347）
@@ -221,24 +233,42 @@ int size = queue.size();     // 当前层节点数（分层 BFS 必备）
 
 ## 四、 Map 与 Set 一行流神仙 API
 
-刷题时利用现代 Java API 可以极大精简代码：
+刷题时利用现代 Java API 可以极大精简代码，配合输出演进极易理解：
 
-### 1. 频次统计（不用写任何 `if-else`）
+### 1. 频次统计（`getOrDefault` 免去繁琐判断）
 ```java
-Map<Integer, Integer> countMap = new HashMap<>();
+Map<String, Integer> countMap = new HashMap<>();
 
-// 极简一行流统计出现次数
-countMap.put(num, countMap.getOrDefault(num, 0) + 1);
+// 场景演练：依次计入 "apple", "banana", "apple"
+// ① 第一次遇到 "apple"：map 中没有，getOrDefault 返回默认值 0，计算 0 + 1 = 1 并存入
+countMap.put("apple", countMap.getOrDefault("apple", 0) + 1);
+// 此时 countMap: {"apple": 1}
+
+// ② 第一次遇到 "banana"：
+countMap.put("banana", countMap.getOrDefault("banana", 0) + 1);
+// 此时 countMap: {"apple": 1, "banana": 1}
+
+// ③ 第二次遇到 "apple"：map 中已有，getOrDefault 返回已有值 1，计算 1 + 1 = 2 并更新
+countMap.put("apple", countMap.getOrDefault("apple", 0) + 1);
+// 最终 countMap: {"apple": 2, "banana": 1}
 ```
 
-### 2. 邻接表建图（多对一、一对多分组）
+### 2. 邻接表建图（`computeIfAbsent` 自动初始化列表）
 在图论建图或字符分组时，以前需要先判断 `map.containsKey`，现在只需一行：
 ```java
-// u -> [v1, v2, v3]
+// 目标结构：点 u -> 相邻的所有邻居列表 [v1, v2, v3...]
 Map<Integer, List<Integer>> graph = new HashMap<>();
 
-// 如果键不存在，则执行后面的 lambda 放入一个空 ArrayList，然后直接 .add()
-graph.computeIfAbsent(u, k -> new ArrayList<>()).add(v);
+// 场景演练：添加两条边 1 -> 2 和 1 -> 3
+// ① 第一次为节点 1 添加邻居 2：
+// 发现 key=1 不存在，自动执行后面的 Lambda 创建一个空的 new ArrayList<>() 放入 Map，并立即将 2 添加进去
+graph.computeIfAbsent(1, k -> new ArrayList<>()).add(2);
+// 此时 graph: {1=[2]}
+
+// ② 第二次为节点 1 添加邻居 3：
+// 发现 key=1 已经存在，直接返回已有的 ArrayList，并追加 3
+graph.computeIfAbsent(1, k -> new ArrayList<>()).add(3);
+// 最终 graph: {1=[2, 3]} （全自动无空指针隐患！）
 ```
 
 ### 3. 一行流初始化固定集合
@@ -282,35 +312,57 @@ for (char c : cs) {
 }
 ```
 
-### 3. `StringBuilder` 在回溯/路径拼接中的核心用法
+### 3. `StringBuilder` 在回溯/路径拼接中的核心用法（含单步输出）
 ```java
 StringBuilder sb = new StringBuilder();
 
-sb.append("abc");
-sb.append(123);
+sb.append("abc");                 // 当前内容: "abc"
+sb.append(123);                   // 当前内容: "abc123"
 
-// 回溯算法中撤销最后一步选择
-sb.deleteCharAt(sb.length() - 1); 
+// 回溯算法中撤销最后一步选择（删除最后一个字符 '3'）
+sb.deleteCharAt(sb.length() - 1); // 变换后内容: "abc12"
 
-// 翻转字符串
-sb.reverse();
+// 高阶技巧：一键截断恢复现场（若追加了多个字符，直接一秒回滚到指定长度）
+sb.setLength(3);                  // 截断后内容: "abc"
 
-String res = sb.toString();
+// 翻转字符串（常用于高精度加法、回文判断）
+sb.reverse();                     // 翻转后内容: "cba"
+
+String res = sb.toString();       // 最终字符串: "cba"
 ```
 
 ---
 
-## 六、 常用数值与数组工具函数
+## 六、 常用数值与数组工具函数（含结果与区间闭开对比）
 
 ```java
-// 1. 数组一键填充默认值（初始化 DP 数组等）
-int[] dp = new int[n];
-Arrays.fill(dp, -1);
+// 1. 数组一键填充默认值（初始化 DP 备忘录等）
+int[] dp = new int[4];
+Arrays.fill(dp, -1); 
+// 输出: [-1, -1, -1, -1]
 
-// 2. 数组拷贝与截取
-int[] copy = Arrays.copyOf(nums, nums.length);
-int[] sub = Arrays.copyOfRange(nums, 1, 4); // 左闭右开 [1, 4)
+// 2. 数组区间截取 Arrays.copyOfRange（左闭右开 [from, to)）
+int[] nums = {10, 20, 30, 40, 50}; // 下标: 0, 1, 2, 3, 4
+int[] sub = Arrays.copyOfRange(nums, 1, 4); // 截取下标 [1, 4)，即下标 1, 2, 3
+// 输出: [20, 30, 40]（长度恰好等于 to - from = 3）
 
-// 3. 最大值与最小值简写
-int maxVal = Math.max(a, Math.max(b, c));
+// 3. 字符串区间截取 String.substring（左闭右开 [begin, end)）
+String str = "leetcode";
+String subStr = str.substring(0, 4); // 截取下标 0, 1, 2, 3
+// 输出: "leet"（不包含下标 4 的 'c'）
+
+// 4. 字符串分割与去除首尾空白
+String raw = "  apple, banana, orange  ";
+String[] fruits = raw.trim().split(",\\s*");
+// 输出 fruits: ["apple", "banana", "orange"]
+
+// 5. 二分查找工具 Arrays.binarySearch（必须在有序数组上使用）
+int[] sorted = {2, 5, 8, 12, 19};
+int idx1 = Arrays.binarySearch(sorted, 8);
+// 输出: 2 （找到了，返回元素下标 2）
+
+int idx2 = Arrays.binarySearch(sorted, 10);
+// 输出: -4 （没找到！返回负数 -(插入点 + 1)）
+// 技巧推导：10 应该插入在 12 的位置（下标 3），所以返回值 = -(3 + 1) = -4
+// 还原插入点：int insertPos = -idx2 - 1 = 3！刷题查插槽神技！
 ```
