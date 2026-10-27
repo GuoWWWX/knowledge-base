@@ -404,29 +404,52 @@ Collections.fill(initList, -1);
 ---
 
 ### 3. 数组与 List 互相极速转换（力扣返回答案必备）
+
+> [!tip] 灵魂吐槽：为什么基本类型转换这么麻烦？
+> 因为 Java 历史包袱：泛型 `List<T>` 只能装对象（`Integer`），装不了底层基本数据类型（`int`）！
+> ⚠️ **新手死穴**：千万别写 `Arrays.asList(new int[]{1, 2})`，它会把整个 `int[]` 当成一个对象，变成长度为 1 的 `List<int[]>`！
+> 
+> **力扣刷题真相**：Stream 不仅代码长、难记，而且运行时反复自动装箱拆箱，**性能很慢（动辄增加 10ms）**。
+> **真正的高手在力扣里更推荐朴素的 2 行 for 循环（0ms 击败 100%，永远不会拼错 API）！**
+
+#### ① 力扣最推荐：返璞归真 2 行 for 循环（0ms 满分，极度推荐）
 ```java
-// ① 二维 List 转二维数组（合并区间 LC 56 等高频必考神技！）
+// 1. List<Integer> 转 int[]（力扣返回答案最最最常用姿势！）
+List<Integer> list = List.of(1, 2, 3);
+int[] ans = new int[list.size()];
+for (int i = 0; i < ans.length; i++) ans[i] = list.get(i);
+// 输出 ans: [1, 2, 3]（代码仅 2 行，耗时 0ms 击败 100%，绝不报错）
+
+// 2. int[] 转 List<Integer>
+int[] nums = {1, 2, 3};
+List<Integer> res = new ArrayList<>();
+for (int x : nums) res.add(x);
+// 输出 res: [1, 2, 3]
+```
+
+#### ② 现代语法糖：Stream 一行流（如果记不住就果断用上面的 for 循环）
+```java
+// List<Integer> 转 int[]
+int[] primitiveArr = list.stream().mapToInt(i -> i).toArray();
+
+// int[] 转 List<Integer>
+List<Integer> boxedList = Arrays.stream(nums).boxed().toList();
+```
+
+#### ③ 对象与二维类型：原生就支持一行流（无需 Stream！）
+由于对象类型（`String`、`int[]`）本身就是标准的 `Object`，完全没有泛型阻碍，**可以直接优雅转换**：
+```java
+// 1. 二维 List<int[]> 转二维数组 int[][]（合并区间 LC 56 终极神技！）
 List<int[]> resList = new ArrayList<>();
 resList.add(new int[]{1, 3});
 resList.add(new int[]{2, 6});
-// 极简一行流转换：
 int[][] resultMatrix = resList.toArray(new int[0][]);
 // 输出: [[1, 3], [2, 6]]
 
-// ② List<Integer> 转 int[]
-List<Integer> intList = List.of(1, 2, 3);
-int[] primitiveArr = intList.stream().mapToInt(i -> i).toArray();
-// 输出: [1, 2, 3]
-
-// ③ int[] 转 List<Integer>
-int[] rawArr = {1, 2, 3};
-List<Integer> boxedList = Arrays.stream(rawArr).boxed().toList();
-// 输出: [1, 2, 3]
-
-// ④ String[] 与 List<String> 互转
+// 2. String[] 与 List<String> 互转
 String[] sArr = {"a", "b", "c"};
-List<String> sList = new ArrayList<>(Arrays.asList(sArr));
-String[] backToArr = sList.toArray(new String[0]);
+List<String> sList = new ArrayList<>(Arrays.asList(sArr)); // 数组转 List
+String[] backToArr = sList.toArray(new String[0]);          // List 转数组
 ```
 
 ---
