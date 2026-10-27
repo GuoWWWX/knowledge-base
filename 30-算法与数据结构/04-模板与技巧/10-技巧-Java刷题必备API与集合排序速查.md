@@ -26,31 +26,83 @@ mastery: ⭐⭐⭐⭐⭐
 
 ## 一、 排序与 Comparator（必背与防溢出红线）
 
-### 1. 一维数组与 List 排序
-```java
-// 1. 基本数据类型数组升序（不支持直接传自定义 Comparator）
-int[] nums = {3, 1, 4, 1, 5};
-Arrays.sort(nums); // 默认升序 [1, 1, 3, 4, 5]
+### 1. 一维数组与 List 排序（升序 / 降序全对比）
 
-// 2. 对象 List 升序与降序
-List<Integer> list = new ArrayList<>(List.of(3, 1, 4, 1, 5));
-Collections.sort(list); // 升序
-list.sort(Collections.reverseOrder()); // 降序
+#### ① `Arrays.sort`：针对一维原生数组
+```java
+// 1. 基本数据类型数组 int[]
+int[] nums = {3, 1, 4, 1, 5};
+Arrays.sort(nums); // 升序：[1, 1, 3, 4, 5]
+
+// ⚠️ 避坑：int[] 不支持直接传 Collections.reverseOrder()（Java 泛型不支持基本数据类型）
+// 若必须对 int[] 进行降序：
+// 最优解：先升序排序，再用双指针首尾翻转（耗时 O(N)，零内存开销，大厂笔试首选）
+for (int l = 0, r = nums.length - 1; l < r; l++, r--) {
+    int t = nums[l]; nums[l] = nums[r]; nums[r] = t;
+}
+
+// 2. 包装类 / 对象数组 Integer[]
+Integer[] arr = {3, 1, 4, 1, 5};
+Arrays.sort(arr);                                      // 升序：[1, 1, 3, 4, 5]
+Arrays.sort(arr, Collections.reverseOrder());          // 降序：[5, 4, 3, 1, 1]
+Arrays.sort(arr, (a, b) -> Integer.compare(b, a));     // 降序（Lambda 标准写法）
 ```
+
+#### ② `Collections.sort`：针对集合 List（经典工具类）
+```java
+List<Integer> list = new ArrayList<>(List.of(3, 1, 4, 1, 5));
+
+// 升序（两种常用写法）：
+Collections.sort(list);                                // 默认自然升序
+Collections.sort(list, (a, b) -> Integer.compare(a, b));// Lambda 升序
+
+// 降序（两种常用写法）：
+Collections.sort(list, Collections.reverseOrder());    // 经典逆序工具
+Collections.sort(list, (a, b) -> Integer.compare(b, a));// Lambda 降序
+```
+
+#### ③ `list.sort`：List 自身实例方法（Java 8+ 官方首推）
+```java
+List<Integer> list = new ArrayList<>(List.of(3, 1, 4, 1, 5));
+
+// 升序（三种常用写法）：
+list.sort(null);                                       // 传 null 即默认自然升序
+list.sort(Comparator.naturalOrder());                  // 显式自然升序
+list.sort((a, b) -> Integer.compare(a, b));            // Lambda 升序
+
+// 降序（三种常用写法）：
+list.sort(Collections.reverseOrder());                 // 常用降序
+list.sort(Comparator.reverseOrder());                  // 现代逆序接口
+list.sort((a, b) -> Integer.compare(b, a));            // Lambda 降序
+```
+
+> [!tip] 极简速查对比表格
+> | 排序目标 | 推荐调用方式 | 升序写法 | 降序写法 |
+> | :--- | :--- | :--- | :--- |
+> | **`int[]` 基础数组** | `Arrays.sort` | `Arrays.sort(nums);` | 先升序后双指针原地翻转 |
+> | **`Integer[]` 对象数组** | `Arrays.sort` | `Arrays.sort(arr);` | `Arrays.sort(arr, Collections.reverseOrder());` |
+> | **`List<T>` 列表 (首推)** | `list.sort` | `list.sort(null);` 或 `list.sort(Comparator.naturalOrder());` | `list.sort(Collections.reverseOrder());` |
+> | **`List<T>` 列表 (兼容)** | `Collections.sort` | `Collections.sort(list);` | `Collections.sort(list, Collections.reverseOrder());` |
 
 ---
 
-### 2. 二维数组排序（合并区间、贪心区间排雷必备）
+### 2. 二维数组排序（升序 / 降序 / 双关键字全覆盖）
 做贪心、区间合并题时，经常需要对 `int[][] intervals` 排序：
 
 ```java
-// ① 按第 0 列升序排列（最常见：合并区间 LC 56）
+// ① 按第 0 列升序（最常见：合并区间 LC 56）
 Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
 
-// ② 按第 1 列升序排列（用最少数量的箭引爆气球 LC 452、无重叠区间 LC 435）
+// ② 按第 0 列降序
+Arrays.sort(intervals, (a, b) -> Integer.compare(b[0], a[0]));
+
+// ③ 按第 1 列升序（用最少数量的箭引爆气球 LC 452、无重叠区间 LC 435）
 Arrays.sort(intervals, (a, b) -> Integer.compare(a[1], b[1]));
 
-// ③ 双关键字排序：第一列升序，第一列相同时按第二列降序（俄罗斯套娃信封 LC 354）
+// ④ 按第 1 列降序
+Arrays.sort(intervals, (a, b) -> Integer.compare(b[1], a[1]));
+
+// ⑤ 双关键字排序：第一列升序，第一列相同时按第二列降序（俄罗斯套娃信封 LC 354）
 Arrays.sort(envelopes, (a, b) -> {
     if (a[0] != b[0]) {
         return Integer.compare(a[0], b[0]); // 宽度升序
