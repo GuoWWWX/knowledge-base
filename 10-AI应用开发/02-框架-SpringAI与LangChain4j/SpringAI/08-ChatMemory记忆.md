@@ -18,8 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 8 课，多轮记忆**。前置：[[07-Advisor拦截器]]（记忆通过 Advisor 自动注入）；本节讲 `ChatMemory` 的会话边界与记忆类型。
-- **延伸**：更系统的记忆方案（滑动窗口、摘要、语义检索、分层）在 [[../../04-多轮对话与上下文工程/_index|04-多轮对话与上下文工程]] 章节。
+本篇介绍 `ChatMemory` 的记忆类型和会话边界，并通过 [[07-Advisor拦截器|Advisor]] 将历史消息加入请求。滑动窗口、摘要和语义记忆等方案见 [[../../04-多轮对话与上下文工程/_index|多轮对话与上下文工程]]。
 
 ## 📌 这是什么
 
@@ -46,6 +45,11 @@ Spring AI 的 Chat Memory 相关能力通常和 Advisor 一起使用，让历史
 
 ---
 
+## 🔍 为什么“历史记录”和“记忆”不是同一份数据？
+
+完整聊天历史用于让用户回看或供应用审计；ChatMemory 用于选出这次模型需要的上下文。窗口超出限制后，较早消息可能不再进入 Prompt，因此不能依赖窗口记忆作为完整聊天记录。
+例如用户第一轮给出订单号，第十轮追问“它到哪了”：如果订单号已被窗口裁掉，模型就可能不知道“它”指什么。可以按需要保存业务状态或摘要，但需要测试信息是否被遗漏。
+
 ## 🧩 记忆类型
 
 | 类型 | 说明 | 适合场景 |
@@ -61,7 +65,7 @@ Spring AI 的 Chat Memory 相关能力通常和 Advisor 一起使用，让历史
 
 ## 💻 示例：基于 Advisor 注入记忆
 
-> [!info] 2.0 记忆三件套（2026-06 起）
+> [!info] ChatMemory 的三个角色
 > `ChatMemory`（接口）→ `MessageWindowChatMemory`（内置窗口实现，默认 20 条，超限淘汰旧消息但保留 system 消息）→ `ChatMemoryRepository`（存储实现：`InMemoryChatMemoryRepository`、`JdbcChatMemoryRepository`、`RedisChatMemoryRepository`、`MongoChatMemoryRepository`、`CassandraChatMemoryRepository`、`Neo4jChatMemoryRepository`）。
 
 ```java
@@ -93,8 +97,8 @@ String answer = chatClient.prompt()
         .content();
 ```
 
-> [!warning] 2.0 起 conversationId 必填
-> 所有记忆类 Advisor 都要求显式传入 `ChatMemory.CONVERSATION_ID`，省略会抛 `IllegalArgumentException`（1.x 的 `PromptChatMemoryAdvisor` 已移除，不再有隐式会话）。这也是 2.0 强化"会话状态显式化"的设计。
+> [!warning] 会话 ID 要明确传入
+> 本文写法按 Spring AI 当前文档的记忆 Advisor 接口组织：调用时传入 `ChatMemory.CONVERSATION_ID`，否则会报错。不同版本的接口和默认行为应查看对应版本文档，不要依赖固定默认会话。
 
 后续同一个 `conversationId` 的请求就能带上历史。
 
@@ -107,7 +111,6 @@ conversationId = 用户 + 会话 + 场景
 ```
 
 不要只用 `userId` 当 conversationId。一个用户可能同时有“客服咨询”“代码助手”“简历修改”多个会话，混在一起会污染上下文。
-
 推荐：
 
 ```text
@@ -133,17 +136,18 @@ chat:{userId}:{sessionId}
 
 ## ⚠️ 常见坑
 
-- [ ] **历史全塞进去**：Token 爆炸且容易引入噪声。
-- [ ] **会话 ID 设计太粗**：不同场景互相污染。
-- [ ] **把长期事实和短期聊天混存**：后续很难清理。
-- [ ] **忽略用户删除权**：记忆是数据资产，也可能是合规风险。
+- 把全部历史放进 Prompt 会增加 Token 消耗和无关信息。
+- 不同用户或场景共用会话 ID，容易造成上下文串线。
+- 长期事实和短期聊天混存，后续更新或删除会比较困难。
+- 设计记忆时要考虑用户删除数据的需求。
 
 ## 🎯 面试速记
 
-> - **Q: ChatMemory 的本质是什么？**
->   - A: 应用侧保存历史消息，并在下一轮调用时把必要历史重新注入 Prompt。
-> - **Q: 记忆和向量库有什么区别？**
->   - A: 记忆偏会话上下文，向量库偏长期知识检索；语义记忆会用到向量库。
+> [!question]- ChatMemory 的本质是什么？
+> 应用侧保存和选择历史消息，在下一轮调用时把必要上下文加入 Prompt；是否长期保存完整历史取决于存储设计。
+
+> [!question]- 记忆和向量库有什么区别？
+> 记忆是对话上下文管理需求，向量库是可用于相似度查询的存储方式；语义记忆可以使用向量库实现。
 
 ## 🔗 关联阅读
 
@@ -155,5 +159,3 @@ chat:{userId}:{sessionId}
 ## 📚 参考资料
 
 - [Spring AI Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html)
-
-

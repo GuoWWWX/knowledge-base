@@ -6,136 +6,76 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
 
-# Agent可观测
+# 🔍 Agent 可观测
 
-> [!abstract] 一句话总结
-> Agent 可观测不是普通日志，而是把一次任务中的 prompt、规划、工具调用、MCP 往返、Skill 命中、token、成本、失败原因串成可复盘的执行轨迹。
+> [!abstract] 本文要解决什么
+> 用户只看到最终回答，开发者还需要知道 Agent 查了什么、哪一步出错、耗时和费用来自哪里。可观测就是把这些执行信息关联起来，供排查和评估使用。
 
-## 📌 这是什么
+## 🎯 从一次订单查询看起
 
-Agent 可观测要回答四个生产问题：
+用户问：“订单 A1001 到哪了？”Agent 可能先调用订单工具获取物流单号，再调用物流工具查询状态，最后组织回答。如果回答错了，只看最终文本很难知道是没查工具、参数传错、工具返回异常，还是模型理解错了结果。
 
-1. 用户输入进入系统后，Agent 选择了哪个策略、哪个 Skill、哪些工具。
-2. 每一步模型调用的输入、输出、token、耗时、finish reason 是什么。
-3. 每次 Java Tool 或 MCP Tool 调用的参数、返回、异常、权限判定是什么。
-4. 最终答案为什么这样生成，失败时能否用同一份 trace 复现。
+可以把一次任务记为一条 Trace，其中的每个步骤记为一个 Span。下面是便于理解的示意，时间和内容都是假设值：
 
-普通应用日志通常只记录接口请求；Agent 链路还要记录推理步骤和外部工具状态，否则线上问题会变成“模型刚才可能想错了”。
-
-## 🤔 解决什么问题 / 为什么需要
-
-- **定位幻觉来源**：区分是 prompt 漏约束、RAG 召回错、工具返回错，还是模型没有调用工具。
-- **复盘工具链路**：把 `tool.name`、`tool.arguments`、`tool.result`、`mcp.server`、`mcp.transport` 写进同一个 trace。
-- **控制成本和延迟**：按会话、步骤、工具维度统计 token、模型耗时和外部 API 耗时。
-- **支撑安全审计**：记录越权请求被哪个 guard 拦截，敏感参数是否脱敏。
-
-## 🧩 关键数据模型
-
-| 字段 | 例子 | 用途 |
-| ---- | ---- | ---- |
-| `traceId` / `spanId` | `a8f...` | 串联一次用户任务的全部步骤。 |
-| `agent.step` | `plan`、`tool_call`、`reflect` | 判断 Agent 停在哪个阶段。 |
-| `skill.name` | `refund-policy-skill` | 观察 Skill 是否被正确触发。 |
-| `tool.name` | `order_status` | 分析工具调用命中率和失败率。 |
-| `mcp.server` | `order-mcp` | 区分本地函数和远端 MCP 服务。 |
-| `token.input/output` | `1680/420` | 做成本预算和上下文裁剪。 |
-| `safety.decision` | `allow`、`deny`、`redact` | 供审计和回放使用。 |
-
-## ⚙️ 落地步骤
-
-```mermaid
-flowchart LR
-    A[HTTP请求] --> B[创建traceId]
-    B --> C[Agent规划]
-    C --> D[ChatClient调用]
-    D --> E[ToolCallingAdvisor]
-    E --> F[Java Tool或MCP Tool]
-    F --> G[记录参数/结果/异常]
-    G --> H[聚合指标与日志]
-    H --> I[回放和评估]
+```text
+Trace：查询订单 A1001（总耗时 2.4 秒）
+├─ 模型调用：决定查询订单                0.5 秒
+├─ queryOrder：返回物流单号               0.3 秒
+├─ queryLogistics：返回“运输中”           1.0 秒
+└─ 模型调用：根据工具结果组织回答         0.6 秒
 ```
 
-1. 在 Controller 入口生成 `traceId`，放入 MDC、Reactor Context 或请求上下文。
-2. 给每次 `ChatClient` 调用加 observation tag：模型名、业务场景、会话 ID、是否流式。
-3. 包装 Java `@Tool` 和 MCP `ToolCallback`，记录工具名、耗时、参数摘要、异常类型。
-4. prompt、工具参数、工具返回要做脱敏；生产环境不要明文保存身份证、手机号、token。
-5. 建立失败样本库：把低分回答、工具异常、超过步数、人工改写过的答案沉淀成回归用例。
+Span 可以继续包含子 Span；真正的耗时可能有并发或嵌套，不能简单把所有 Span 时间相加。模型并不一定公开内部推理，Trace 记录的是应用实际能看到的请求、调用和结果，不能假设能够完整还原模型的思考过程。
 
-## 💻 Java / Spring AI 示例
+## 🧩 应该记录哪些信息？
+
+记录的目的不是把所有原文永久保存，而是让一次请求可定位、可关联、能排查：
+- 任务：Trace ID、会话或请求 ID、场景、最终状态及总耗时。
+- 模型：模型和配置版本、调用次数、耗时、Token 用量及供应商返回的结束原因。
+- 工具：名称、参数摘要、耗时、状态、错误类型，以及本地工具或 MCP Server 来源。
+- 权限：主体、目标资源、允许或拒绝的结果；必要时关联审批记录。
+- 上下文：实际使用的 Skill、检索结果的来源和版本，便于还原当时的输入条件。
+
+Token 或费用可能需要结合模型返回的用量、计费规则以及外部 API 账单计算；若服务没有返回用量，应明确标记未知，不要当成零。
+
+## 🛠️ 怎样用它排查问题？
+
+先找到用户请求对应的 Trace，再沿着模型与工具的调用顺序查看：
+1. 工具选得对不对，参数是否指向正确的订单。
+2. 工具有没有成功返回，返回事实与业务系统是否一致。
+3. 最终回答是否准确使用了工具结果，是否遗漏必要条件。
+4. 时间主要花在模型、检索、工具还是网络上，有没有异常重试。
+
+例如工具已经返回“运输中”，最终回答却说“已签收”，就应重点检查结果传入模型的上下文和最终生成，而不是先修改订单查询接口。修复后，把这个样例加入 [[19-Agent评估|评测集]]，再检查类似情况。
+
+## ☕ Spring AI 中怎么接入？
+
+Spring AI 使用 Micrometer Observation 为 `ChatClient`、模型和向量库等组件提供观测信息；应用仍需按部署环境配置指标与追踪导出，并为自己的业务步骤补充必要信息。下面仅展示一次业务操作的观测包装，`agent` 和 `observationRegistry` 由应用提供，不是完整的追踪配置：
 
 ```java
-@Component
-class AgentTraceAdvisor implements CallAdvisor {
-    @Override
-    public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-        String traceId = MDC.get("traceId");
-        long start = System.nanoTime();
-        try {
-            ChatClientResponse response = chain.nextCall(request);
-            log.info("agent_call traceId={} model={} tokens={}",
-                    traceId,
-                    request.prompt().getOptions().getModel(),
-                    response.chatResponse().getMetadata().getUsage());
-            return response;
-        } catch (RuntimeException ex) {
-            log.warn("agent_call_failed traceId={} error={}", traceId, ex.getClass().getSimpleName());
-            throw ex;
-        } finally {
-            log.info("agent_call_latency traceId={} ms={}", traceId,
-                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
-        }
-    }
-}
+Observation.createNotStarted("agent.run", observationRegistry)
+        .observe(() -> agent.run(question));
 ```
 
-```java
-@Service
-class OrderTools {
-    @Tool(description = "根据订单号查询订单状态。只返回当前登录用户自己的订单。")
-    String queryOrderStatus(@ToolParam(description = "订单号") String orderId) {
-        log.info("tool_call tool=queryOrderStatus orderIdHash={}", DigestUtils.sha256Hex(orderId));
-        return orderService.queryOwnedOrder(orderId).status();
-    }
-}
-```
+工具调用也要关联到同一条链路，记录工具名称、状态和耗时。具体自动采集范围、配置项与版本有关，应对照所用版本的 Spring AI 文档检查实际产生了哪些 Span。
 
-## ⚠️ 工程坑
+## 🔐 记录时注意什么？
 
-- 只记录最终回答，不记录工具参数；线上无法判断模型是没查数据还是查错数据。
-- trace 里保存原始 prompt 和完整业务数据，排障方便但合规风险很高。
-- 忽略流式响应的中间事件，用户看到卡顿但服务端只有一次总耗时。
-- 多 Agent 并行时共用一个 span，导致 supervisor 和 worker 的失败点混在一起。
-- 只看平均 token，没看 P95 / P99；少量复杂任务可能吃掉大部分预算。
+订单号、用户输入和工具返回可能包含敏感数据，采集前应决定哪些字段确有排障价值，再按需要脱敏、控制访问权限和保留时间。不能假定摘要或哈希一定匿名；样本回放也可能受到模型非确定性、外部数据变化和未保存上下文的影响，并不保证完全复现。
 
-## 🎯 面试问题
+> [!question]- Trace 和普通日志有什么区别？
+> Trace 把同一次任务的多个步骤及其父子关系串起来，适合观察耗时和调用链；日志适合记录某一步的具体事件。两者可以通过 Trace ID 关联。
 
-> [!question] 高频问题
-> - Q: Agent 可观测和普通接口日志有什么区别？
->   - A: 普通日志关注请求和返回，Agent 可观测还要记录模型输入输出、规划步骤、工具调用、MCP 往返、Skill 命中和 token 成本。
-> - Q: 线上回答错误，你会按什么顺序排查？
->   - A: 先看 trace 中的用户输入和 system prompt，再看是否调用正确工具、工具返回是否可信、RAG 上下文是否相关，最后用失败样本回放验证修复。
-> - Q: prompt 和工具返回是否都能落日志？
->   - A: 可以落摘要和脱敏字段；敏感原文要有权限、保留周期和加密策略，不能为了排障把隐私数据长期明文保存。
+> [!question]- 只看平均耗时够吗？
+> 不够。平均值可能掩盖少量特别慢的请求，还应结合 P95 / P99、超时率和具体慢 Trace 排查。
 
-## ✅ 精通检查清单
+## 🔗 关联与资料
 
-- 能为一次 Agent 执行画出 trace/span 结构。
-- 能解释 Java Tool 和 MCP Tool 分别记录哪些字段。
-- 能用指标区分模型慢、工具慢、RAG 慢和网络慢。
-- 能设计脱敏、采样、保留周期和失败回放策略。
-
-## 🔗 关联笔记
-
-- [[_index]]
-- [[17-Agent-MCP-Skills组合实战]]
-- [[../00-总览/学习仪表盘]]
-
-## 📚 参考资料
-
-- [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
-- [OpenAI Platform Docs](https://platform.openai.com/docs/)
+- [[19-Agent评估|Agent 评估]]、[[21-Agent权限治理与分级自治|权限与审计]]、[[22-Agent成本控制与降级|成本控制]]
+- [Spring AI：Observability](https://docs.spring.io/spring-ai/reference/observability/index.html)
+- [OpenTelemetry：Traces](https://opentelemetry.io/docs/concepts/signals/traces/)

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,15 +18,12 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 7 课**：前置 [[06-TS速查-Java视角]]，本篇解决 Node / pnpm 环境与项目命令。
-- **延伸**：[[08-Next.js-AppRouter基础]]。
+本篇在 [[06-TS速查-Java视角]] 之后，介绍 Node 与 pnpm 环境、依赖管理及常用项目命令；后续可学习 [[08-Next.js-AppRouter基础]]。
 
 ## 📌 这是什么
 
 TypeScript AI 项目通常不是直接运行 `.ts` 文件，而是由 Node、包管理器、框架和构建工具一起工作。
-
 接手项目优先看：
-
 - `package.json`：脚本和依赖。
 - `pnpm-lock.yaml`：锁定依赖版本。
 - `tsconfig.json`：TypeScript 编译规则。
@@ -60,11 +57,11 @@ pnpm dev
 ```bash
 pnpm create next-app ai-chat-demo --ts
 cd ai-chat-demo
-pnpm add ai@5 @ai-sdk/openai@2 @ai-sdk/react@2
+pnpm add ai@5 @ai-sdk/openai@2 @ai-sdk/react@2 # 与本章 AI SDK 5 示例对应
 pnpm dev
 ```
 
-常用检查：
+常用检查（先确认 `package.json` 中配置了对应脚本）：
 
 ```bash
 pnpm lint
@@ -89,7 +86,6 @@ pnpm why ai
 ```
 
 上述命令对应 `package.json` 的 `scripts` 配置（Next.js 16 起推荐直接使用 `eslint .` 替代已移除的 `next lint`）。在 CI 环境中，建议使用 `pnpm install --frozen-lockfile` 并配合 `packageManager` 字段锁定包管理器与依赖版本。
-
 运行逻辑是：`pnpm dev` -> 找 `scripts.dev` -> 启动框架开发服务。
 
 ## 🤖 AI 生态落点
@@ -109,13 +105,14 @@ pnpm why ai
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: `pnpm` 相比 `npm` 的特点是什么？
->   - A: 依赖通过内容寻址存储和链接复用，安装快，磁盘占用更少，monorepo 支持也常见。
-> - Q: 接手 TS AI 项目第一步做什么？
->   - A: 看 `package.json` 脚本、`.env.example`、框架目录，再 `pnpm install && pnpm dev`。
-> - Q: 为什么要提交 `pnpm-lock.yaml`？
->   - A: 锁定依赖树，避免不同机器安装出不同版本导致构建或运行差异。
+> [!question]- `pnpm` 相比 `npm` 的特点是什么？
+> 依赖通过内容寻址存储和链接复用，安装快，磁盘占用更少，monorepo 支持也常见。
+
+> [!question]- 接手 TS AI 项目第一步做什么？
+> 看 `package.json` 脚本、`.env.example`、框架目录，再 `pnpm install && pnpm dev`。
+
+> [!question]- 为什么要提交 `pnpm-lock.yaml`？
+> 锁定依赖树，避免不同机器安装出不同版本导致构建或运行差异。
 
 项目里可以用它快速复现：Vercel AI SDK Chat Demo、Next.js 管理台、LangChain.js RAG 服务。
 

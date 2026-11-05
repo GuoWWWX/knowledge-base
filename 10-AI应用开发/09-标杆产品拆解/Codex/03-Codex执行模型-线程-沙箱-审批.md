@@ -2,7 +2,7 @@
 title: Codex执行模型-线程-沙箱-审批
 tags: [领域/AI应用, 类型/知识, 主题/Codex, 主题/Agent安全]
 created: 2026-07-08
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -10,22 +10,13 @@ mastery: ⭐☆☆☆☆
 # Codex 执行模型：线程、沙箱、审批
 
 > [!abstract] 一句话总结
-> Codex 的执行模型可以理解为：在线程里规划和行动，在沙箱里运行工具，对越界或高风险动作触发审批。
+> Codex 可以在持续会话中规划和行动；工具受运行环境、沙箱与权限策略约束，是否需要审批由当前配置决定。
 
-## Thread：任务状态容器
+## 🧵 Thread：任务状态容器
 
-Codex 以 thread 承载一次持续任务。一个 thread 里包含：
+Thread 是包含多轮请求和结果的持续会话，可以记录用户目标、工具输出、文件修改和验证结果。一个任务可以跨多轮推进；历史进入模型上下文的方式会受压缩和具体配置影响。
 
-- 用户目标和约束。
-- 已读文件和命令输出。
-- 修改过的文件。
-- 测试结果。
-- 中途决策。
-- 最终总结。
-
-这解决了编程任务的长链路问题：不是一次性生成代码，而是在“读、改、跑、修、交付”的循环中推进。
-
-## Local / Worktree / Cloud
+## 📁 Local / Worktree / Cloud
 
 | 模式 | 含义 | 适合 |
 | ---- | ---- | ---- |
@@ -33,31 +24,34 @@ Codex 以 thread 承载一次持续任务。一个 thread 里包含：
 | Worktree | 在 Git worktree 中隔离修改 | 并行任务、实验性改动 |
 | Cloud | 在远程环境执行 | 后台任务、云端依赖、异步工作 |
 
-Worktree 通过独立的文件目录与分支隔离代码修改，适合多任务并行开发；由于各工作区仍共享本地端口、数据库与外部服务环境，运行时安全隔离仍需依赖 Sandbox 机制，且分支合并时需处理潜在的代码冲突。
+Worktree 提供独立的工作目录，适合并行开发；Codex 管理的 worktree 可以处于 detached HEAD，并不一定对应独立分支。工作目录隔离不等于进程、端口、数据库或外部服务隔离，合并变更仍可能产生冲突。
 
-## Sandbox：技术边界
+## 🔐 Sandbox：技术边界
 
-Codex 官方手册强调 sandbox mode 控制模型生成命令能做什么，例如：
-
+sandbox mode 控制命令能在技术上访问的范围，例如：
 - 能否写文件。
 - 可写范围在哪里。
 - 是否能访问网络。
 - 是否能碰工作区外文件。
 
-这对应企业 Agent 里的“最小权限原则”。Agent 的执行范围必须由底层运行环境实施硬性约束。
+沙箱限制命令的文件系统和网络能力，审批策略决定哪些请求需要额外审核；两者共同使用，但互不替代。远程工具还受其自身服务端权限控制。 ^codex-permissions
 
-## Approval：人工决策边界
+## 🔐 Approval：审批决策边界
 
-Approval policy 决定 Codex 什么时候必须停下来问用户，例如：
-
+Approval policy 决定哪些动作需要审核、允许或拒绝。以下是可能触发审核的例子，实际取决于权限配置：
 - 需要访问网络。
 - 需要写工作区外文件。
 - 需要执行高风险命令。
 - MCP 或 app tool 声明有副作用。
 
-审批触发行为由当前配置的 Approval Policy 决定：在严格策略下，越界请求会被直接拒绝；在受控审批策略下，高风险命令会暂停并等待用户确认。此外，本地沙箱主要约束本机文件与进程边界，针对远程 MCP Server 或外部业务系统的写操作，仍需在对应服务端实施独立的身份鉴权与权限控制。
+在人工审批模式下，符合条件的请求会交给用户决定；启用 Auto-review 时，符合条件的沙箱边界审批可由独立审核代理处理，拒绝后需遵循返回的限制。自动审核不扩大沙箱权限，也不是所有入口和操作的通用行为。
 
-## 执行循环
+## 🗣️ 用一个任务区分沙箱和审批
+
+假设当前任务允许修改指定工作区，Agent 请求在其中编辑文件时，执行是否允许由当前环境和权限策略决定；如果请求访问工作区外的路径，沙箱可能阻止，审批策略则决定能否申请额外授权及由谁审核。
+具体的可写目录、网络访问和审核方式都以当前运行环境为准；即便审核通过，远程系统的账户权限仍会独立生效。
+
+## ⚙️ 执行循环
 
 ```mermaid
 flowchart TD
@@ -68,7 +62,7 @@ flowchart TD
     E -->|策略允许| F[执行工具]
     E -->|策略要求确认| G[请求审批]
     E -->|策略禁止| I[调整方案]
-    G --> H{用户同意}
+    G --> H{审核通过}
     H -->|是| F
     H -->|否| I[调整方案]
     F --> J[运行验证]
@@ -77,33 +71,34 @@ flowchart TD
     K -->|是| L[总结与交付]
 ```
 
-## 对企业 Agent 的启发
+## 💡 对企业 Agent 的启发
 
 Codex 的 sandbox / approval 可以抽象成企业 Agent 的三级控制：
 
 | 层级 | Codex 里的体现 | 企业 Agent 类比 |
 | ---- | -------------- | --------------- |
 | 技术限制 | sandbox | 只能访问授权数据和工具 |
-| 操作审批 | approval | 退款、发券、改订单前人工确认 |
+| 操作审批 | 依配置交由用户或自动审核 | 退款、发券、改订单等操作按业务要求审批 |
 | 结果验证 | tests / command output | 业务规则校验、回归测试、人工抽查 |
 
-## 常见误区
+## ⚠️ 常见误区
 
-- 误区一：Agent 越自动越好。实际应按风险分级。
-- 误区二：Prompt 能代替权限。实际必须靠运行环境和服务端判断。
-- 误区三：一次生成就是完成。实际要有验证循环。
-- 误区四：并行 Agent 可以随便改同一目录。实际要靠 worktree 或明确写范围隔离。
+- 自动化程度应根据任务风险决定。
+- Prompt 不能代替运行环境和服务端的权限检查。
+- 修改后需要按任务选择合适的验证方式。
+- 并行任务应明确写入范围，必要时使用 worktree 隔离。
 
-## 面试讲法
+## 🎯 面试讲法
 
-> Codex 的执行模型给我的启发是：生产 Agent 必须有任务状态、工具边界和审批机制。线程负责持续上下文，sandbox 负责技术限制，approval 负责高风险动作的人类确认，验证循环负责交付质量。
+> [!question]- 会话、沙箱和审批分别解决什么问题？
+> 会话承载持续上下文，沙箱限制执行环境，审批策略决定哪些动作需要审核；完成后还应结合实际测试或其他证据验证结果。
 
-## 关联
+## 🔗 关联
 
 - [[../../05-Agent-MCP-Skills/21-Agent权限治理与分级自治]]
 - [[../../06-平台与工程化/09-AI应用评估数据集与回归测试]]
 
 ## 📚 参考资料
 
-- [OpenAI Codex Manual：Approvals, Sandboxing, and Security](https://developers.openai.com/codex/codex-manual.md#approvals-sandboxing-and-security)
-- [OpenAI Codex Manual：Codex app features](https://developers.openai.com/codex/codex-manual.md#surface-behavior)
+- [Codex 审批与安全](https://learn.chatgpt.com/docs/agent-approvals-security)；[Auto-review](https://learn.chatgpt.com/docs/sandboxing/auto-review)
+- [Codex Worktree](https://learn.chatgpt.com/docs/environments/git-worktrees)

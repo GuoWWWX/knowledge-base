@@ -49,26 +49,25 @@ graph TD
 ```
 
 ### 两种拦截接口
-Spring AI 针对同步调用和流式调用分别提供了对应的拦截接口：
 
-1. **`CallAdvisor`（同步调用拦截）**：
-   ```java
-   ChatClientResponse adviseCall(ChatClientRequest chatClientRequest, CallAdvisorChain callAdvisorChain);
-   ```
-2. **`StreamAdvisor`（响应式流式拦截）**：
-   ```java
-   Flux<ChatClientResponse> adviseStream(ChatClientRequest chatClientRequest, StreamAdvisorChain streamAdvisorChain);
-   ```
+`CallAdvisor` 拦截同步调用，`StreamAdvisor` 拦截流式调用。两者都接收当前请求和责任链，分别返回普通响应和响应流：
+
+```java
+ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain);
+Flux<ChatClientResponse> adviseStream(ChatClientRequest request, StreamAdvisorChain chain);
+```
 
 自定义拦截器通常同时实现这两个接口，以确保业务层无论调用 `.call()` 还是 `.stream()` 都能执行一致的横切逻辑。
 
 ### 请求级上下文传递：`context`
+
 在责任链各节点之间传递动态参数（如会话 ID `conversationId`、租户标识 `tenantId`），可通过 `ChatClientRequest.context()` 维护的请求级键值对实现（在响应式流或异步执行场景下，建议存入不可变对象以保证并发安全）：
+
 ```java
-// 业务调用端传入上下文参数
-chatClient.prompt()
-    .advisors(a -> a.param("tenantId", "tenant_001"))
-    ...
+// 假设 chatClient 已配置，用户与租户身份来自服务端
+String result = chatClient.prompt().user("你好")
+        .advisors(a -> a.param("tenantId", tenantId))
+        .call().content();
 ```
 
 ---
@@ -87,123 +86,69 @@ chatClient.prompt()
 
 ## 💻 代码实践：自定义耗时审计 Advisor
 
-以下示例同时实现 `CallAdvisor` 与 `StreamAdvisor` 接口，统一记录同步调用与流式调用的链路耗时（避免在生产日志中直接打印未脱敏的完整 Prompt 文本）：
+下面以同步调用为例，展示自定义 `CallAdvisor` 的核心方法；省略类声明、`getName()`、`getOrder()` 和日志配置，未在本机运行。
 
 ```java
-package com.example.ai.advisor;
-
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClientRequest;
-import org.springframework.ai.chat.client.ChatClientResponse;
-import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
-import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisor;
-import org.springframework.ai.chat.client.advisor.api.StreamAdvisorChain;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
-
-@Slf4j
-@Component
-public class SecurityAuditAdvisor implements CallAdvisor, StreamAdvisor {
-
-    @Override
-    public int getOrder() {
-        return 0;
-    }
-
-    @Override
-    public String getName() {
-        return "SecurityAuditAdvisor";
-    }
-
-    @Override
-    public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
-        long started = System.nanoTime();
-        try {
-            return chain.nextCall(request);
-        } finally {
-            log.info("模型同步调用结束，耗时={}ms", (System.nanoTime() - started) / 1_000_000);
-        }
-    }
-
-    @Override
-    public Flux<ChatClientResponse> adviseStream(ChatClientRequest request, StreamAdvisorChain chain) {
-        return Flux.defer(() -> {
-            long started = System.nanoTime();
-            return chain.nextStream(request).doFinally(signal ->
-                    log.info("模型流式调用结束，终止信号={}，耗时={}ms",
-                            signal, (System.nanoTime() - started) / 1_000_000));
-        });
-    }
+public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+    long start = System.nanoTime();
+    try { return chain.nextCall(request); }
+    finally { log.info("耗时：{} ns", System.nanoTime() - start); }
 }
 ```
 
-### 在 ChatClient 中挂载拦截器链
+若还需要拦截 `.stream()`，应另外实现 `StreamAdvisor`，在订阅、结束、错误和取消时处理统计，不能只统计创建流对象的耗时。
+
+### 在 ChatClient 中挂载 Advisor
+
+假设 `auditAdvisor`、`chatMemory` 已创建：
 
 ```java
-@Configuration
-public class ChatClientConfig {
-
-    @Bean
-    public ChatClient enterpriseChatClient(
-            ChatClient.Builder builder,
-            SecurityAuditAdvisor auditAdvisor,
-            ChatMemory chatMemory,
-            VectorStore vectorStore) {
-
-        return builder
-                .defaultSystem("你是企业内部智能助理。")
-                .defaultAdvisors(
-                        auditAdvisor, // 执行顺序由各 Advisor 的 getOrder() 返回值决定
-                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        QuestionAnswerAdvisor.builder(vectorStore).build()
-                )
-                .build();
-    }
-}
+ChatClient client = builder.defaultAdvisors(auditAdvisor,
+        MessageChatMemoryAdvisor.builder(chatMemory).build()).build();
 ```
+
+实际顺序由 Advisor 的 `getOrder()` 决定，敏感内容的权限和脱敏需要在各自数据进入链路时处理。
 
 ---
 
 ## ⚠️ 工程注意事项
 
 ### 1. 合理规划 `getOrder()` 执行顺序与数据边界
-- **排序规则**：责任链按 `getOrder()` 返回值从小到大排序；数值越小的 `Advisor` 在请求阶段越先执行，在响应阶段越晚执行。
-- **全链路数据治理**：外层输入过滤 `Advisor` 仅能处理用户的当前提问；后续由 `ChatMemory` 注入的历史消息、由 RAG 检索出的知识片段以及工具调用返回的数据，同样需要在入库或检索阶段做好权限过滤与敏感信息脱敏。
-  $$\text{链路审计/计时} \to \text{输入安全检查} \to \text{会话记忆注入} \to \text{RAG 检索注入} \to \text{模型调用} \to \text{输出合规检查}$$
+
+`getOrder()` 的值越小，请求阶段越早执行，响应阶段越晚返回。输入过滤只能检查当时已有的内容；后续注入的历史消息、检索片段和工具结果也需要在各自环节检查权限与敏感信息。一次调用的处理顺序可以这样安排：
+
+```text
+审计计时 → 输入检查 → 记忆注入 → 检索注入 → 模型调用 → 输出检查
+```
 
 ### 2. 避免在 Advisor 中执行长耗时同步阻塞操作
-- **原因**：`Advisor` 位于每次模型调用的关键路径上，尤其是在流式（`StreamAdvisor`）响应式线程中，同步阻塞 I/O 会降低系统吞吐甚至阻塞事件循环线程。
-- **建议**：敏感词表或规则配置应采用本地内存缓存，审计日志与监控指标采用异步队列或非阻塞方式上报。
+
+`Advisor` 位于模型调用路径上，流式响应中的同步阻塞 I/O 可能阻塞事件循环。规则配置可以按需缓存，审计日志和指标可以使用异步或非阻塞方式上报。
 
 ### 3. 显式传入 `conversationId`
-- **注意**：在 Spring AI 2.0 中，使用 `MessageChatMemoryAdvisor` 时需在单次请求中通过 `.advisors(a -> a.param(ChatMemory.CONVERSATION_ID, id))` 显式传入会话标识，确保不同用户的上下文严格隔离。
+
+使用 `MessageChatMemoryAdvisor` 时，在请求中通过 `.advisors(a -> a.param(ChatMemory.CONVERSATION_ID, id))` 传入会话标识，并在服务端校验会话归属。不同版本省略该参数时可能报错或使用默认会话，不能依赖默认值实现用户隔离。
 
 ---
 
 ## 🎯 高频面试问题
 
-> [!question] 常见面试问题解析
-> 
-> **Q1：Spring AI 中的 `Advisor` 机制是如何设计的？它与传统的 Spring AOP 有什么区别？**
-> - **答**：
+> [!question]- Q1：Spring AI 中的 `Advisor` 机制是如何设计的？它与传统的 Spring AOP 有什么区别？
 >   - **设计模式**：`Advisor` 采用**责任链模式（Chain of Responsibility）**，通过 `CallAdvisor` 和 `StreamAdvisor` 接口分别对同步调用和 Project Reactor 响应式流提供环绕拦截能力；
 >   - **与 Spring AOP 的区别**：传统 Spring AOP 基于动态代理拦截通用 Java 方法调用（`MethodInvocation`）；而 `Advisor` 是面向大模型调用生命周期的专用拦截链，直接操作 `ChatClientRequest`（包含 `Prompt`、参数与上下文 Map）与 `ChatClientResponse`，便于对提示词、历史消息、检索上下文及流式响应块进行结构化改写与观测。
->
-> **Q2：`MessageChatMemoryAdvisor` 与旧版 `PromptChatMemoryAdvisor`（2.0 已移除）有什么区别？**
-> - **答**：
+
+> [!question]- Q2：`MessageChatMemoryAdvisor` 与旧版 `PromptChatMemoryAdvisor`（2.0 已移除）有什么区别？
 >   - **`MessageChatMemoryAdvisor`**：保持多轮对话的原生的角色结构，将历史记录作为独立的 `UserMessage`、`AssistantMessage` 列表注入 `Prompt`，符合现代聊天模型的消息对齐规范；
 >   - **`PromptChatMemoryAdvisor`**：将历史消息拼接为一段纯文本字符串并填入系统提示词占位符中，会丢失结构化的消息角色边界，因此在 Spring AI 2.0 中已被移除。
->
-> **Q3：在流式输出（SSE）场景下，自定义 `StreamAdvisor` 如何准确记录耗时与采集 Token 用量？**
-> - **答**：
+
+> [!question]- Q3：在流式输出（SSE）场景下，自定义 `StreamAdvisor` 如何准确记录耗时与采集 Token 用量？
 >   在 `adviseStream(...)` 中使用 `Flux.defer()` 记录起始时间，并通过 Reactor 的 `.doFinally(signal -> ...)` 统一处理流正常完成（`ON_COMPLETE`）、异常（`ON_ERROR`）和客户端取消（`CANCEL`）时的收尾统计。采集 Token 用量（`Usage`）时，应从流式响应块中携带元数据的最后一个有效 `ChatClientResponse` 提取，避免将多个分块的累计统计值重复相加。
 
 ---
 
 ## 🪝 知识复盘卡
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │               Advisor 拦截器 复盘卡                     │
 ├────────────────────────────────────────────────────────┤

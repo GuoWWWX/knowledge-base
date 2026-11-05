@@ -6,7 +6,7 @@ tags:
   - 主题/Prompt
   - 阶段/01
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,15 +14,15 @@ mastery: ⭐☆☆☆☆
 # System-Prompt设计
 
 > [!abstract] 一句话总结
-> System Prompt 是一次对话中最高层级的行为说明，用来设定角色、边界、工具使用原则、安全规则和输出规范，但不能当作唯一安全边界。
+> System Prompt 通常用于提供高优先级的行为说明，设定角色、边界和输出规范；不同服务的指令层级有所区别，它也不能充当唯一安全边界。
 
 ## 🎯 本节定位
 
-- **本章第 8 课，承接 [[07-Prompt工程基础]]**。System Prompt 的安全边界问题见 [[12-防御性提示与防注入]]；“冻结 System Prompt”还是缓存命中的前提，见 [[17-Prompt-Caching提示缓存]]。
+本章第 8 课，承接 [[07-Prompt工程基础]]。System Prompt 的安全边界问题见 [[12-防御性提示与防注入]]；稳定的 System Prompt 有助于缓存命中，见 [[17-Prompt-Caching提示缓存]]。
 
 ## 📌 这是什么
 
-在 Chat API 中，消息通常分为 system、user、assistant、tool 等角色。System Prompt 位于最高层，用来告诉模型“你是谁、你要遵守什么规则、如何处理冲突、如何输出”。
+在 Chat API 中，消息通常分为 system、user、assistant、tool 等角色，部分接口还有 developer 等指令层级。System Prompt 用来定义较稳定的行为规则；各消息角色和优先级应以对应服务文档为准。
 
 ## 🤔 解决什么问题 / 为什么需要
 
@@ -42,7 +42,7 @@ mastery: ⭐☆☆☆☆
 | ---- | ---- | ---- |
 | Role | 模型扮演的专业身份 | 不要空泛 |
 | Policy | 行为边界和禁止事项 | 应具体可执行 |
-| Priority | 指令冲突时的优先级 | system 高于用户输入 |
+| Priority | 指令冲突时的优先级 | 常见接口中 system 高于用户输入；具体规则按服务确定 |
 | Tool Policy | 何时调用工具、如何处理失败 | Agent 场景关键 |
 | Refusal | 拒答规则 | 说明何时拒绝和如何替代 |
 | Output Contract | 稳定输出契约 | JSON/Markdown/语言风格 |
@@ -71,6 +71,8 @@ flowchart TD
 
 ## 💻 代码实践
 
+以下是 Spring AI 配置片段，假设 `chatModel` 已配置；提示词不替代服务端权限控制。
+
 ```java
 ChatClient client = ChatClient.builder(chatModel)
     .defaultSystem("""
@@ -84,20 +86,21 @@ ChatClient client = ChatClient.builder(chatModel)
 
 ## ⚠️ 踩坑与注意事项
 
-- [ ] **把密钥写进 System Prompt**：Prompt 可能被间接泄露，秘密应放服务端。
-- [ ] **用 System Prompt 替代权限控制**：权限、审核、工具白名单必须在代码层实现。
-- [ ] **规则过多且冲突**：模型会难以执行，应按优先级整理。
-- [ ] **忘记版本管理**：System Prompt 是生产配置，改动应记录和回归测试。
+- [ ] Prompt 可能泄露，不要把密钥写入 System Prompt。
+- [ ] 在代码层实现权限、审核和工具白名单，不能只依赖 System Prompt。
+- [ ] 检查规则是否过多或相互冲突，并按优先级整理。
+- [ ] 对 System Prompt 做版本管理，改动后进行回归测试。
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: System Prompt 能防止 Prompt Injection 吗？
->   - A: 只能降低风险，不能作为安全边界；还需要输入隔离、工具权限、输出校验和审计。
-> - Q: System Prompt 应该写多长？
->   - A: 写稳定且必要的规则，避免放大段文档和临时任务。
-> - Q: 用户要求“忽略之前所有指令”怎么办？
->   - A: System Prompt 应规定此类请求无效，代码层还要限制工具和敏感数据访问。
+> [!question]- System Prompt 能防止 Prompt Injection 吗？
+> 只能降低风险，不能作为安全边界；还需要输入隔离、工具权限、输出校验和审计。
+
+> [!question]- System Prompt 应该写多长？
+> 写稳定且必要的规则，避免放大段文档和临时任务。
+
+> [!question]- 用户要求“忽略之前所有指令”怎么办？
+> System Prompt 应规定此类请求无效，代码层还要限制工具和敏感数据访问。
 
 ## 🔗 关联笔记
 

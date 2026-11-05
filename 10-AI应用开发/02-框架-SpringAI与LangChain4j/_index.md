@@ -13,7 +13,7 @@ mastery: ⭐⭐⭐☆☆
 # ☕ 02 · Java AI 框架（Spring AI 与 LangChain4j）
 
 > [!info] 本区说明
-> 对应学习路径 **阶段二**。全面构建 Java 工程师面向大模型时代的工程落地架构体系：以 **Spring AI** 作为企业级主线，以 **LangChain4j** 作为声明式接口对照，以 **Embabel Agent** 作为多 Agent 规划进阶。
+> 对应学习路径 **阶段二**。全面构建 Java 工程师面向大模型时代的工程落地架构体系：以 **Spring AI** 作为企业级主线，以 **LangChain4j** 作为声明式接口对照，以 **Embabel Agent** 作为规划进阶，以 **AgentScope Java** 学习 Agent 工具循环和运行能力。
 
 ---
 
@@ -44,6 +44,8 @@ flowchart TD
     S1 --> CMP["01-SpringAI与LangChain4j对比与选型"]
     S2 --> CMP
     CMP --> S3
+    CMP --> AS["AgentScope Java：工具循环与 Harness"]
+    AS --> FIN
     S3 --> FIN["99-本章总结与复习<br/>（核心拓扑、高频问答与工程规范）"]
 
     style M0 fill:#e1f5fe,stroke:#0288d1,stroke-width:1px
@@ -56,12 +58,15 @@ flowchart TD
 ## 📚 知识导航清单
 
 ### 00 · 全景心智
+
 - [ ] [[00-Java-AI框架全景与心智模型]]（统一模型抽象、分层架构与 Java 工程生态优势）
 
 ### 01 · 框架对比与选型
+
 - [ ] [[01-SpringAI与LangChain4j对比]]（设计理念、Fluent 链式 API 与声明式接口对比及选型策略）
 
 ### 02 · Spring AI 专区（主线）
+
 - [ ] [[SpringAI/_index|Spring AI 体系总览索引]]
   - [ ] [[SpringAI/01-Spring-AI项目搭建|01-Spring-AI项目搭建]]（BOM 依赖管理与 Provider 接入）
   - [ ] [[SpringAI/02-ChatClient与ChatModel|02-ChatClient与ChatModel]]（底层模型接口与 Fluent API 门面）
@@ -74,6 +79,7 @@ flowchart TD
   - [ ] [[SpringAI/09-VectorStore向量存储|09-VectorStore向量存储]]（PGVector/Milvus 接入与相似度检索）
 
 ### 03 · LangChain4j 专区（对照）
+
 - [ ] [[LangChain4j/_index|LangChain4j 体系总览索引]]
   - [ ] [[LangChain4j/01-LangChain4j核心概念|01-核心概念与架构]]
   - [ ] [[LangChain4j/02-AiServices声明式AI服务|02-AiServices声明式服务]]（基于动态代理的声明式接口设计）
@@ -83,9 +89,21 @@ flowchart TD
   - [ ] [[LangChain4j/06-多模型接入与配置|06-多模型接入与配置]]
 
 ### 04 · Embabel Agent 进阶专区
+
 - [ ] [[EmbabelAgent/_index|Embabel Agent 编排专区索引]]（面向 JVM 的强类型状态机与多步骤 Agent 规划）
 
+### 05 · AgentScope Java 专区
+
+- [ ] [[AgentScopeJava/_index|AgentScope Java 学习索引]]（Agent 执行循环、工具、会话与 Harness）
+
+### 06 · 近期更新专题
+
+- [ ] [[SpringAI/10-2.x工具调用循环与动态工具发现|Spring AI 2.x 工具调用循环与动态工具发现]]
+- [ ] [[LangChain4j/07-Agentic工作流与共享状态|LangChain4j Agentic 工作流与共享状态]]
+- [ ] [[EmbabelAgent/10-1.5版本后续更新与学习重点|Embabel 1.5 后续更新与学习重点]]
+
 ### 99 · 本章总结与复习
+
 - [ ] [[99-本章总结与复习]]（全章核心拓扑、高频面试问答、生产工程规范）
 
 ---

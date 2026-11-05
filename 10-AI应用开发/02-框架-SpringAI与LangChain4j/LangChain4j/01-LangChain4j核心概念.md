@@ -18,11 +18,10 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 10 课，LangChain4j 对照**。前置：前 9 课建立的 Spring AI 心智；本节以对照视角看 LangChain4j 的核心抽象（`ChatModel`、`AiServices` 等）。
-- **延伸**：选型结论在下一课 [[../01-SpringAI与LangChain4j对比]]。
+本篇介绍 LangChain4j 的 `ChatModel`、`AiServices` 等核心抽象，并与 Spring AI 对照；框架选择可参考 [[../01-SpringAI与LangChain4j对比]]。
 
 > [!info] 版本现状（2026-08）
-> LangChain4j 当前 **1.18.1**（2026-07 发布），1.x 持续稳定迭代；`OpenAiChatModel.builder()`、`AiServices`、`@Tool` 等核心 API 自 1.0 GA 起保持稳定，本课示例可直接使用。
+> 本课以 LangChain4j 1.x 的核心概念为主；示例需按实际版本和依赖配置验证，不能假定跨版本接口完全不变。
 
 ## 📌 这是什么
 
@@ -143,10 +142,11 @@ Document
 
 ## 🎯 面试速记
 
-> - **Q: LangChain4j 的特色是什么？**
->   - A: 普通 Java 抽象清晰，`AiServices` 可以用接口定义 AI 能力，工具、记忆、RAG 组合方便。
-> - **Q: 它和 Spring AI 最大差异？**
->   - A: Spring AI 更 Spring Boot 原生；LangChain4j 更框架中立，接口式 AI Service 很突出。
+> [!question]- LangChain4j 的特色是什么？
+> 普通 Java 抽象清晰，`AiServices` 可以用接口定义 AI 能力，工具、记忆、RAG 组合方便。
+
+> [!question]- 它和 Spring AI 最大差异？
+> Spring AI 更 Spring Boot 原生；LangChain4j 更框架中立，接口式 AI Service 很突出。
 
 ## 🔗 关联阅读
 

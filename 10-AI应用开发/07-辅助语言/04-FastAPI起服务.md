@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,19 +14,16 @@ mastery: ⭐☆☆☆☆
 # FastAPI起服务
 
 > [!abstract] 一句话总结
-> FastAPI 是 Python 里最常见的 AI 后端接口框架，用它可以把模型调用、RAG 检索、Embedding 入库封装成 HTTP API。
+> FastAPI 是 Python 中常用的 Web 接口框架，可以把模型调用、RAG 检索或 Embedding 入库封装成 HTTP API。
 
 ## 🎯 本节定位
 
-- **本章第 4 课**：前置 [[01-Python速查-Java视角]]、[[02-uv包管理与环境]]，本篇把 Python AI 能力封装成 HTTP 服务（对应 Java 的 Spring Boot）。
-- **延伸**：[[05-LangChain-Python读代码笔记]] 讲如何读基于它的项目。
+在 [[01-Python速查-Java视角]] 和 [[02-uv包管理与环境]] 的基础上，本篇学习用 FastAPI 将 Python 能力封装成 HTTP 服务；之后可阅读 [[05-LangChain-Python读代码笔记]]。
 
 ## 📌 这是什么
 
-FastAPI 对 Java 开发者最友好的理解方式是：`@RestController` + DTO 校验 + Swagger 文档。
-
+FastAPI 对 Java 开发者最友好的理解方式是：`@RestController` + DTO 校验 + Swagger 文档。 Python 的字段模型可先看 [[01-Python速查-Java视角#🧩 Pydantic：Python 里的 DTO|Pydantic 示例]]。
 一个最小服务包含：
-
 - `FastAPI()`：应用对象。
 - `@app.get` / `@app.post`：路由。
 - `pydantic.BaseModel`：请求和响应 DTO。
@@ -45,8 +42,10 @@ FastAPI 对 Java 开发者最友好的理解方式是：`@RestController` + DTO 
 
 ## ⚙️ 环境命令
 
+先创建项目并安装依赖；将下方服务示例保存为项目根目录的 `main.py` 后，再运行最后一条命令。
+
 ```bash
-uv init fastapi-ai-demo
+uv init --no-package fastapi-ai-demo # 示例使用项目根目录的 main.py
 cd fastapi-ai-demo
 uv add fastapi uvicorn pydantic
 uv run uvicorn main:app --reload
@@ -87,6 +86,11 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/chat -Method Post `
   -Body ([System.Text.Encoding]::UTF8.GetBytes('{"message":"解释 RAG"}'))
 ```
 
+## 🔍 请求进来后发生什么？
+
+例如客户端提交 `{"message":"解释 RAG"}`，FastAPI 根据路由找到 `chat`，再用 `ChatRequest` 解析请求体；示例返回的 JSON 为 `{"answer":"收到：解释 RAG"}`。如果请求体缺少必填的 `message`，默认会返回 422 及字段错误信息，不会进入正常处理逻辑。
+这里的回答是本地回显，没有调用模型；真实项目还需要鉴权、超时和模型错误处理。
+
 ## 🤖 AI 生态落点
 
 - `/chat`：封装 LLM 对话接口，前端或 Java 服务都可以调用。
@@ -109,20 +113,23 @@ app/
 ## ⚠️ 踩坑与注意事项
 
 - 路由文件拆分后要记得 `app.include_router(...)`，否则接口不会注册。
-- `async def` 路由运行在主事件循环中，应配合异步 SDK 使用；若必须执行同步阻塞 I/O，可定义为普通 `def` 路由（由 FastAPI 自动放入外部线程池执行），或在协程中使用 `run_in_executor` 显式调度。
+- `async def` 路由应配合异步 SDK，避免同步 I/O 阻塞事件循环。
+- 必须使用同步库时，可使用普通 `def` 路由或将阻塞任务交给线程池。
 - Pydantic 默认会校验请求体，422 往往是字段名或类型不对。
-- 生产环境应移除 `--reload` 参数，并将耗时任务交由后台任务队列处理。多 worker 部署时各进程内存相互独立，会话状态与配额统计需保存在 Redis 或数据库等外部存储中。
+- 生产环境移除 `--reload`，长耗时任务可交给后台任务队列。
+- 多 worker 的内存相互独立，共享会话和配额状态需要外部存储。
 - 模型 API Key 不要写死在代码里，放 `.env` 或部署平台环境变量。
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: FastAPI 相比 Flask 的优势是什么？
->   - A: 类型注解、Pydantic 校验、自动 OpenAPI 文档和异步支持更适合接口型 AI 服务。
-> - Q: FastAPI 怎么和 Java 主系统协作？
->   - A: Java 保持主业务和权限，FastAPI 承载 Python AI 能力，通过 HTTP 或 gRPC（另一种远程调用协议）互通。
-> - Q: 线上 Chat 接口要补哪些工程能力？
->   - A: 超时、限流、鉴权、日志 trace、请求体大小限制、模型错误映射和健康检查。
+> [!question]- FastAPI 相比 Flask 的优势是什么？
+> 类型注解、Pydantic 校验、自动 OpenAPI 文档和异步支持更适合接口型 AI 服务。
+
+> [!question]- FastAPI 怎么和 Java 主系统协作？
+> Java 保持主业务和权限，FastAPI 承载 Python AI 能力，通过 HTTP 或 gRPC（另一种远程调用协议）互通。
+
+> [!question]- 线上 Chat 接口要补哪些工程能力？
+> 超时、限流、鉴权、日志 trace、请求体大小限制、模型错误映射和健康检查。
 
 项目里可以用 FastAPI 快速交付：RAG 原型服务、Embedding 入库接口、模型网关适配层。
 

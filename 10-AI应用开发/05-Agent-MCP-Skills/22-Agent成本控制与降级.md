@@ -6,134 +6,89 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
 
-# Agent成本控制与降级
+# 💰 Agent 成本控制与降级
 
-> [!abstract] 一句话总结
-> Agent 成本控制是把“模型选择、上下文长度、工具数量、循环步数、并发和缓存”变成可配置预算，并在预算耗尽前降级到更便宜、更确定的路径。
+> [!abstract] 本文要解决什么
+> 一次 Agent 任务可能多次调用模型、查询工具和重试。成本控制需要覆盖整次任务，降级则要在资源不足或服务异常时给用户一个真实、可继续的处理方式。
 
-## 📌 这是什么
+## 🎯 为什么一次任务会越来越贵？
 
-Agent 成本主要来自五处：
+假设用户要求分析订单异常。Agent 先读订单，再查物流、查询退款规则，之后又因工具超时重试。每一轮模型调用都可能再次携带历史消息、工具描述和已有结果；因此，即使用户只问了一个问题，也不等于只产生一次模型调用。
 
-1. 模型输入输出 token。
-2. ReAct / Reflection / Supervisor 带来的多轮模型调用。
-3. 工具描述、MCP tools 列表、RAG chunks 占用上下文。
-4. 外部工具 API、向量检索、数据库和网络调用。
-5. 失败重试、超时等待、人工复核。
+常见成本来自模型输入与输出 Token、工具或第三方 API、检索和存储、重试以及人工处理。耗时也要考虑：模型变慢或工具阻塞时，用户体验可能先于费用出现问题。
 
-成本控制不是简单换小模型，而是为每类任务设预算：最多几步、最多多少 token、可用哪些工具、失败后怎样退回确定性流程。
+## 📏 先给任务设预算
 
-## 🤔 解决什么问题 / 为什么需要
+预算应覆盖整个任务，而不是只限制某一次模型回答。可以根据业务场景设置：
+- 模型和工具最多调用多少次，避免循环或重复查询。
+- 输入、输出 Token 和金额的上限，分别累计并按服务商用量结算。
+- 总截止时间、单次调用超时和重试次数，避免一直等待。
+- 子 Agent 与主 Agent 共同使用的任务预算，防止并发时分别超支。
 
-- **避免一次复杂任务打穿预算**：长上下文、多 Agent 并行和工具循环很容易指数级变贵。
-- **让降级可预期**：超预算时给模板答案、人工工单或只读查询，而不是让请求随机失败。
-- **提升稳定性**：限制工具数量和上下文长度后，模型更容易选对工具。
-- **便于运营计费**：按租户、用户、场景统计 token 与外部 API 成本。
-
-## 🧩 成本杠杆
-
-| 杠杆 | 做法 | 适用场景 |
-| ---- | ---- | -------- |
-| 模型路由 | 简单分类用小模型，复杂推理用强模型。 | 客服、工单、内容审核。 |
-| 上下文裁剪 | 只放 top-k 证据和必要工具描述。 | RAG、多工具 Agent。 |
-| 工具搜索 | 从工具库检索相关 tools，而不是全量塞给模型。 | MCP server 多、工具多。 |
-| 步数限制 | `maxSteps`、超时、重试次数硬限制。 | ReAct、Plan-and-Execute。 |
-| 缓存 | 缓存分类、RAG 召回、稳定工具结果。 | 高频重复问题。 |
-| 降级 | 模板、FAQ、人工流转、只读模式。 | 预算耗尽或模型不可用。 |
-
-## ⚙️ 落地步骤
+例如订单查询最多允许 4 次模型调用、5 次工具调用和 15 秒总耗时；数值只是示例，需要结合真实场景和评测调整。一次模型调用的最大输出 Token 不等于整个任务的 Token 或费用上限。
 
 ```mermaid
 flowchart LR
-    A[请求进入] --> B[识别场景和租户]
-    B --> C[加载预算]
-    C --> D[选择模型/工具/Skill]
-    D --> E[执行并累计成本]
-    E --> F{预算是否充足}
-    F -->|是| G[继续]
-    F -->|否| H[降级响应]
+    A["接收任务与预算"] --> B["调用前检查剩余额度"]
+    B -->|足够| C["调用模型或工具"]
+    C --> D["记录实际用量和耗时"]
+    D --> E{"任务完成？"}
+    E -->|否| B
+    E -->|是| F["返回结果"]
+    B -->|不足| G["停止并按业务规则降级"]
 ```
 
-1. 定义 `AgentBudget`：最大 token、最大模型调用次数、最大工具调用次数、最大耗时。
-2. 在 Agent 循环里每一步扣减预算，扣减点包括 prompt tokens、completion tokens、tool latency。
-3. 将 tools 分组：默认只暴露当前场景需要的 tools；大量 MCP tools 使用工具搜索或白名单。
-4. 对低风险任务使用缓存，对高风险写操作只缓存只读上下文，不缓存执行结果。
-5. 降级路径提前产品化：例如“给出基于已有信息的回答 + 创建人工工单”。
+并发调用时，多条分支可能同时看到“预算还有剩余”。需要在共享预算上原子预留额度，调用后再按实际用量结算；模型或外部服务已经产生的费用不能因为任务取消而假定为零。
 
-## 💻 Java / Spring AI 示例
+## 🛠️ 可以从哪里减少开销？
+
+| 做法 | 具体方式 | 需要权衡 |
+| :--- | :--- | :--- |
+| 选择模型 | 简单分类或抽取交给经过验证的较小模型 | 成本可能降低，也要检查正确率 |
+| 控制上下文 | 保留当前任务需要的消息、证据和工具描述 | 裁剪过多可能丢失关键条件 |
+| 筛选工具 | 按场景提供工具，数量很多时评估动态工具发现 | 多一次搜索也会有延迟和成本 |
+| 合理缓存 | 缓存适合复用的公开资料或查询结果 | 设置有效期，并隔离用户与租户数据 |
+| 控制重试 | 仅对适合重试的错误限次重试 | 写操作需幂等，不能盲目重复执行 |
+
+Spring AI 提供动态工具发现能力，可按需向模型提供相关工具定义；具体接口与可用版本应查看对应文档，并用实际任务验证准确率、Token 和耗时。
+
+## 🚦预算不足或服务异常时怎么办？
+
+降级不是统一返回“系统繁忙”，而是根据已经完成的步骤选择安全的后续路径：
+- 只读查询失败：说明当前无法取得最新结果，提供重试或人工入口。
+- 已有部分可靠证据：可以明确说明已查到什么、哪些信息尚未确认。
+- 需要人工处理：在工单实际创建成功后，再告知用户已转交并给出编号。
+- 写操作结果不明：先查询业务状态或由人工核实，不能假定失败后直接重复执行。
+
+模型服务不可用、工具超时和预算耗尽的处理方式可以不同。尤其是退款、发消息等有副作用的动作，降级时不能把“请求已发送”当作“执行成功”。
+
+## ☕ Java 中的简单步骤限制
+
+下面只展示一次调用前的计数检查，`BudgetExceededException` 由项目定义。它没有实现跨线程原子预留、Token 统计、超时或整个 Agent 循环，不能直接作为完整的生产预算控制器。
 
 ```java
-record AgentBudget(int maxSteps, int maxInputTokens, int maxOutputTokens, Duration timeout) {
-    AgentBudget consumeStep() {
-        if (maxSteps <= 0) {
-            throw new BudgetExceededException("agent step budget exceeded");
-        }
-        return new AgentBudget(maxSteps - 1, maxInputTokens, maxOutputTokens, timeout);
+void checkCallBudget(int usedCalls, int maxCalls) {
+    if (usedCalls >= maxCalls) {
+        throw new BudgetExceededException("模型调用次数已用尽");
     }
 }
 ```
 
-```java
-String replyWithBudget(String question, AgentBudget budget) {
-    try {
-        return chatClient.prompt()
-                .system("优先使用订单查询工具；如果信息不足，说明需要人工处理。")
-                .user(question)
-                .options(OpenAiChatOptions.builder()
-                        .maxTokens(budget.maxOutputTokens())
-                        .temperature(0.2)
-                        .build())
-                .tools(orderTools)
-                .call()
-                .content();
-    } catch (BudgetExceededException | ResourceAccessException ex) {
-        return "当前自动处理资源不足，请使用人工服务入口。";
-    }
-}
-```
+真正接入时，每次模型、工具和重试都要经过对应预算检查，并将实际用量与执行结果关联到任务 Trace，详见 [[18-Agent可观测]]。
 
-> [!important] 预算结算与降级一致性要点
-> - **全链路原子预算控制**：任务级预算应覆盖主控 Agent、子 Agent、模型重试及外部工具调用的累计开销；在并发场景下采用“调用前预留额度 + 调用后按实际消耗结算”的原子机制，防止并发请求穿透配额上限。
-> - **降级响应与业务状态一致**：触发人工兜底降级时，应先调用工单接口完成工单创建并持久化上下文，确认创建成功后再向用户返回“已转交人工处理”及对应工单号。
+> [!question]- 为什么限制单次输出长度仍可能超预算？
+> Agent 可能连续多次调用模型，每轮都要处理输入上下文，还可能产生工具费用；需要累计整次任务的调用和用量。
 
-## ⚠️ 工程坑
+> [!question]- 降级到小模型就一定更好吗？
+> 不一定。小模型可能需要更多重试，或在关键任务上效果不足，应比较完成率、总费用和延迟，再决定适用场景。
 
-- 只限制输出 token，不限制 ReAct 步数；模型可能多次工具调用后才输出。
-- 工具描述过长，业务 prompt 还没开始就消耗大量上下文。
-- 降级文案没接业务流程，用户看到“系统繁忙”却没有工单或后续入口。
-- 缓存包含用户私有数据，跨租户命中造成泄露。
-- 只统计模型账单，不统计 MCP server、搜索、向量库和第三方 API 成本。
+## 🔗 关联与资料
 
-## 🎯 面试问题
-
-> [!question] 高频问题
-> - Q: Agent 为什么比单次 ChatCompletion 更难控成本？
->   - A: Agent 会多轮规划、调用工具、反思和重试；每轮都会新增 token、延迟和外部 API 成本。
-> - Q: 工具很多时怎么减少 token？
->   - A: 按场景白名单或使用工具搜索，只把相关工具定义传给模型；不把全量 MCP tools 每次都塞进上下文。
-> - Q: 模型不可用时怎么降级？
->   - A: 对只读查询走确定性接口或 FAQ；对复杂任务创建人工工单；对高风险写操作保持不可自动执行。
-
-## ✅ 精通检查清单
-
-- 能计算一次 Agent 请求的主要成本项。
-- 能设计 step、token、timeout 三类预算。
-- 能说明工具搜索和上下文裁剪的收益。
-- 能给出业务可接受的降级路径。
-
-## 🔗 关联笔记
-
-- [[_index]]
-- [[18-Agent可观测]]
-- [[17-Agent-MCP-Skills组合实战]]
-- [[../00-总览/学习仪表盘]]
-
-## 📚 参考资料
-
-- [Spring AI Dynamic Tool Discovery](https://docs.spring.io/spring-ai/reference/guides/dynamic-tool-search.html)
-- [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
+- [[18-Agent可观测|可观测]]、[[19-Agent评估|评估]]、[[21-Agent权限治理与分级自治|权限治理]]
+- [Spring AI：Dynamic Tool Discovery](https://docs.spring.io/spring-ai/reference/guides/dynamic-tool-search.html)
+- [Spring AI：Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)

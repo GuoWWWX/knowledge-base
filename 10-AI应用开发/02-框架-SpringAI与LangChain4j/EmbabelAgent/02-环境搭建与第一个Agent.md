@@ -20,7 +20,6 @@ mastery: ⭐☆☆☆☆
 ## 本节目标
 
 学完后你应该能：
-
 1. 新建一个 Embabel `1.5.0` Java 工程。
 2. 解释三个 Starter 各自负责什么。
 3. 编写并运行只有一个 Action 的 Agent。
@@ -33,7 +32,7 @@ mastery: ⭐☆☆☆☆
 | ---- | ---- | -------- |
 | JDK | Java 21+ | `java -version` |
 | Maven | 3.9+ | `mvn -version` |
-| 模型密钥 | OpenAI、Anthropic、Google 等至少一个 | 检查对应环境变量 |
+| 模型密钥 | 调用模型时配置相应 Provider 的密钥，纯 Java Action 可以不配 | 检查对应环境变量 |
 | Embabel Agent | 本章固定 `1.5.0` | 看 `pom.xml` |
 
 Windows PowerShell 中检查：
@@ -41,7 +40,7 @@ Windows PowerShell 中检查：
 ```powershell
 java -version
 mvn -version
-$env:OPENAI_API_KEY
+[bool]$env:OPENAI_API_KEY  # 只检查是否已设置，不输出密钥
 ```
 
 不要把密钥写死在 Git 管理的 `application.yml` 中。本地可以使用环境变量，部署时交给密钥管理系统。
@@ -64,72 +63,17 @@ embabel-learning/
 
 ### `pom.xml`
 
+以下仅展示核心 Starter 坐标；版本、Spring Boot 兼容性、模型 Provider 和完整工程配置应以实际使用版本的官方模板为准。
+
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0</version>
-        <relativePath/>
-    </parent>
-
-    <groupId>com.example</groupId>
-    <artifactId>embabel-learning</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-
-    <properties>
-        <java.version>21</java.version>
-        <embabel-agent.version>1.5.0</embabel-agent.version>
-    </properties>
-
-    <dependencies>
-        <!-- AgentPlatform、注解模型和自动配置 -->
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-starter</artifactId>
-            <version>${embabel-agent.version}</version>
-        </dependency>
-
-        <!-- OpenAI 模型注册；换 Provider 时替换这个 Starter -->
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-starter-openai</artifactId>
-            <version>${embabel-agent.version}</version>
-        </dependency>
-
-        <!-- 学习阶段用交互式 Shell 查看 Agent、Action、Goal 和执行轨迹 -->
-        <dependency>
-            <groupId>com.embabel.agent</groupId>
-            <artifactId>embabel-agent-starter-shell</artifactId>
-            <version>${embabel-agent.version}</version>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <!-- Embabel 会读取 Action 参数名作为 Blackboard binding -->
-                    <parameters>true</parameters>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
+<dependency>
+    <groupId>com.embabel.agent</groupId>
+    <artifactId>embabel-agent-starter</artifactId>
+    <version>${embabel-agent.version}</version>
+</dependency>
 ```
 
-三个依赖不是重复的：
+需要相应模型接入或交互式 Shell 时，再按官方说明添加模型 Provider Starter 和 Shell Starter。项目须启用 Java 参数名编译选项；这里没有在本机编译验证。下面是各依赖的作用：
 
 | 依赖 | 作用 | 能否省略 |
 | ---- | ---- | -------- |
@@ -197,13 +141,12 @@ public class LearningPlanAgent {
 ```
 
 逐行理解：
-
 - `@Agent` 既是 Embabel 注解，也是 Spring stereotype，因此该类会成为 Spring Bean。
 - `description` 不只是注释。Closed/Open 模式可能用它帮助选择 Agent。
 - `UserInput` 是起点类型，Shell 会把用户文本包装成这个对象。
 - `LearningPlan` 是 Action 的输出类型，同时成为 Blackboard 中的新事实。
 - `@AchievesGoal` 把该 Action 的完成标记为一个 Goal。
-- `readOnly = true` 表示 Action 不修改文件、数据库或外部系统。
+- `readOnly = true` 声明 Action 不产生外部副作用；框架不会仅凭这个声明阻止代码执行写操作。
 
 ## 5. 最小配置与运行
 
@@ -233,7 +176,6 @@ blackboard
 ```
 
 预期现象：
-
 1. `agents` 中出现 `LearningPlanAgent`。
 2. `actions` 中出现 `createPlan`。
 3. `goals` 中出现“Return a usable learning plan”。
@@ -247,7 +189,6 @@ blackboard
 ### `agents` 为空
 
 排查顺序：
-
 1. Agent 是否有 `@Agent`。
 2. 类是否在 Spring 扫描范围内。
 3. `@Agent(scan = false)` 是否被误用。
@@ -267,7 +208,6 @@ blackboard
 ### 找不到模型
 
 本节的第一个 Agent 没用 LLM，理论上仍能运行。加入 LLM 后再检查：
-
 - Provider Starter 是否存在。
 - 环境变量是否在启动 Maven 的同一个终端中。
 - `embabel.models.default-llm` 是否与已注册模型名称一致。
@@ -317,4 +257,3 @@ blackboard
 - [Embabel Getting the Binaries](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#getting-started.installing)
 - [Embabel Getting Running](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#getting-started.running)
 - [Maven Central: embabel-agent-starter 1.5.0](https://repo1.maven.org/maven2/com/embabel/agent/embabel-agent-starter/1.5.0/)
-

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.knowledge</groupId>
+        <artifactId>knowledge-code-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <groupId>com.knowledge</groupId>
+    <artifactId>lab04-spring-advanced</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>Lab 04 - Spring Advanced Ecosystem Lab</name>
+    <description>Spring 进阶实战：纯Java三级缓存闭环解决循环依赖、JDK动态代理与AOP切面增强机制、事务四大失效陷阱复现与防御</description>
+
+    <dependencies>
+        <!-- Spring Boot 核心 Starter (版本受父 POM dependencyManagement 统一纳管) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
+

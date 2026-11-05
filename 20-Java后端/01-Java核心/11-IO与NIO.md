@@ -6,7 +6,7 @@ tags:
   - 主题/Java核心
   - 阶段/01
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
@@ -165,6 +165,60 @@ flowchart LR
 
 ## 💻 代码实践 / 排查命令
 
+### 先分清字节、字符与文件路径
+
+InputStream/OutputStream 面向字节，适合图片、压缩包等二进制数据；Reader/Writer 面向字符，适合文本。InputStreamReader 与 OutputStreamWriter 是转换桥梁，必须按数据协议选择 Charset。Buffer 不是“字符编码”，NIO 也不等于默认非阻塞；FileChannel 本身不使用 Selector 处理文件就绪事件。
+
+Path 表达路径，Files 提供创建、读取、复制、移动和遍历等操作。相对路径依赖进程工作目录；`normalize()` 只做路径语法整理，不访问文件系统，不解析符号链接，不能单独当作路径安全校验。
+
+### 文件常用操作（完整实验）
+
+保存为 `FileDemo.java`，运行 `java FileDemo.java`，需要 JDK 11+（本章验证环境为 JDK 21）。本例只处理自己创建的临时目录与文件，finally 中按明确名称清理。
+
+```java
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+
+public class FileDemo {
+    public static void main(String[] args) throws Exception {
+        Path dir = Files.createTempDirectory("java-core-io-");
+        Path source = dir.resolve("source.txt");
+        Path copy = dir.resolve("copy.txt");
+        Path moved = dir.resolve("moved.txt");
+        try {
+            Files.writeString(source, "你好\nJava", StandardCharsets.UTF_8);
+            System.out.println(Files.readString(source, StandardCharsets.UTF_8));
+            // 两行：你好 / Java；只对可控的小文件一次性读取。
+            Files.copy(source, copy);
+            Files.move(copy, moved);
+            try (var reader = Files.newBufferedReader(moved, StandardCharsets.UTF_8)) {
+                System.out.println(reader.readLine()); // 你好
+            }
+            try (var entries = Files.list(dir)) {
+                System.out.println(entries.count());   // 2：source.txt、moved.txt
+            }
+        } finally {
+            Files.deleteIfExists(moved);
+            Files.deleteIfExists(copy);
+            Files.deleteIfExists(source);
+            Files.deleteIfExists(dir);
+        }
+    }
+}
+```
+
+`Files.list` 只列一层，`Files.walk` 递归遍历；返回的 Stream 持有目录资源，应在 try-with-resources 中关闭。`Files.lines` 同样需要关闭；普通集合的 Stream 没有因此自动获得文件资源。
+
+复制和移动遇到目标已存在，默认通常失败；确实要覆盖时显式选择 REPLACE_EXISTING。需要原子移动时使用 ATOMIC_MOVE 并处理不支持的情况，不把跨文件系统移动视为原子操作。大文件用缓冲或分块读写，不直接 readAllBytes/readString。
+
+### Unicode 与乱码定位
+
+文件里的 UTF-8 字节经 UTF-8 解码才还原为正确文本；读错后再按另一种编码保存，可能把损坏固化。定位时分别检查源字节、读写使用的 Charset 和控制台显示编码，不靠“换一个编码试试”作为长期方案。
+
+`char` 和 String.length 使用 UTF-16 代码单元；码点、代码单元与编码字节数不同，见 [[03-String与字符串常量池]]。分块解码时，一个 UTF-8 字符可能跨块，应保留解码器状态或直接使用 Reader，不能把每块独立 new String 后拼接。
+
+### Channel 与 Buffer 实验
+
 ```java
 // 正确读文件：try-with-resources + 循环读 + flip/clear
 try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)) {
@@ -196,7 +250,7 @@ lsof -p <pid> | awk '{print $9}' | sort | uniq -c | sort -nr | head   # 热点�
 ## 🛠️ 排查 / 实践要点
 
 - **句柄泄漏**：`lsof -p <pid>` 看数量趋势；Java 侧回到未关闭的流、目录遍历、HTTP 响应体、Netty ByteBuf 生命周期。
-- **乱码问题**：统一 Charset（`Files.newBufferedReader(path, StandardCharsets.UTF_8)`），不要依赖平台默认编码（Windows GBK / Linux UTF-8 不一致）。
+- **乱码问题**：按文件或协议显式选择 Charset（如 `Files.newBufferedReader(path, StandardCharsets.UTF_8)`）。JDK 17 及以前默认字符集通常依赖平台，JDK 18 起默认 UTF-8；控制台以及兼容配置需单独检查，不能概括成“Windows 永远是 GBK”。
 - **线程阻塞定位**：`jstack` 看线程栈卡在 `read`/`write`/`connect`（IO 阻塞）还是业务代码——NIO 服务线程全卡住时优先怀疑阻塞调用混入。
 - **大文件**：`Files.readAllBytes` 直接读 1GB 文件 = 1GB 堆内存，必须流式/分块处理。
 
@@ -262,10 +316,15 @@ for (int i = 0; i < 100000; i++) {
 
 ## 🔗 关联笔记
 
+- 数据持久化边界：[[18-序列化与反序列化]]；文本处理：[[19-正则表达式]]。
+
 - 本课内：上一课 [[10-Lambda与Stream]]；下一课 [[12-反射与动态代理/_index|12-反射与动态代理]]
 - 延伸：[[../02-JVM/08-常用工具-jstat-jmap-jstack-Arthas|JVM 排查工具]]（jstack 定位 IO 阻塞）；Netty 网络层属于中间件章节
 
 ## 📚 参考资料
+
+- [Files API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/Files.html)
+- [Charset API（默认字符集与编码）](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html)
 
 - [Dev.java Tutorials](https://dev.java/learn/)
 - [Oracle Java Documentation](https://docs.oracle.com/en/java/)

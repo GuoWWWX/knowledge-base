@@ -18,9 +18,7 @@ mastery: ⭐⭐⭐☆☆
 
 ## 🎯 本节定位
 
-- **LangChain4j 子区第 4 课（收尾）**。前置：[[01-LangChain4j核心概念]]、[[02-AiServices声明式AI服务]]、[[03-记忆与RAG]]。
-- 收尾后读 [[../01-SpringAI与LangChain4j对比|两框架对比]] 做最终选型。
-- 延伸：非 Spring 环境（Quarkus、纯 Java）的用法只做概念了解。
+了解 [[01-LangChain4j核心概念]]、[[02-AiServices声明式AI服务]] 和 [[03-记忆与RAG]] 后，可以在本篇学习 Spring Boot 集成，并了解纯 Java、Quarkus 等非 Spring 使用方式；选型参考 [[../01-SpringAI与LangChain4j对比|两框架对比]]。
 
 ## 📌 这是什么
 
@@ -56,13 +54,13 @@ langchain4j:
 ```java
 @Autowired ChatModel chatLanguageModel;          // 自动装配的对话模型 Bean
 // 若需注入 EmbeddingModel，可在配置文件中同步配置 langchain4j.open-ai.embedding-model.*
-// 标注了 @Tool 方法的 Spring Bean 可直接装配至 AiServices
+// 手动构建 AiServices 时显式传入工具；自动发现取决于装配模式
 ```
 
 ## 🤔 解决什么问题 / 为什么需要
 
 - **免手工装配**：模型、向量模型由 Starter 自动创建为 Bean，配置走 yaml。
-- **工具即 Bean**：`@Tool` 标注的方法在 Spring 容器里自动注册，`AiServices` 装配时直接取。
+- **工具接入**：`@Tool` 方法可由 `@AiService` 的自动装配模式发现；手动使用 `AiServices.builder()` 时应显式传入需要的工具。自动发现的工具范围要核对，不能把工具发现当成权限控制。
 - **两种集成深度**：轻量（只用模型 Bean）到完整（AiServices + 记忆 + RAG 全自动）。
 
 ## 🧩 与 Spring AI 的集成对照
@@ -77,6 +75,8 @@ langchain4j:
 | 生态归属 | Spring 官方 | 社区 + Spring 集成 |
 
 ## 💻 代码实践
+
+下面的订单工具返回固定演示文本，不连接订单服务，不能作为真实查询结果。
 
 ```java
 // 方式一：直接用自动配置的模型 Bean（轻量）
@@ -95,7 +95,7 @@ class ChatController {
 @Component
 class OrderTool {
     @Tool("查询订单状态")
-    public String getStatus(@P("订单号") String id) { ... }
+    public String getStatus(@P("订单号") String id) { return "演示状态：配送中"; }
 }
 
 @Configuration
@@ -113,9 +113,9 @@ class AssistantConfig {
 ## ⚠️ 踩坑与注意事项
 
 - **版本管理**：和 Spring AI 一样用 BOM（`langchain4j-bom`）管版本，别混写各模块版本。
-- **两个框架同工程**：Spring AI 与 LangChain4j 可以共存（Bean 名不冲突），但没必要——选型见对比篇，避免"框架内耗"。
+- Spring AI 与 LangChain4j 可以在同一工程中使用，但需要检查 Bean、依赖和配置是否冲突。
 - Starter 自动配置的模型 Bean 若想自定义（如超时、baseUrl），在 yaml 里配 `langchain4j.*` 属性，或用 `@Bean` 覆盖。
-- 纯 Java（非 Spring）环境：不用 Starter，手动 `OpenAiChatModel.builder()...build()` 即可——这是 LangChain4j 相对 Spring AI 的灵活性优势。
+- 纯 Java 环境可以不使用 Starter，手动通过 `OpenAiChatModel.builder()` 创建模型；所需依赖以项目版本为准。
 
 ## 🧪 最小验证
 

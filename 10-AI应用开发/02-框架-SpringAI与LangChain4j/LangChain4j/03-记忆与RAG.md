@@ -14,13 +14,11 @@ mastery: ⭐⭐⭐☆☆
 # 记忆与RAG
 
 > [!abstract] 一句话总结
-> LangChain4j 的记忆与 RAG 组件和 Spring AI 一一对应：`ChatMemory`（`MessageWindowChatMemory`）管多轮上下文，`EmbeddingStore` + `ContentRetriever` 管知识检索——装配进 `AiServices` 即可自动生效，不需要手写编排。
+> LangChain4j 用 `ChatMemory` 保存对话上下文，用 `EmbeddingStore` 和 `ContentRetriever` 检索知识；两者可以配置到 `AiServices`，但身份、数据权限和结果质量仍需应用负责。
 
 ## 🎯 本节定位
 
-- **LangChain4j 子区第 3 课**。前置：[[01-LangChain4j核心概念]]、[[02-AiServices声明式AI服务]]（本课组件都是往 `AiServices` 里装配的"插槽"）。
-- 对照：Spring AI 的 [[../SpringAI/08-ChatMemory记忆|ChatMemory]] 与 [[../SpringAI/09-VectorStore向量存储|VectorStore]]——两边概念同源，API 不同。
-- 延伸：RAG 全链路（切分/向量化/检索/重排）详见 03-知识库技术-RAG 章，本课只讲框架侧组件。
+本篇接着 [[01-LangChain4j核心概念]] 和 [[02-AiServices声明式AI服务]]，介绍接入会话记忆与检索的组件；可以对照 Spring AI 的 [[../SpringAI/08-ChatMemory记忆|ChatMemory]] 和 [[../SpringAI/09-VectorStore向量存储|VectorStore]]。文档切分、向量化和重排等流程见 [[../../03-知识库技术-RAG/_index|RAG 专题]]。
 
 ## 📌 这是什么
 
@@ -46,39 +44,22 @@ String reply3 = assistant.chat("session-1002", "我叫什么？");
 
 ### RAG：EmbeddingStore + ContentRetriever
 
+假设 `store` 和 `embeddingModel` 已配置、文档片段已经入库。下面只展示检索器和 AI 服务的组装，省略模型、向量库依赖与认证，未在本机运行。
+
 ```java
-// ① 离线侧：切分文档 → 向量化 → 存入向量库
-Document document = Document.from("...");
-List<TextSegment> segments = DocumentSplitters.recursive(500, 0).split(document);
-
-EmbeddingModel embeddingModel = OpenAiEmbeddingModel.builder()
-        .apiKey(System.getenv("OPENAI_API_KEY"))
-        .modelName("text-embedding-3-small")
-        .build();
-
-EmbeddingStore<TextSegment> store = new InMemoryEmbeddingStore<>();  // 生产换 Redis/Milvus/PGVector 等
-for (TextSegment segment : segments) {
-    store.add(embeddingModel.embed(segment).content(), segment);
-}
-
-// ② 在线侧：ContentRetriever 把向量库包成"检索插槽"
 ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
-        .embeddingStore(store)
-        .embeddingModel(embeddingModel)
-        .maxResults(3)
-        .build();
-
-// ③ 装配进 AiServices：问答时自动检索并注入上下文
+        .embeddingStore(store).embeddingModel(embeddingModel)
+        .maxResults(3).build();
 Assistant assistant = AiServices.builder(Assistant.class)
-        .chatModel(model)
-        .contentRetriever(retriever)
-        .build();
+        .chatModel(model).contentRetriever(retriever).build();
 ```
+
+入库时仍需解析文档、切分并生成向量；应用应保留来源信息并检查用户权限。检索到的资料可能不相关，回答也可能误用资料。
 
 ## 🤔 解决什么问题 / 为什么需要
 
 - **记忆**：LLM 无状态，多轮对话必须由框架侧保存并注入历史——窗口记忆是"够用且简单"的默认方案（摘要/语义记忆是进阶，见 04-多轮对话章）。
-- **RAG**：模型不知道你的私有知识，检索注入让回答"有据可依"——框架把"切分→向量化→检索→注入"封装成插槽，业务代码零编排。
+- **RAG**：模型不知道你的私有知识，检索注入可为回答提供资料；应用仍要检查检索结果、引用和权限。
 
 ## 🧩 核心概念
 
@@ -93,22 +74,9 @@ Assistant assistant = AiServices.builder(Assistant.class)
 
 ## 💻 代码实践 / 排查要点
 
-```java
-// 完整链路：切分 → 向量化 → 入库 → 检索问答
-// 离线（一次性）：
-// documents 为已加载的 List<Document>，切分产物是 TextSegment
-for (Document doc : documents) {
-    for (TextSegment segment : DocumentSplitters.recursive(500, 100).split(doc)) {
-        store.add(embeddingModel.embed(segment).content(), segment);
-    }
-}
-
-// 在线（每次问答）：
-String answer = assistant.chat("session-1001", "根据知识库回答：什么是 CAG？");
-```
-
-- 检索结果太少 → 调大 `maxResults` / 换更好的 embedding 模型；太多 → 调小或加 rerank（见 RAG 章）。
-- 向量库选型（Redis/Milvus/PGVector）见 [[../../03-知识库技术-RAG/15-向量库选型对比|RAG 章选型]]。
+问题排查时先检查解析出的片段和检索结果，再检查模型回答；不要把模型回答错误直接归因于生成模型。
+- 检索结果太少 → 检查解析、切分、过滤条件和召回，评测调整 `maxResults` 的效果；噪声多时可以评估重排（见 RAG 章）。
+- 向量库选型（Redis/Milvus/PGVector）见 [[../../03-知识库技术-RAG/01-RAG核心原理与全链路实战|RAG 章选型]]。
 - 记忆"记不住" → 检查 `maxMessages` 是否太小、`chatMemoryId` 是否每次都不同。
 
 ## ⚠️ 踩坑与注意事项
@@ -120,11 +88,10 @@ String answer = assistant.chat("session-1001", "根据知识库回答：什么�
 
 ## 🧪 最小验证
 
-```java
-// 记忆验证：同一 chatMemoryId 能记住，不同 id 互相隔离
-// RAG 验证：问一个只存在于文档中的事实，看回答是否引用文档内容
-// 断点看 Prompt：AiServices 内部把检索片段注入到了哪条消息里
-```
+用相同会话连续提问，再换一个经认证的会话 ID，检查上下文是否隔离。准备只存在于知识库中的事实，分别检查召回片段与实际回答；不能因为回答正确就假定引用也正确。
+
+> [!question]- 会话记忆能代替 RAG 查找最新退货制度吗？
+> 不能简单等同。记忆保存对话信息，RAG 从外部资料检索；制度更新后还要检查索引是否同步、用户是否有权访问。
 
 ## ✅ 精通检查清单
 

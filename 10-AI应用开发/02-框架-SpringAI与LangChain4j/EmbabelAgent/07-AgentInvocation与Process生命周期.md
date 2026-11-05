@@ -135,7 +135,6 @@ future.thenAccept(plan -> saveResult(plan));
 ```
 
 如果桌面 UI 需要过程事件、取消和状态恢复，仅拿 `CompletableFuture<T>` 通常不够，应把 Process ID 作为一等业务标识。
-
 还要注意：`runAsync(input)` 虽然返回 `CompletableFuture<AgentProcess>`，但这个 Future 也是在 Process 执行结束后才完成，不能用它在创建任务时立即取得 Process ID。需要立即向前端返回 ID 时，应先显式创建 Process，再异步启动：
 
 ```java
@@ -181,7 +180,6 @@ sequenceDiagram
 ```
 
 Embabel WebMVC 能提供：
-
 - `GET /api/v1/process/{id}`：查询状态和最后结果。
 - `DELETE /api/v1/process/{id}`：终止 Process。
 - `GET /events/process/{id}`：SSE 事件流。
@@ -199,6 +197,7 @@ embabel:
 ```
 
 要使用内置 Web 端点，需要选择包含 WebMVC 能力的 Starter/模块，而不是只加入 Shell Starter。
+状态、事件和终止接口都应先认证调用方并检查 Process 的用户与租户归属，不能把知道 `processId` 当作授权。不同版本端点与开关默认值可能不同；不需要的接口应关闭，并核实实际部署的权限配置。
 
 ## 7. Process 状态与事件
 
@@ -211,9 +210,7 @@ embabel:
 ```
 
 UI 不应该根据“最后一条文本消息”猜状态。状态、Action 事件、LLM 事件、Tool 事件和最终结果要分字段传输。
-
 典型事件消费：
-
 - Process 创建/开始。
 - Planner 生成或调整计划。
 - Action 开始/成功/失败。
@@ -227,7 +224,6 @@ UI 不应该根据“最后一条文本消息”猜状态。状态、Action 事�
 ## 8. 终止与取消
 
 用户点击“取消”时，不能只让前端停止显示。后端必须：
-
 1. 通过 Process ID 找到真实任务。
 2. 请求终止 Process。
 3. 停止后续 Planner/Action 调度。
@@ -246,9 +242,7 @@ DELETE /api/v1/process/{id}
 ## 9. Process 持久化边界
 
 默认的内存 Process Repository 适合开发，不适合把桌面任务恢复能力想当然地建立其上。
-
 生产需要明确：
-
 - 应用重启后是否要恢复任务？
 - Blackboard 中哪些对象可序列化？
 - 大型文件内容是否只保存引用？
@@ -261,9 +255,7 @@ Embabel 提供 Process/Context 扩展点，但“完整桌面会话恢复”仍�
 ## 10. 并发与隔离
 
 两个 Process 并发运行时，共享的是 `AgentPlatform` 和 Spring Bean，隔离的是各自 Blackboard/Process 状态。
-
 需要自行保证：
-
 - 注入 Agent 的成员变量不要保存每次请求状态。
 - Action 使用的服务要线程安全。
 - 文件编辑任务使用不同工作区或 Git worktree。

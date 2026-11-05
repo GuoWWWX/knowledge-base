@@ -2,7 +2,7 @@
 title: OpenAI Agents SDK 与 Handoffs Guardrails
 tags: [领域/AI应用, 类型/知识, 主题/Agent, 主题/OpenAI]
 created: 2026-07-05
-updated: 2026-09-28
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -10,24 +10,23 @@ mastery: ⭐☆☆☆☆
 # OpenAI Agents SDK 与 Handoffs Guardrails
 
 > [!abstract] 一句话总结
-> OpenAI Agents SDK 把 Agent 的工具调用、多 Agent 交接、护栏和 trace 做成一套轻量工程框架，代表了 2026 年主流 Agent SDK 的设计方向。
+> OpenAI Agents SDK 提供工具调用、多 Agent 交接、护栏和追踪等能力，可用于组织和检查 Agent 的执行流程。
 
 > [!info] 本节定位
 > 本章第 8 课，与 [[06-Multi-Agent-Supervisor实现]]、[[07-LangGraph生产级Agent编排]] 互补：前两篇讲多 Agent 分工与状态编排，本篇以 OpenAI Agents SDK 为例看 **Handoff 交接 + Guardrail 护栏 + Tracing** 的产品化设计，并给出 Java 侧的落地对照。
 
-## 为什么要学
+## 🎯 为什么要学
 
-应用开发岗位越来越少问“怎么调一次模型”，更多问“怎么让 Agent 稳定执行任务”。Agents SDK 里的五个概念要分清：
-
+Agents SDK 用几个组件组织多步骤任务，先分清它们的作用：
 - **Agent**：带 instructions、tools、handoffs 的执行单元。
 - **Tool**：模型可调用的函数或外部能力。
 - **Handoff**：当前 Agent 把任务交给另一个专业 Agent。
 - **Guardrail**：输入或输出护栏，用来阻断风险请求或不合规结果。
-- **Tracing**：完整记录模型、工具、交接、异常和耗时。
+- **Tracing**：按配置记录模型、工具、交接、异常和耗时，具体可见内容取决于实现和脱敏策略。
 
-## Handoffs 的工程意义
+## 🔀 Handoffs 的工程意义
 
-在多 Agent 协作架构中，**Handoff（会话交接）** 表示任务控制权的正式移交：当前 Agent 完成意图分流或前置处理后，将后续会话主导权转移给具备特定领域指令与工具集的目标 Agent，并在交接阶段按需过滤历史消息与脱敏上下文。这与 **Agent-as-Tool（将子 Agent 封装为工具）** 形成互补：后者属于主从子过程调用，子 Agent 执行完毕后将结果交回主控 Agent，由主控 Agent 继续把控整体流程。
+Handoff 表示把后续处理交给另一个 Agent；Agent-as-Tool 则是把子 Agent 当作工具调用，子 Agent 返回结果后由主 Agent 继续处理。两者的主要区别是后续由谁继续负责对话。
 
 | 场景 | 主 Agent | 被交接 Agent |
 | ---- | -------- | ------------ |
@@ -36,17 +35,24 @@ mastery: ⭐☆☆☆☆
 | 代码助手 | 总控规划 | 测试修复 Agent、文档 Agent |
 | 企业知识库 | 问题理解 | 检索 Agent、合规审核 Agent |
 
-## Guardrails 的工程意义
+## 🗣️ 交接和子调用有什么区别？
 
-安全控制需要落实在代码拦截层与工具执行层，形成多级护栏（Guardrails）：
+用户问“发票抬头怎么修改？”分流 Agent 可以把后续对话交给发票 Agent，让它继续处理；如果只是需要发票 Agent 查一次资料，也可以把它当工具调用，返回结果后由分流 Agent 继续回答。
+交接时目标 Agent 可能看到之前的对话，应按实际运行模式选择可用的历史过滤方式，并检查摘要、普通消息中是否也包含敏感信息。两种方式都要控制子 Agent 的工具权限；会话交接不等于授权发票修改，实际写操作仍由业务服务验证。
 
-- **输入护栏（Input Guardrails）**：在入口处识别越权请求、提示词注入、敏感数据与违规内容。
-- **输出护栏（Output Guardrails）**：在响应交付前校验敏感信息泄露、结构化格式合规性与事实一致性。
-- **工具护栏（Tool Guardrails）**：在工具函数执行前完成服务端鉴权、配额检查、幂等控制与高风险操作审批。
+## 🛡️ Guardrails 的工程意义
 
-在 OpenAI Agents SDK 的执行模型中，输入护栏挂载于任务链路的入口 Agent，输出护栏作用于生成最终响应的出口 Agent。输入护栏默认支持与主模型推理并行执行（Optimistic Execution）以降低首字延迟；而在涉及资金、权限变更或外部副作用的场景下，应将其配置为同步阻塞模式（`run_in_parallel=False`），确保安全校验通过后再触发模型推理与工具调用。
+护栏可以在不同位置检查输入、输出和工具调用：
+- **输入护栏（Input Guardrails）**：按规则检查用户输入，例如识别敏感信息或不允许的请求。
+- **输出护栏（Output Guardrails）**：检查最终回答是否符合结构和内容要求。
+- **工具护栏（Tool Guardrails）**：在受支持的函数工具执行前后检查参数或结果。
 
-## Java 后端怎么落地
+在 Python 版 Agents SDK 中，输入护栏作用于任务链路的入口 Agent，输出护栏作用于生成最终响应的 Agent。输入护栏默认与 Agent 并行运行，检查失败时工具可能已经开始执行；如果必须等检查通过后再开始，应配置阻塞模式 `run_in_parallel=False`。
+
+> [!warning] 工具护栏有适用范围
+> 当前 Python SDK 的工具护栏针对受支持的函数工具执行，并不拦截 Handoff 本身，也不覆盖所有托管工具。具体能力随版本变化，使用前查阅[官方工具护栏说明](https://openai.github.io/openai-agents-python/guardrails/#tool-guardrails)。业务服务仍需独立鉴权，高风险操作按业务策略审批。
+
+## ☕ Java 后端怎么落地
 
 即使项目不用 OpenAI Python SDK，也可以吸收这个架构：
 
@@ -61,30 +67,29 @@ flowchart LR
 ```
 
 Java 里建议这样分层：
-
 - `AgentOrchestrator`：负责路由和步骤控制。
 - `GuardrailService`：输入输出校验、敏感词、注入检测。
 - `ToolExecutor`：统一工具执行入口，做权限、限流、审计。
-- `TraceService`：记录 prompt、模型、工具、耗时、错误和用户反馈。
+- `TraceService`：按需记录模型、工具、耗时和错误，控制敏感信息及保留期限。
 
-## 与 Spring AI 的关系
+## 🧩 与 Spring AI 的关系
 
-Spring AI 更适合作为 Java 侧模型调用和工具调用基础设施；Agents SDK 更适合学习 Agent 产品形态。真正生产系统可以用 Spring AI 实现同样的模式：
-
+Spring AI 可以在 Java 应用中提供模型和工具调用，再由应用实现相应的路由、检查与追踪；下面是职责上的类比，不代表两个框架的组件能直接互换：
 - `ToolCallback` 对应 Tool。
 - Advisor / 拦截器对应 Guardrail 和 Trace。
 - 自定义状态机对应 Handoff / Workflow。
 
-## 面试讲法
+## ❓ 面试问题
 
-> 我会把 Agent 系统拆成执行单元、工具、交接、护栏和追踪五层。Handoff 解决专业 Agent 分工，Guardrail 解决输入输出风险，Tracing 解决线上定位和评估。即使用 Java/Spring AI 落地，也会复用这套设计，而不是只写一个大 prompt。
+> [!question]- Handoff、Guardrail 和 Tracing 分别解决什么问题？
+> Handoff 将任务交给另一个 Agent，Guardrail 在输入、输出或工具调用处执行检查，Tracing 记录执行过程以便排查和评估。具体权限仍由应用和业务服务校验。
 
-## 学习检查
+## ✅ 学习检查
 
 - [ ] 能解释 Handoff 与普通函数调用的区别。
 - [ ] 能说出输入护栏、输出护栏、工具护栏各自拦什么。
 - [ ] 能画出 Java 版 Agent SDK 分层。
-- [ ] 能说明为什么 trace 是 Agent 上生产的必要条件。
+- [ ] 能说明 trace 如何帮助排查 Agent 的执行问题，以及记录哪些内容需要脱敏。
 
 ## 🔗 关联笔记
 
@@ -100,3 +105,4 @@ Spring AI 更适合作为 Java 侧模型调用和工具调用基础设施；Agen
 - [OpenAI Agents SDK：Handoffs](https://openai.github.io/openai-agents-python/handoffs/)
 - [OpenAI Agents SDK：Guardrails](https://openai.github.io/openai-agents-python/guardrails/)
 - [OpenAI Agents SDK：Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [OpenAI：Guardrails 与人工审批](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)

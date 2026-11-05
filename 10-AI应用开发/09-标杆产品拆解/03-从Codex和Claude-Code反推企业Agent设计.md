@@ -12,16 +12,15 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > Codex 和 Claude Code 的产品设计可以迁移到企业 Agent：先嵌入真实工作流，再设计上下文、工具、权限、验证和复用机制。
 
-## 从真实业务工作流切入
+## 📌 从真实业务工作流切入
 
 构建企业级 AI 应用时，比起单纯提供一个通用对话窗口，更有效的方式是直接切入高频业务工作流：
-
 - 先梳理高频业务流程。
 - 将 Agent 嵌入关键作业节点。
 - 装配业务上下文与受控工具。
 - 通过权限分级与结果验证管控风险。
 
-## 映射到企业场景
+## 🗣️ 映射到企业场景
 
 | 编程 Agent 设计 | 企业 Agent 对应设计 |
 | --------------- | ------------------- |
@@ -36,7 +35,7 @@ mastery: ⭐☆☆☆☆
 | skills | 可复用业务流程包 |
 | MCP | 企业系统标准接入层 |
 
-## 企业 Agent 通用架构
+## 🏗️ 企业 Agent 通用架构
 
 ```mermaid
 flowchart TD
@@ -58,12 +57,11 @@ flowchart TD
     L --> M["审计 / Trace / 反馈"]
 ```
 
-## 设计步骤
+## 🧩 设计步骤
 
 ### 1. 定义工作流
 
 先问：
-
 - 用户每天重复做什么？
 - 哪些步骤最耗时？
 - 哪些步骤需要查资料？
@@ -84,9 +82,7 @@ flowchart TD
 ### 3. 定义工具
 
 工具不要一次性全部暴露给模型。要按场景、用户、风险过滤。
-
 示例：
-
 - 客服 Agent：查订单、查物流、创建工单、申请退款。
 - 数据 Agent：查指标、生成 SQL、画图、解释波动。
 - 办公 Agent：查制度、写邮件草稿、生成周报、创建待办。
@@ -94,7 +90,6 @@ flowchart TD
 ### 4. 定义权限和风险等级
 
 借鉴 [[../05-Agent-MCP-Skills/21-Agent权限治理与分级自治]]：
-
 - L0：只读。
 - L1：生成草稿。
 - L2：低风险自动执行。
@@ -108,15 +103,14 @@ flowchart TD
 | 任务 | 验证 |
 | ---- | ---- |
 | RAG 问答 | 引用证据、无答案拒答 |
-| SQL 分析 | 只读、limit、结果核验 |
+| SQL 分析 | 只读权限、资源限制、结果核验 |
 | 工单操作 | 参数校验、幂等、审批 |
 | 文档生成 | 格式校验、敏感信息扫描 |
 | 代码修改 | 测试、lint、diff |
 
-## 最小可行企业 Agent
+## 📌 最小可行企业 Agent
 
 如果要做一个可面试的项目，可以按这个最小闭环：
-
 1. 一个 Web Chat 入口。
 2. 一个任务线程表。
 3. 一个业务规则文档，相当于企业版 `AGENTS.md`。
@@ -125,11 +119,12 @@ flowchart TD
 6. 一个高风险操作：必须人工审批。
 7. 一套 trace 和 eval badcase。
 
-## 讲给面试官的版本
+## 🎯 讲给面试官的版本
 
-> 设计企业 Agent 时可借鉴 Codex 和 Claude Code 的工程架构：将 Agent 嵌入核心业务流程，自动加载组织级规则，按需检索业务上下文，通过受控工具网关执行操作，配合权限分级与人工审批管控风险，最后通过业务校验、变更预览与审计轨迹保障交付质量。在企业场景中，代码库对应业务系统与知识库，AGENTS.md/CLAUDE.md 对应岗位 SOP，shell/test 对应业务规则校验与审批流。
+> [!question]- 如何从编程 Agent 推导企业 Agent 的设计？
+> 先梳理业务流程和组织规则，再按需加载资料、调用受控工具，并用权限、审批和业务校验约束操作。代码库可类比业务系统与知识库，规则文件可类比岗位 SOP，测试与差异审查可类比业务验证和变更预览。
 
-## 关联
+## 🔗 关联
 
 - [[02-编程Agent通用架构图]]
 - [[Codex/02-Codex一次任务执行全链路]]
@@ -139,6 +134,6 @@ flowchart TD
 
 ## 📚 参考资料
 
-- [OpenAI Codex Documentation](https://developers.openai.com/codex/)
+- [OpenAI Codex Documentation](https://learn.chatgpt.com/docs/glossary)
 - [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/specification)

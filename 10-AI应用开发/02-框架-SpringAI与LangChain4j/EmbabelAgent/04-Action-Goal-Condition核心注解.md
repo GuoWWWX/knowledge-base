@@ -117,21 +117,19 @@ public ReviewedPlan review(DraftPlan draft) {
 ```java
 @Action
 public FinalReport doEverything(UserInput input) {
-    // 理解需求、查资料、生成、审核、发送邮件全写在一起
+    return handleAll(input); // 假设 handleAll 包含理解、生成、审核和发送等步骤
 }
 ```
 
 问题是 Planner 无法重用中间能力，也无法在失败后从已有状态继续。
-
 过小：
 
 ```java
-@Action String trim(String text) { ... }
-@Action String addPeriod(String text) { ... }
+@Action String trim(String text) { return text.trim(); }
+@Action String addPeriod(String text) { return text + "."; }
 ```
 
 问题是规划图充满无业务意义的细节，增加搜索和观测噪声。
-
 合适的 Action 通常代表一个可独立测试、产出明确领域事实的业务步骤。
 
 ## 4. `@AchievesGoal`
@@ -155,13 +153,11 @@ public LearningPlan finish(ApprovedPlan approvedPlan) {
 ```
 
 它不是单独的 `@Goal` 方法，而是贴在某个 `@Action` 上：完成这个 Action，就产出对应目标。
-
 Goal 描述尤其重要，因为 Open/Closed 选择可能基于用户意图匹配目标。好的描述写“达成什么结果”，而不是“调用 finish 方法”。
 
 ### 为什么不能只有最后一个 Action
 
 如果没有 `@AchievesGoal`：
-
 - GOAP 不知道终点。
 - `AgentInvocation.create(platform, LearningPlan.class)` 找不到能产生该目标类型的 Agent。
 - Process 可能无法判断何时结束。
@@ -186,9 +182,7 @@ public LearningPlan finish(ReviewedPlan reviewedPlan) {
 ```
 
 条件方法的领域参数也来自 Blackboard。`ReviewedPlan` 不存在时，`planApproved` 不能成立；存在后框架才能求值。
-
 条件方法必须：
-
 - 无副作用。
 - 可重复调用。
 - 只判断事实，不执行补救动作。
@@ -215,7 +209,6 @@ public LearningPlan finish(ReviewedPlan reviewed) {
 ```
 
 `pre` 表示：即使输入类型 `ReviewedPlan` 已存在，条件为真之前也不能执行。
-
 一个可达路径必须同时满足：
 
 ```text
@@ -250,14 +243,14 @@ public LearningPlan finish(ReviewedPlan reviewedPlan) {
 
 ## 8. `cost`、`value` 与 `@Cost`
 
-两条路径都能到 Goal 时，GOAP 倾向选择成本更低的路径：
+两条路径都能到 Goal 时，GOAP 倾向选择成本更低的路径。下面省略 `readLocal`、`readWithModel` 的实现：
 
 ```java
 @Action(cost = 0.1)
-public RepositoryInfo readLocalMetadata(ProjectPath path) { /* ... */ }
+public RepositoryInfo readLocalMetadata(ProjectPath path) { return readLocal(path); }
 
 @Action(cost = 0.8)
-public RepositoryInfo askLargeModel(ProjectPath path) { /* ... */ }
+public RepositoryInfo askLargeModel(ProjectPath path) { return readWithModel(path); }
 ```
 
 成本随状态变化时：
@@ -289,7 +282,6 @@ public EmailSent sendEmail(ApprovedPlan plan) {
 ```
 
 在打开 `canRerun` 或重试前，先回答：
-
 1. 同一个 Process 重复调用会不会重复扣款、发信、提交代码？
 2. 是否有业务幂等键，例如 `processId + actionName`？
 3. 失败发生在外部系统成功之后、本地返回之前怎么办？
@@ -297,7 +289,7 @@ public EmailSent sendEmail(ApprovedPlan plan) {
 
 `readOnly` 是元数据，不会自动阻止副作用。它要求开发者如实建模。
 
-## 10. 完整小例子
+## 10. 小例子：为什么目标不可达？
 
 ```java
 @Agent(description = "Create a reviewed learning plan")
@@ -362,4 +354,3 @@ public class LearningPlanAgent {
 
 - [Embabel Annotation Model](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#reference.annotations)
 - [Embabel Planners](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#reference.planners)
-

@@ -2,7 +2,7 @@
 title: 编程Agent通用架构图
 tags: [领域/AI应用, 类型/知识, 主题/产品拆解, 主题/编程Agent]
 created: 2026-07-08
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,7 +14,7 @@ mastery: ⭐☆☆☆☆
 
 以下基于公开产品能力提炼出编程 Agent 的**六层通用参考架构**，用于梳理各核心模块的职责边界与协作关系：
 
-## 六层架构
+## 🏗️ 六层架构
 
 ```mermaid
 flowchart TD
@@ -28,7 +28,12 @@ flowchart TD
     G -->|是| H["交付给用户"]
 ```
 
-## 1. 用户入口层
+## 🗣️ 用修复接口的任务看六层
+
+用户在 IDE 提出“修复订单接口的空指针”，入口层接收目标；上下文层按需提供项目约定、相关代码和报错；决策层选择先查哪里。工具层负责读文件或运行测试，治理层依据当前配置控制访问和审批，交付层展示改动与实际验证结果。
+这六层是学习时的职责划分，不代表产品内部存在同名组件，也不保证每次任务都按固定顺序执行。
+
+## 🚪 1. 用户入口层
 
 入口决定产品形态：
 
@@ -40,7 +45,7 @@ flowchart TD
 | Cloud | Codex Cloud / CI 集成 | 后台任务和远程环境 |
 | 协作平台 | GitHub / Slack / Linear | 进入团队流程 |
 
-## 2. 上下文装配层
+## 🧠 2. 上下文装配层
 
 上下文不是越多越好，而是要分层：
 
@@ -53,10 +58,9 @@ flowchart TD
 | 经验上下文 | Skills、模板、团队方法论 | 可复用 |
 | 历史上下文 | thread、memory、trace | 会话或长期 |
 
-## 3. Agent 决策层
+## 📌 3. Agent 决策层
 
 核心职责：
-
 - 判断任务类型。
 - 决定读哪些文件。
 - 决定是否需要工具。
@@ -66,10 +70,9 @@ flowchart TD
 
 这里可以是单 Agent，也可以是 supervisor + subagents（见 [[../05-Agent-MCP-Skills/06-Multi-Agent-Supervisor实现]]）。
 
-## 4. 工具执行层
+## 🛠️ 4. 工具执行层
 
 编程 Agent 的工具通常包括：
-
 - 文件读取和编辑。
 - 全文搜索。
 - shell 命令。
@@ -78,9 +81,9 @@ flowchart TD
 - MCP 外部工具。
 - 浏览器或 IDE API。
 
-工具层必须返回结构化结果，让 Agent 能继续推理。
+工具层要返回可供 Agent 理解的结果；具体可以是文本或结构化数据，不应假设所有工具都返回同一种格式。
 
-## 5. 治理安全层
+## 🔐 5. 治理安全层
 
 这一层决定产品能不能上生产。
 
@@ -93,10 +96,9 @@ flowchart TD
 | 并行冲突 | worktree、任务写范围隔离 |
 | 结果不可验 | 强制测试、diff、trace |
 
-## 6. 交付验证层
+## 📌 6. 交付验证层
 
 成功的编程 Agent 不应只说“我改好了”，而应交付：
-
 - 文件 diff。
 - 测试结果。
 - 构建结果。
@@ -104,7 +106,7 @@ flowchart TD
 - 残余风险。
 - 后续建议。
 
-## Codex 和 Claude Code 放到架构图里
+## 🏗️ Codex 和 Claude Code 放到架构图里
 
 | 架构层 | Codex | Claude Code |
 | ------ | ----- | ----------- |
@@ -115,11 +117,11 @@ flowchart TD
 | 治理层 | sandbox、approval、worktree、managed config | permissions、hooks、settings |
 | 交付层 | diff、commit、PR、review、summary | 代码修改、测试、summary、协作集成 |
 
-## 能讲清楚的核心话术
+## 📌 能讲清楚的核心话术
 
 > 编程 Agent 的通用架构可分为六层：入口层嵌入开发者工作流，上下文层动态装配项目规则与代码文件，Agent 决策层负责规划与工具选择，工具层执行文件读写与命令调用，治理层把控权限与安全边界，交付层通过自动化测试、Diff 与执行轨迹验证结果可靠性。
 
-## 关联
+## 🔗 关联
 
 - [[Codex/02-Codex一次任务执行全链路]]
 - [[Claude-Code/02-Claude-Code一次任务执行全链路]]
@@ -127,6 +129,6 @@ flowchart TD
 
 ## 📚 参考资料
 
-- [OpenAI Codex Documentation](https://developers.openai.com/codex/)
-- [OpenAI Codex Manual](https://developers.openai.com/codex/codex-manual.md)
+- [OpenAI Codex Documentation](https://learn.chatgpt.com/docs/glossary)
+- [Codex 审批与安全](https://learn.chatgpt.com/docs/agent-approvals-security)
 - [Anthropic Claude Code Overview](https://code.claude.com/docs/overview)

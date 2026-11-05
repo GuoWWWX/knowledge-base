@@ -30,12 +30,10 @@ public LearningRequest understand(
 ```
 
 参数来源：
-
 - `UserInput` 从 Blackboard 取得，是领域依赖。
 - `OperationContext` 由 Embabel 运行时注入，是基础设施上下文。
 
 它提供当前 Operation/Process 相关能力，包括：
-
 - `context.ai()`：进入模型与 PromptRunner API。
 - `context.processContext()`：访问当前 Process 信息。
 - Blackboard 读写与当前状态能力。
@@ -84,7 +82,6 @@ context.ai().withFirstAvailableLlmOf("gpt-4.1-mini", "gpt-4.1");
 ```
 
 `withAutoLlm()` 和 `withDefaultLlm()` 不完全相同：前者使用自动选择条件，可能结合 Prompt 和工具；后者使用 `embabel.models.default-llm` 指定的默认模型。
-
 生产代码优先按默认或角色解耦，不要让每个 Action 到处硬编码供应商模型名。
 
 ```yaml
@@ -125,7 +122,6 @@ public LearningRequest understand(
 ```
 
 `createObject` 的因果链：
-
 1. Embabel 根据 `LearningRequest` 生成输出 schema。
 2. 模型返回结构化结果。
 3. 数据绑定为 Java record。
@@ -204,7 +200,6 @@ flowchart TD
 ```
 
 外层 Planner 循环选择的是 **Action**；内层 Tool Loop 中模型选择的是 **Tool**。例如：
-
 - `researchTopic` 是一个 Action。
 - 这个 Action 内的模型可以多次调用 `web_search` Tool。
 - Tool Loop 最终产出一个 `ResearchNotes`。
@@ -267,7 +262,6 @@ return context.ai()
 ```
 
 ToolGroup 的意义：
-
 - Action 声明需要“Web 能力”，不绑定具体 MCP Server。
 - 部署配置决定该角色由哪些真实工具实现。
 - 可以附加权限，例如互联网访问。

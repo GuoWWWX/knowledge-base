@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,18 +14,15 @@ mastery: ⭐☆☆☆☆
 # Vercel-AI-SDK-useChat流式UI
 
 > [!abstract] 一句话总结
-> `useChat` 是 Vercel AI SDK 的 React Hook，用来管理聊天消息、输入框、提交状态和流式更新；它适合快速做一个可用的 AI Chat 前端。
+> `useChat` 是 Vercel AI SDK 的 React Hook，用来管理聊天消息、请求状态和流式更新；此处的输入框内容由组件自行管理。
 
 ## 🎯 本节定位
 
-- **本章第 10 课**：前置 [[09-Vercel-AI-SDK核心]]，本篇把服务端流式接到 React 前端。
-- **延伸**：[[11-LangChain.js简介]] 讲更重的编排方案。
+本篇在 [[09-Vercel-AI-SDK核心]] 之后，介绍如何将服务端流式响应接入 React 前端；更复杂的编排可继续看 [[11-LangChain.js简介]]。
 
 ## 📌 这是什么
 
-`useChat` 把聊天 UI 里重复的状态处理收起来：
-
-以下基于 **AI SDK 5** 的核心接口说明：
+`useChat` 帮助管理聊天消息和请求状态。以下示例按 AI SDK 5 的接口组织，项目使用其他版本时应查阅对应文档：
 - `messages`：UI 消息，文本在 `parts` 中。
 - `sendMessage`：发送消息；输入框由 React `useState` 管理。
 - `status` / `error`：提交、生成和错误状态。
@@ -62,43 +59,21 @@ components/
 
 ## 💻 最小示例
 
-`components/chat-box.tsx`：
+下面展示一个自定义 Hook；假设由客户端组件调用，组件负责输入框、按钮与消息渲染。这里只演示消息和提交状态，代码未连接模型运行。
 
 ```tsx
 "use client";
-
-import { useState } from "react";
 import { useChat } from "@ai-sdk/react";
 
-export function ChatBox() {
-  const [input, setInput] = useState("");
-  const { messages, sendMessage, status, error, stop } = useChat();
-  const busy = status === "submitted" || status === "streaming";
-
-  return (
-    <form onSubmit={(event) => {
-      event.preventDefault();
-      if (busy || !input.trim()) return;
-      void sendMessage({ text: input });
-      setInput("");
-    }}>
-      {messages.map((message) => (
-        <div key={message.id}>
-          {message.parts.map((part, i) =>
-            part.type === "text" ? <span key={i}>{part.text}</span> : null
-          )}
-        </div>
-      ))}
-      <input value={input} onChange={(e) => setInput(e.target.value)} />
-      <button type="submit" disabled={busy || !input.trim()}>发送</button>
-      <button type="button" disabled={!busy} onClick={() => stop()}>停止</button>
-      {error && <p role="alert">请求失败，请稍后重试。</p>}
-    </form>
-  );
+function useChatSender() {
+  const { messages, sendMessage, status } = useChat();
+  const submit = async (text: string) => sendMessage({ text });
+  return { messages, status, submit };
 }
 ```
 
-`app/api/chat/route.ts`：
+例如组件调用 `submit("解释 RAG")` 后，服务端流式返回消息，`messages` 随响应更新；`status` 可用于显示等待或生成状态。此片段本身不包含输入校验、停止按钮和界面。
+服务端接口 `app/api/chat/route.ts` 的示例：
 
 ```ts
 import { convertToModelMessages, streamText } from "ai";
@@ -110,6 +85,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: openai("gpt-4.1-mini"),
     messages: await convertToModelMessages(messages),
+    abortSignal: req.signal,
   });
 
   return result.toUIMessageStreamResponse();
@@ -125,22 +101,25 @@ export async function POST(req: Request) {
 
 ## ⚠️ 踩坑与注意事项
 
-- 组件必须写 `"use client"`，否则不能使用 Hook。
+- 使用 Hook 的组件应位于 `"use client"` 模块边界内，子组件不必重复声明。
 - 后端必须返回 AI SDK 兼容的数据流，普通 JSON 不能驱动逐字更新。
 - `messages` 会越来越长，真实项目要做会话存储、截断或摘要。
 - 不要把模型 API Key 放到客户端组件。
-- 提交表单时需做好空字符串拦截与防重提交处理；点击“停止”会中止本地流读取与网络请求，若需同步终止服务端推理，可在后端监听 `req.signal` 中断信号。
-- 上述示例仅渲染了 `text` 类型的消息片段；若涉及工具调用、文件附件或知识库引用，可遍历 `message.parts` 按对应类型分别渲染。同时，身份鉴权与会话归属校验应在服务端接口中完成。
+- 提交前检查空输入，并避免重复提交。
+- `stop` 可取消前端请求；后端可将 `req.signal` 传给 `streamText`，但远端是否停止仍取决于服务商。
+- 示例只演示发送；实际组件需要遍历 `message.parts` 渲染文本和工具结果。
+- 身份和会话归属需要在服务端接口中校验。
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: `useChat` 帮你做了什么？
->   - A: 它管理消息、发送、请求状态和流式更新；输入框内容由组件自己管理。
-> - Q: 为什么流式 UI 体验更好？
->   - A: 用户能更早看到首段输出，不必等模型完整生成后才显示。
-> - Q: 生产 Chat UI 还要补什么？
->   - A: 会话存储、错误提示、停止生成、重试、鉴权、消息长度控制和埋点。
+> [!question]- `useChat` 帮你做了什么？
+> 它管理消息、发送、请求状态和流式更新；输入框内容由组件自己管理。
+
+> [!question]- 为什么流式 UI 体验更好？
+> 用户能更早看到首段输出，不必等模型完整生成后才显示。
+
+> [!question]- 生产 Chat UI 还要补什么？
+> 会话存储、错误提示、停止生成、重试、鉴权、消息长度控制和埋点。
 
 项目里可以用它做：AI 助手浮窗、知识库问答页面、模型效果调试页。
 
@@ -160,3 +139,4 @@ export async function POST(req: Request) {
 ## 📚 参考资料
 
 - [AI SDK UI Docs](https://ai-sdk.dev/docs/ai-sdk-ui)
+- [AI SDK：停止流式响应](https://ai-sdk.dev/docs/advanced/stopping-streams)

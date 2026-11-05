@@ -6,7 +6,7 @@ tags:
   - 主题/LLM
   - 阶段/04
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,24 +18,22 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 2 课，上下文预算分配**。前置 [[01-滑动窗口记忆]]（窗口怎么留）；窗口与预算概念见 [[../01-LLM基础与Prompt/14-上下文窗口预算管理|01 区·上下文窗口预算管理]]，本篇讲多来源上下文的统一裁剪。
-- **延伸阅读（本课不展开）**：摘要压缩见 [[03-摘要记忆]]、检索片段竞争预算见 [[04-语义检索记忆]]、多层统一组装见 [[06-分层记忆]]。
+本篇在 [[01-滑动窗口记忆]] 的基础上介绍多来源上下文的统一裁剪，窗口与预算概念见 [[../01-LLM基础与Prompt/14-上下文窗口预算管理|01 区·上下文窗口预算管理]]。摘要压缩、检索预算和分层组装分别见 [[03-摘要记忆]]、[[04-语义检索记忆]]、[[06-分层记忆]]。
 
 ## 📌 这是什么
 
 Token窗口裁剪不是简单截字符串，而是按消息角色、业务优先级和 token 预算选择上下文。
-
 - 输入：模型上下文上限、预期输出 token、system prompt、历史消息、检索记忆、工具结果。
 - 输出：可安全放入模型请求的消息列表。
 - 关键约束：必须预留输出 token，否则模型可能中途截断。
-- 优先级：system prompt > 当前用户问题 > 必要工具结果 > 最近关键对话 > 可替代背景材料。
+- 优先级示例：system prompt > 当前用户问题 > 必要工具结果 > 最近关键对话 > 可替代背景材料；具体顺序要结合任务调整。
 
 ## 🤔 解决什么问题 / 为什么需要
 
-- **避免超过模型窗口**：请求超限会失败，或被 SDK / 网关静默截断。
-- **保留高价值信息**：让模型看到关键约束，而不是被低价值长文本挤占。
-- **稳定成本**：token 越多，费用和延迟越高，裁剪策略能让接口延迟可预期。
-- **方便排查**：记录裁剪前后 token 分布，可以解释模型为什么漏看某段历史。
+- 请求超限可能失败，也可能被 SDK 或网关截断。
+- 优先保留关键约束，避免被无关的长文本挤占空间。
+- 控制 Token 数量有助于控制费用和延迟。
+- 记录裁剪前后的 Token 分布，便于排查模型为何没有看到某段历史。
 
 ## 🧩 核心数据结构
 
@@ -68,40 +66,21 @@ flowchart LR
 4. 滑动窗口消息从新到旧累加，语义检索片段按 score 排序累加。
 5. 对长工具结果先摘要，再决定是否进入 Prompt。
 
+## 🧮 具体怎么分配预算？
+
+假设某模型的窗口同时容纳输入和输出，窗口大小为 4096 Token，计划最多输出 800 Token，再留 200 Token 安全余量，则本次输入预算是 `4096 - 800 - 200 = 3096`。如果系统规则、当前问题与工具定义共占 1200，剩余 1896 才能用于历史、摘要和检索资料；这些数字只是示例。
+先保留任务必需的内容，再按相关性和完整轮次装入剩余预算。若必需内容本身已超过 3096，不能继续硬塞：需要缩短固定内容、调整输出预算、换支持更大窗口的模型，或明确告知请求超限。
+
+> [!example] 工具消息不要拆开
+> 历史中一轮包含“用户提问 → 模型请求工具 → 工具返回 → 模型回答”。裁剪时应作为一组处理；只留工具结果或只留工具请求，可能让上下文不完整，也可能不符合模型接口要求。
+
 ## 💻 Spring AI / Redis / VectorStore 落地点
 
+下面是流程示意片段；相关类型和方法由应用自行实现，省略配置与错误处理。
+
 ```java
-// 示例假设片段可独立选择；工具调用与结果必须先组成不可拆分的选择单元。
-record ContextSegment(String id, String source, Message message, int priority, int tokens) {}
-
-List<Message> cut(List<ContextSegment> segments, int modelWindow, int outputReserve) {
-    int budget = modelWindow - outputReserve - 512;
-    List<ContextSegment> fixed = segments.stream()
-        .filter(s -> s.priority() >= 100)
-        .toList();
-    int used = fixed.stream().mapToInt(ContextSegment::tokens).sum();
-
-    if (budget <= 0 || used > budget) {
-        throw new IllegalArgumentException("固定内容超出输入预算，需拒绝或拆分请求");
-    }
-    List<ContextSegment> selected = new ArrayList<>(fixed);
-    List<ContextSegment> candidates = segments.stream()
-        .filter(s -> s.priority() < 100)
-        .sorted(Comparator.comparingInt(ContextSegment::priority).reversed())
-        .toList();
-    for (ContextSegment s : candidates) {
-        if (used + s.tokens() <= budget) {
-            selected.add(s);
-            used += s.tokens();
-        }
-    }
-
-    var selectedIds = selected.stream().map(ContextSegment::id)
-            .collect(java.util.stream.Collectors.toSet());
-    // 按输入的合法消息顺序还原，不能按优先级直接发送给模型
-    return segments.stream().filter(s -> selectedIds.contains(s.id()))
-            .map(ContextSegment::message).toList();
-}
+List<ContextGroup> groups = groupByCompleteTurn(history);
+List<ContextGroup> selected = selectWithinBudget(groups, inputBudget);
 ```
 
 - Redis：保存最近消息及 `tokenCount`，避免每次重新估算。
@@ -129,13 +108,14 @@ List<Message> cut(List<ContextSegment> segments, int modelWindow, int outputRese
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: 如何设计 token 裁剪优先级？
->   - A: 先固定 system prompt 和当前问题，再保留必要工具结果、最近对话、高分检索片段，最后丢弃低分背景和过旧闲聊。
-> - Q: 为什么不能直接截断字符串？
->   - A: 会破坏消息角色、JSON 结构和工具调用结果，也可能截掉高优先级指令，导致模型行为不可控。
-> - Q: 如何证明裁剪策略有效？
->   - A: 记录裁剪前后 token、丢弃片段来源、回答命中率和超限错误率，用回归样例比较不同策略。
+> [!question]- 如何设计 token 裁剪优先级？
+> 先固定 system prompt 和当前问题，再保留必要工具结果、最近对话、高分检索片段，最后丢弃低分背景和过旧闲聊。
+
+> [!question]- 为什么不能直接截断字符串？
+> 会破坏消息角色、JSON 结构和工具调用结果，也可能截掉高优先级指令，导致模型行为不可控。
+
+> [!question]- 如何证明裁剪策略有效？
+> 记录裁剪前后 token、丢弃片段来源、回答命中率和超限错误率，用回归样例比较不同策略。
 
 ## ✅ 精通检查清单
 

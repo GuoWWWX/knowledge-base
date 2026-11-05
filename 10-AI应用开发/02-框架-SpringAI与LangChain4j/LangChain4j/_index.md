@@ -16,7 +16,10 @@ mastery: ⭐☆☆☆☆
 > LangChain4j 是社区驱动的 Java LLM 框架（对应 Python 的 LangChain），不强制绑定 Spring，以普通 Java 抽象 + `AiServices` 声明式 AI 服务为特色，也可与 Spring Boot 集成。本子区以"对照 Spring AI"的视角讲透。**作为 02 章的对照线，在 Spring AI 主线之后读。**
 
 > [!info] 版本现状（2026-08）
-> **LangChain4j 1.18.1**（2026-07），1.x 持续稳定迭代；`OpenAiChatModel.builder()`、`AiServices`、`@Tool` 等核心 API 自 1.0 GA 起稳定。
+> 本专题以 LangChain4j 1.x 为背景，版本和模块兼容性请以官方发布记录为准。
+
+> [!info] 更新补充（2026-10-30）
+> 官方发布页列出核心 1.23.0 与配套 beta33；Agentic 模块仍为实验性，见 [[07-Agentic工作流与共享状态]]。旧笔记示例的版本不要只改数字后直接使用。
 
 ## 📚 知识笔记清单（按学习顺序编号，顺着编号读即可）
 
@@ -26,6 +29,7 @@ mastery: ⭐☆☆☆☆
 - [ ] [[04-与Spring生态集成]] — Spring Boot Starter、与 Spring AI 共存
 - [ ] [[05-流式输出与结构化输出]] — TokenStream 流式、OutputParser/POJO 结构化
 - [ ] [[06-多模型接入与配置]] — 多 Provider builder、Embedding 模型、切换与降级
+- [ ] [[07-Agentic工作流与共享状态]] — Agentic 模块、工作流与实验性边界
 
 ## 🧭 学习路线
 

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IntelliJ IDEA Java 配色方案交互式实时预览</title>
+  <style>
+    :root {
+      --bg: #1e1e24;
+      --card-bg: #282c34;
+      --text: #abb2bf;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background-color: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+      font-weight: 600;
+    }
+    .header p {
+      color: #8a8f9d;
+      margin: 0;
+      font-size: 14px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .btn {
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 500;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #2a2d36;
+      color: #d1d5db;
+    }
+    .btn:hover {
+      background: #373b47;
+    }
+    .btn.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+    .editor-window {
+      max-width: 960px;
+      margin: 0 auto;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+    .titlebar {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      background: #21252b;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .dots {
+      display: flex;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+    .tab {
+      margin-left: 20px;
+      padding: 4px 12px;
+      background: #282c34;
+      border-radius: 4px 4px 0 0;
+      font-family: monospace;
+      font-size: 13px;
+      color: #d1d5db;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .code-container {
+      display: flex;
+      padding: 16px 0;
+      font-family: "JetBrains Mono", "Fira Code", Consolas, Menlo, Monaco, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+    .line-numbers {
+      padding: 0 16px 0 20px;
+      color: #5c6370;
+      text-align: right;
+      user-select: none;
+      border-right: 1px solid rgba(255,255,255,0.05);
+    }
+    .code-content {
+      padding: 0 24px;
+      white-space: pre;
+    }
+
+    /* ================= One Dark Pro 主题样式 ================= */
+    .theme-onedark {
+      background-color: #282c34;
+    }
+    .theme-onedark .code-content { color: #abb2bf; }
+    .theme-onedark .line-numbers { color: #636d83; border-color: #3b4048; }
+    .theme-onedark .kwd { color: #c678dd; font-weight: bold; }       /* 关键字: 紫罗兰 */
+    .theme-onedark .str { color: #98c379; }                           /* 字符串: 护眼绿 */
+    .theme-onedark .num { color: #d19a66; }                           /* 数值: 浅橙 */
+    .theme-onedark .anno { color: #e5c07b; font-weight: bold; }      /* 注解: 亮金黄 */
+    .theme-onedark .cls { color: #e5c07b; }                           /* 类名: 明亮黄 */
+    .theme-onedark .ifc { color: #56b6c2; font-style: italic; }       /* 接口: 青绿斜体 */
+    .theme-onedark .fn { color: #61afef; font-weight: bold; }         /* 方法: 科技蓝 */
+    .theme-onedark .field { color: #e06c75; }                         /* 成员变量: 珊瑚红 */
+    .theme-onedark .const { color: #e06c75; font-weight: bold; font-style: italic; } /* 常量: 亮红 */
+    .theme-onedark .cmt { color: #7f848e; font-style: italic; }       /* 注释: 银灰 */
+    .theme-onedark .param { color: #d19a66; }                         /* 参数: 杏色 */
+
+    /* ================= Dracula 主题样式 ================= */
+    .theme-dracula {
+      background-color: #282a36;
+    }
+    .theme-dracula .code-content { color: #f8f8f2; }
+    .theme-dracula .line-numbers { color: #6272a4; border-color: #3b3d4d; }
+    .theme-dracula .kwd { color: #ff79c6; font-weight: bold; }       /* 关键字: 霓虹粉 */
+    .theme-dracula .str { color: #f1fa8c; }                           /* 字符串: 金黄 */
+    .theme-dracula .num { color: #bd93f9; }                           /* 数值: 紫罗兰 */
+    .theme-dracula .anno { color: #50fa7b; font-weight: bold; }      /* 注解: 鲜亮绿 */
+    .theme-dracula .cls { color: #8be9fd; }                           /* 类名: 冰蓝 */
+    .theme-dracula .ifc { color: #8be9fd; font-style: italic; }       /* 接口: 冰蓝斜体 */
+    .theme-dracula .fn { color: #50fa7b; font-weight: bold; }         /* 方法: 荧光绿 */
+    .theme-dracula .field { color: #ffb86c; }                         /* 成员变量: 亮橙 */
+    .theme-dracula .const { color: #bd93f9; font-weight: bold; font-style: italic; } /* 常量: 紫罗兰 */
+    .theme-dracula .cmt { color: #6272a4; font-style: italic; }       /* 注释: 灰紫 */
+    .theme-dracula .param { color: #ffb86c; font-style: italic; }     /* 参数: 浅橙斜体 */
+
+    .feature-tags {
+      max-width: 960px;
+      margin: 20px auto 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .tag-card {
+      background: #23272e;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .tag-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #61afef;
+    }
+    .tag-card p {
+      margin: 0;
+      font-size: 13px;
+      color: #9da5b4;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🎨 IntelliJ IDEA Java 配色方案实时对比预览</h1>
+    <p>点击下方按钮无缝切换主题，直观感受 Java 21 / Spring Boot 语法高亮与对比度效果</p>
+  </div>
+
+  <div class="controls">
+    <button id="btnOneDark" class="btn active" onclick="switchTheme('onedark')">One Dark Pro (经典极客暖深灰)</button>
+    <button id="btnDracula" class="btn" onclick="switchTheme('dracula')">Dracula (吸血鬼高对比霓虹)</button>
+  </div>
+
+  <div class="editor-window theme-onedark" id="editorWindow">
+    <div class="titlebar">
+      <div class="dots">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+      </div>
+      <div class="tab">
+        <span style="color:#e5c07b;">☕</span> SeckillOrderService.java
+      </div>
+    </div>
+    <div class="code-container">
+      <div class="line-numbers" id="lineNumbers"></div>
+      <div class="code-content" id="codeContent"></div>
+    </div>
+  </div>
+
+  <div class="feature-tags">
+    <div class="tag-card">
+      <h3>📁 本地已为您生成 .icls 导入文件</h3>
+      <p>无需手调，已在 <code>code/config/idea/</code> 目录生成好，支持在 IDEA 中 <code>Import Scheme</code> 一键载入。</p>
+    </div>
+    <div class="tag-card">
+      <h3>🌟 专为现代 Java 21 深度定制</h3>
+      <p>针对虚拟线程、Record 模式匹配、多级注解、Lambda 表达式及泛型参数进行了专项调色加粗，阅读体验极佳。</p>
+    </div>
+  </div>
+
+  <script>
+    const sampleJavaCode = `<span class="kwd">package</span> com.knowledge.seckill.service;
+
+<span class="kwd">import</span> org.springframework.stereotype.<span class="cls">Service</span>;
+<span class="kwd">import</span> org.springframework.transaction.annotation.<span class="cls">Transactional</span>;
+<span class="kwd">import</span> java.util.<span class="cls">Optional</span>;
+<span class="kwd">import</span> java.util.concurrent.<span class="cls">CompletableFuture</span>;
+
+<span class="cmt">/**
+ * 高并发秒杀下单聚合服务 (Java 21 最佳实战)
+ * @author Antigravity Pair Programmer
+ */</span>
+<span class="anno">@Service</span>
+<span class="kwd">public class</span> <span class="cls">SeckillOrderService</span> <span class="kwd">implements</span> <span class="ifc">OrderProcessor</span> {
+
+    <span class="kwd">private static final</span> <span class="cls">String</span> <span class="const">LOCK_KEY_PREFIX</span> = <span class="str">"seckill:stock:lock:"</span>;
+    <span class="kwd">private final</span> <span class="ifc">RedisClient</span> <span class="field">redisClient</span>;
+
+    <span class="kwd">public</span> <span class="fn">SeckillOrderService</span>(<span class="ifc">RedisClient</span> <span class="param">redisClient</span>) {
+        <span class="kwd">this</span>.<span class="field">redisClient</span> = <span class="param">redisClient</span>;
+    }
+
+    <span class="anno">@Override</span>
+    <span class="anno">@Transactional</span>(rollbackFor = <span class="cls">Exception</span>.<span class="kwd">class</span>)
+    <span class="kwd">public</span> <span class="cls">CompletableFuture</span>&lt;<span class="cls">OrderResult</span>&gt; <span class="fn">submitOrder</span>(<span class="cls">Long</span> <span class="param">userId</span>, <span class="cls">Long</span> <span class="param">skuId</span>, <span class="kwd">int</span> <span class="param">buyCount</span>) {
+        <span class="cls">String</span> lockKey = <span class="const">LOCK_KEY_PREFIX</span> + <span class="param">skuId</span>;
+        <span class="kwd">long</span> expireSeconds = <span class="num">30L</span>;
+
+        <span class="cmt">// 执行分布式扣减与库存原子校验</span>
+        <span class="kwd">boolean</span> acquired = <span class="field">redisClient</span>.<span class="fn">tryLock</span>(lockKey, expireSeconds);
+        <span class="kwd">if</span> (!acquired) {
+            <span class="kwd">return</span> <span class="cls">CompletableFuture</span>.<span class="fn">completedFuture</span>(<span class="cls">OrderResult</span>.<span class="fn">failed</span>(<span class="str">"秒杀排队人数过多，请重试！"</span>));
+        }
+
+        <span class="kwd">return</span> <span class="cls">CompletableFuture</span>.<span class="fn">supplyAsync</span>(() -&gt; {
+            <span class="cls">System</span>.out.<span class="fn">printf</span>(<span class="str">"用户 [%d] 成功秒杀商品 [%d], 数量: %d%n"</span>, <span class="param">userId</span>, <span class="param">skuId</span>, <span class="param">buyCount</span>);
+            <span class="kwd">return</span> <span class="kwd">new</span> <span class="cls">OrderResult</span>(<span class="str">"SUCCESS"</span>, <span class="num">200</span>, <span class="str">"下单成功"</span>);
+        });
+    }
+}`;
+
+    // 生成行号与代码
+    const lines = sampleJavaCode.split('\\n');
+    let lineNumHtml = '';
+    for (let i = 1; i <= lines.length; i++) {
+      lineNumHtml += i + '<br>';
+    }
+    document.getElementById('lineNumbers').innerHTML = lineNumHtml;
+    document.getElementById('codeContent').innerHTML = sampleJavaCode;
+
+    function switchTheme(theme) {
+      const windowEl = document.getElementById('editorWindow');
+      const btnOneDark = document.getElementById('btnOneDark');
+      const btnDracula = document.getElementById('btnDracula');
+
+      if (theme === 'onedark') {
+        windowEl.className = 'editor-window theme-onedark';
+        btnOneDark.classList.add('active');
+        btnDracula.classList.remove('active');
+      } else {
+        windowEl.className = 'editor-window theme-dracula';
+        btnDracula.classList.add('active');
+        btnOneDark.classList.remove('active');
+      }
+    }
+  </script>
+</body>
+</html>

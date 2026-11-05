@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,13 +18,11 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 11 课**：前置 [[06-TS速查-Java视角]]、[[09-Vercel-AI-SDK核心]]，本篇是 Python 侧 [[05-LangChain-Python读代码笔记]] 的 TS 版。
-- **延伸**：[[12-Mastra简介]]。
+本篇在 [[06-TS速查-Java视角]] 和 [[09-Vercel-AI-SDK核心]] 之后，介绍 LangChain.js，并与 [[05-LangChain-Python读代码笔记]] 对照；后续可看 [[12-Mastra简介]]。
 
 ## 📌 这是什么
 
 如果 Python 侧项目用 LangChain，TypeScript 侧通常会遇到 LangChain.js。它适合：
-
 - 在 Next.js API Route 里做 RAG。
 - 在 Node 服务里封装工具调用。
 - 和前端 TypeScript 类型共享部分请求/响应结构。
@@ -48,13 +46,15 @@ pnpm add zod
 pnpm dev
 ```
 
-`.env.local`：
+下面假设在 Next.js 服务端运行；`.env.local` 可由 Next.js 加载。普通 Node 脚本需按项目方式显式加载环境变量。
 
 ```text
 OPENAI_API_KEY=sk-...
 ```
 
 ## 💻 最小示例
+
+以下是服务端片段，假设已有 Node 项目和模型密钥；具体模型 ID 应换成当前账户可用的型号，尚未实际调用验证。
 
 ```ts
 import { ChatOpenAI } from "@langchain/openai";
@@ -95,13 +95,14 @@ console.log(result.content);
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: LangChain.js 适合什么项目？
->   - A: 适合 TypeScript 栈里的 RAG、工具调用和多步骤模型编排。
-> - Q: 它和 Vercel AI SDK 怎么选？
->   - A: 只做流式 Chat UI，AI SDK 更直接；复杂检索和编排，LangChain.js 更顺手。
-> - Q: 线上怎么排查回答质量差？
->   - A: 分别记录用户输入、检索结果、最终 Prompt、模型参数和输出。
+> [!question]- LangChain.js 适合什么项目？
+> 适合 TypeScript 栈里的 RAG、工具调用和多步骤模型编排。
+
+> [!question]- 它和 Vercel AI SDK 怎么选？
+> 只做流式 Chat UI，AI SDK 更直接；复杂检索和编排，LangChain.js 更顺手。
+
+> [!question]- 线上怎么排查回答质量差？
+> 分别记录用户输入、检索结果、最终 Prompt、模型参数和输出。
 
 项目里可以用它做：Next.js 知识库问答、Node Agent 服务、面向前端的 AI API。
 

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,15 +18,12 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 13 课**：前置前几篇 TS 基础，本篇做 Java / TypeScript / Python 在 AI 项目中的分工对照。
-- **延伸**：[[14-AI编程助手-Cursor-Claude-Code-Codex实战]]。
+本篇对照 Java、TypeScript 和 Python 在 AI 项目中的分工，建议先了解前面的 TypeScript 基础；后续可阅读 [[14-AI编程助手-Cursor-Claude-Code-Codex实战]]。
 
 ## 📌 这是什么
 
 这篇用于建立选型心智：同一个 AI 应用，哪些部分更适合 Java，哪些部分更适合 TypeScript。
-
 常见组合：
-
 - Java：用户、权限、订单、支付、审计、核心业务 API。
 - TypeScript：Next.js 页面、AI Chat UI、API Route、模型 Playground。
 - Python：Embedding、RAG 实验、模型生态和数据处理。
@@ -52,13 +49,12 @@ mvn test
 mvn spring-boot:run
 ```
 
-TypeScript 侧常见：
+TypeScript 侧假设已安装 Node.js 和 pnpm，配置方法见 [[07-Node-pnpm-环境配置]]：
 
 ```bash
-corepack enable
 pnpm install
 pnpm dev
-pnpm typecheck
+pnpm typecheck # 仅当 package.json 定义了该脚本
 pnpm build
 ```
 
@@ -73,7 +69,7 @@ CORS / Cookie / Authorization Header
 
 ## 💻 最小示例
 
-TypeScript 调 Java 后端，再把结果交给模型：
+下面是在服务端调用 Java 接口的片段，假设已配置后端地址和服务凭据。片段展示读取订单，不包含模型调用与运行时 JSON 校验：
 
 ```ts
 type Order = {
@@ -94,9 +90,8 @@ async function getOrder(orderId: string): Promise<Order> {
 }
 ```
 
-在生产环境的跨服务调用中，TypeScript 侧应对返回的 JSON 数据做运行时 Schema 校验，同时传入当前用户的身份上下文，由 Java 后端完成细粒度的订单归属与权限校验。
-
-Java 主系统调用 TS AI 服务时，边界可以保持 HTTP JSON：`POST /api/chat`，请求里放 `userId`、`message`、`conversationId`。
+在生产环境的跨服务调用中，TypeScript 侧应对返回的 JSON 数据做运行时 Schema 校验，同时传入当前用户的身份上下文，由 Java 后端完成细粒度的订单归属与权限校验。 原因见 [[06-TS速查-Java视角#^ts-runtime-validation|TypeScript 运行时校验]]。
+Java 主系统调用 TS AI 服务时可以使用 HTTP JSON，例如 `POST /api/chat`。服务间身份与用户身份需要由受信任的认证机制传递；不能把客户端提交的 `userId` 当作授权依据。
 
 ## 🤖 AI 生态落点
 
@@ -116,13 +111,14 @@ Java 主系统调用 TS AI 服务时，边界可以保持 HTTP JSON：`POST /api
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: AI 项目里 Java 和 TypeScript 怎么分工？
->   - A: Java 承载核心业务和治理，TypeScript 承载 AI 前端体验、流式接口和快速原型。
-> - Q: 为什么 Vercel AI SDK 在前端项目里常见？
->   - A: 它把服务端流式模型调用和 React Hook 接起来，做 Chat UI 很快。
-> - Q: 什么时候不该把 AI 能力放在 Next.js API Route？
->   - A: 当逻辑涉及复杂事务、权限、审计或高并发后台处理时，应回到 Java 或独立后端服务。
+> [!question]- AI 项目里 Java 和 TypeScript 怎么分工？
+> Java 承载核心业务和治理，TypeScript 承载 AI 前端体验、流式接口和快速原型。
+
+> [!question]- 为什么 Vercel AI SDK 在前端项目里常见？
+> 它把服务端流式模型调用和 React Hook 接起来，做 Chat UI 很快。
+
+> [!question]- 什么时候不该把 AI 能力放在 Next.js API Route？
+> 当逻辑涉及复杂事务、权限、审计或高并发后台处理时，应回到 Java 或独立后端服务。
 
 项目里可以把这篇作为架构讨论清单：决定模型调用放哪、工具权限归谁、前端如何消费流式结果。
 

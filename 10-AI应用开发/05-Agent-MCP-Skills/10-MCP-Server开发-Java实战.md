@@ -6,136 +6,136 @@ tags:
   - 主题/MCP
   - 阶段/05
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
 
-# MCP-Server开发-Java实战
+# MCP Server 开发：Java 实战
 
 > [!abstract] 一句话总结
-> Java MCP Server 的目标是把企业内部能力用 MCP 标准暴露给 Agent：工具 schema 清楚、权限在服务端执行、传输和审计可生产化。
+> MCP Server 把已有业务能力注册成客户端可以发现和调用的工具。本篇先用模拟订单数据跑通服务，再说明接入真实业务时要补哪些检查。
 
-## 📌 这是什么
+## 🎯 先看要做什么
 
-MCP Server 是 Agent 访问外部能力的标准化服务端。对 Java 团队来说，它通常包装已有 Spring Boot 服务：
-
-1. 把订单、库存、知识库、工单等能力暴露为 MCP tools。
-2. 用 resources 暴露可读上下文，如文档、配置、业务实体摘要。
-3. 用 prompts 提供可复用提示词模板。
-4. 通过 stdio（本地）或 Streamable HTTP（远程）被 IDE、Agent Runtime、网关调用。
-
-## 🤔 解决什么问题 / 为什么需要
-
-- **统一工具协议**：不用为每个 Agent 单独写私有插件。
-- **隔离业务系统**：Agent 只看到受控 tool，不直接拿数据库账号。
-- **复用企业权限**：Java 服务继续使用 Spring Security、租户、审计。
-- **便于调试**：Inspector 能列出 tools、查看 schema、发起测试调用。
-
-## 🧩 设计要点
-
-| 模块 | Java 实现关注点 | 生产要求 |
-| ---- | -------------- | -------- |
-| Tool schema | 参数名、类型、描述、必填项 | 描述必须具体，避免模型误填。 |
-| Handler | 调用领域服务 | 鉴权、幂等、超时、异常映射。 |
-| Transport | stdio / Streamable HTTP（支持普通响应与 SSE 流式传输） | 本地开发和生产部署分开配置。 |
-| Audit | tool call 日志 | 记录用户、租户、参数摘要、结果。 |
-| Version | server 与 tool 版本 | 避免客户端缓存旧 schema。 |
-
-## ⚙️ 实现步骤
+假设用户问“订单 A100 到哪了？”，我们希望 Server 暴露一个 `queryOrderStatus` 工具，接收订单号并返回状态。客户端可以先读取工具名、描述和参数格式，再发送调用请求；Server 收到请求后执行 Java 方法并返回结果。
+这里先只做一个本地只读示例，不接数据库、不接模型，也不包含用户认证。下文的“配送中”是模拟结果，只用于说明调用链。
 
 ```mermaid
 flowchart LR
-    A[选择业务能力] --> B[定义Tool输入输出]
-    B --> C[编写Spring服务]
-    C --> D[注册MCP Tool]
-    D --> E[Inspector调试]
-    E --> F[接入Agent Client]
-    F --> G[监控和审计]
+    A["MCP Client"] -->|"tools/call：订单号 A100"| B["MCP Server"]
+    B --> C["OrderTools.queryOrderStatus"]
+    C -->|"模拟订单状态"| B
+    B --> A
 ```
 
-1. 先选只读工具做 MVP，例如订单查询、库存查询、知识库检索。
-2. 为每个工具写清楚 description：何时使用、参数格式、权限边界、返回含义。
-3. Handler 内部调用领域服务，不在 MCP 层直接写 SQL。
-4. 对写操作增加幂等键、人工确认或审批状态，不让 Agent 直接执行不可逆操作。
-5. 用 Inspector 调用 `tools/list` 和 `tools/call`，确认 schema 与返回结构。
+## 🧩 准备项目
 
-## 💻 Java / Spring AI 示例
+下面按 Spring AI 2.x 的 WebMVC 接口说明。准备一个兼容版本的 Spring Boot 项目，并使用 Spring AI BOM 管理版本；项目搭建和 BOM 配置见 [[../02-框架-SpringAI与LangChain4j/SpringAI/01-Spring-AI项目搭建|Spring AI 项目搭建]]。添加 MCP Server Starter：
+
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+</dependency>
+```
+
+Starter 负责 MCP 协议和 HTTP 传输；`@Tool` 描述 Java 方法，还需要把方法注册为工具。以下代码省略 imports，假设类都在 Spring Boot 的组件扫描范围内；示例尚未在本机运行。
+使用自定义 Java 编译配置时，要保留方法参数名，例如启用 `-parameters`，以便生成包含 `orderId` 的工具 schema。
+
+## 💻 定义并注册订单工具
+
+先定义一个返回模拟状态的 Spring Bean。`name` 是客户端看到的工具名，`description` 和 `@ToolParam` 帮助客户端理解用途及参数。
 
 ```java
 @Service
-class OrderMcpTools {
-    private final OrderService orderService;
+class OrderTools {
 
-    OrderMcpTools(OrderService orderService) {
-        this.orderService = orderService;
-    }
-
-    @Tool(description = "查询当前登录用户的订单状态。参数 orderId 必须是业务订单号。")
-    OrderStatusView queryOrderStatus(
-            @ToolParam(description = "业务订单号，例如 A20260704001") String orderId) {
-        UserPrincipal user = SecurityContext.currentUser();
-        Order order = orderService.mustBelongToUser(orderId, user.id());
-        return new OrderStatusView(order.id(), order.status(), order.carrier(), order.updatedAt());
+    @Tool(name = "queryOrderStatus", description = "根据业务订单号查询订单状态")
+    public String queryOrderStatus(
+            @ToolParam(description = "业务订单号，例如 A100") String orderId) {
+        if (orderId == null || orderId.isBlank()) {
+            return "订单号不能为空";
+        }
+        return "A100".equals(orderId) ? "订单 A100：配送中" : "订单不存在";
     }
 }
 ```
+
+再把 Bean 转换为 `ToolCallbackProvider`，由 Starter 注册到 MCP Server：
 
 ```java
 @Configuration
-class McpServerConfig {
+class McpToolConfig {
+
     @Bean
-    ToolCallbackProvider orderToolProvider(OrderMcpTools tools) {
-        return MethodToolCallbackProvider.builder()
-                .toolObjects(tools)
-                .build();
+    ToolCallbackProvider orderTools(OrderTools tools) {
+        return MethodToolCallbackProvider.builder().toolObjects(tools).build();
     }
 }
 ```
 
+`@Tool` 本身只是工具定义，`ToolCallbackProvider` 负责提供这些工具，MCP Starter 再把它们发布给客户端。只有方法而没有对应注册时，不能假设 `tools/list` 一定能看到它。
+
+## 🔌 配置传输并启动
+
+在 `application.yml` 中选择 Streamable HTTP，并把示例限制在本机访问：
+
 ```yaml
+server:
+  address: 127.0.0.1
+  port: 8080
 spring:
   ai:
     mcp:
       server:
         name: order-mcp-server
-        version: 1.0.0
-        type: sync
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
 ```
 
-## ⚠️ 工程坑
+在 Maven 项目根目录启动 Spring Boot：
 
-- 工具描述只写“查询订单”，模型不知道输入订单号还是用户号。
-- Tool 返回整个 Entity，泄露内部字段；应返回专门的 View DTO。
-- 在工具参数中接受 `userId` 并信任它，导致越权查询。
-- 本地 stdio 正常，生产 HTTP 没配置鉴权和超时。
-- 修改 tool schema 后客户端仍缓存旧定义，调用参数不匹配。
+```bash
+mvn spring-boot:run
+```
 
-## 🎯 面试问题
+启动后 MCP 地址是 `http://127.0.0.1:8080/mcp`。这是 MCP 协议端点，不是普通的订单 REST 接口；使用 MCP Client 或 [[12-MCP调试-Inspector|Inspector]] 测试，不要以浏览器直接打开后是否显示页面判断服务是否正常。配置项和 Starter 名称可能随 Spring AI 版本变化，使用时对照[官方文档](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-streamable-http-server-boot-starter-docs.html)。
 
-> [!question] 高频问题
-> - Q: MCP Server 和普通 REST API 有什么区别？
->   - A: REST 面向程序员调用；MCP 面向 Agent 暴露工具、资源和 prompt，并带有可被模型理解的 schema 与描述。
-> - Q: Java MCP Server 的鉴权放在哪里？
->   - A: 放在服务端 handler 和领域服务里，不能依赖模型传参；MCP 传输层也要做认证。
-> - Q: 怎么设计一个安全的写工具？
->   - A: 参数最小化、幂等键、状态机、人工审批、审计日志，必要时拆成“生成申请”和“确认执行”。
+## 🧪 怎么验证？
 
-## ✅ 精通检查清单
+用 Inspector 连接上述地址，在 Tools 中找到 `queryOrderStatus`，检查参数 `orderId`，再提交：
 
-- 能用 Spring 服务注册一个 MCP tool。
-- 能用 Inspector 验证 tools/list 和 tools/call。
-- 能说明 MCP server 的鉴权、审计和版本策略。
-- 能把 Entity 返回改成安全 DTO。
+```json
+{ "orderId": "A100" }
+```
+
+预期返回内容包含“配送中”；换成其他订单号应看到“订单不存在”。再试空值和缺失参数，观察客户端 schema 校验以及服务端实际返回；具体操作见 [[12-MCP调试-Inspector]]。验证通过后，再用 [[11-MCP-Client开发实战|Spring AI Client]] 接入模型。
+
+## 🔐 接入真实订单服务时
+
+模拟示例没有认证，不能直接对外开放。真实服务需要先验证调用方身份，再由订单服务检查用户、租户和订单归属；不要相信模型传入的 `userId`。工具尽量只返回查询需要的字段，记录脱敏后的调用、耗时与错误。
+网络访问还要配置 TLS、认证、超时与限流。本机绑定地址只限制监听范围，不等于完成鉴权；写操作还要按业务需要处理幂等、审批和状态变化。
+
+## ❓ 自测
+
+> [!question]- 为什么写了 `@Tool`，Inspector 里还是看不到工具？
+> 检查 Bean 是否被扫描、是否通过 `ToolCallbackProvider` 注册，以及 MCP Server 的 Starter 和传输配置是否生效。只写注解不等于已经发布 MCP 服务。
+
+> [!question]- MCP Server 和普通 REST API 有什么区别？
+> MCP 规定客户端发现和调用工具、资源、提示模板的协议；REST API 通常按业务接口自行约定。MCP Server 内部仍然可以调用现有 REST 服务或领域服务。
+
+> [!question]- 为什么订单工具不直接接收模型给出的 userId？
+> 模型生成的参数不能证明身份。身份应来自服务端验证的凭据，订单归属由业务服务再检查。
 
 ## 🔗 关联笔记
 
-- [[_index]]
-- [[09-MCP协议详解]]
-- [[12-MCP调试-Inspector]]
-- [[../00-总览/学习仪表盘]]
+- [[_index]] · [[09-MCP协议详解]] · [[11-MCP-Client开发实战]]
+- [[12-MCP调试-Inspector]] · [[../00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 
-- [Spring AI MCP Server Boot Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html)
-- [Model Context Protocol Docs](https://modelcontextprotocol.io/)
+- [Spring AI MCP Server Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html)
+- [Spring AI Streamable HTTP Server 配置](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-streamable-http-server-boot-starter-docs.html)
+- [MCP 官方文档](https://modelcontextprotocol.io/)

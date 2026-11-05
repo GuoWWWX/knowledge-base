@@ -19,19 +19,14 @@ mastery: ⭐☆☆☆☆
 ## 📌 定位
 
 AI 网关解决“业务代码不要直接绑死某一家模型”的问题。后端统一调用 `/v1/chat/completions` 或兼容接口，网关负责把请求路由到 OpenAI、Azure、通义千问、火山方舟、Claude、本地模型等。
-
 选型边界：
-
 - **LiteLLM**：适合 Python/服务端工程，支持模型别名、fallback、重试、预算、虚拟 Key、日志和 OpenAI 兼容代理。
 - **One-API**：适合快速搭建统一转发服务，管理渠道、用户额度、倍率和 Key 分发。
 - **自研网关**：适合强合规、强审计、复杂路由、深度计费和企业权限模型。
 
 ## 🤔 解决什么问题 / 为什么需要
 
-- **统一调用协议**：业务服务只认一个 base_url 和一种 SDK。
-- **模型路由与降级**：主模型限流或报错时切到备用模型。
-- **成本与额度控制**：按用户、租户、模型统计 token 和费用。
-- **供应商解耦**：阿里百炼、火山方舟、OpenAI、本地模型可以在网关层替换。
+模型网关可以提供统一调用入口，并集中处理路由、额度和使用量统计。主模型限流或报错时，也可以按配置切换备用模型；即使接口兼容，接入时仍需验证具体模型参数与响应格式。
 
 ## 🧩 核心组件
 
@@ -59,7 +54,7 @@ flowchart LR
 2. 为每个 Provider 配置 Key、base_url、模型名和价格倍率。
 3. 对业务暴露稳定模型别名，例如 `chat-prod`、`chat-cheap`、`embedding-prod`。
 4. 给每个业务线发虚拟 Key，绑定预算、模型白名单和速率限制。
-5. 业务代码只改 `base_url` 和 API Key，SDK 仍使用 OpenAI 兼容客户端。
+5. 业务配置网关地址、虚拟 Key 和模型别名，并验证所用 SDK 与网关的接口、参数及流式协议兼容。
 6. 接入日志、告警和成本报表，定期复盘失败率和供应商表现。
 
 ## 💻 LiteLLM 配置示例
@@ -69,7 +64,7 @@ model_list:
   - model_name: chat-prod
     litellm_params:
       model: openai/qwen-plus
-      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_base: os.environ/DASHSCOPE_COMPAT_BASE_URL
       api_key: os.environ/DASHSCOPE_API_KEY
   - model_name: chat-backup
     litellm_params:
@@ -82,22 +77,13 @@ router_settings:
     - chat-prod: [chat-backup]
 ```
 
-接入火山方舟等平台时，将配置中的 `REPLACE_WITH_ARK_MODEL_OR_ENDPOINT` 替换为控制台已开通的具体模型名称或推理接入点（Endpoint ID，如 `ep-2026xxxx`）即可完成路由绑定。
+上述 YAML 是配置片段，`DASHSCOPE_COMPAT_BASE_URL` 从百炼当前工作空间与区域的官方控制台获取；模型标识、网关版本和供应商配置以实际文档为准，替换占位符后仍要验证连接、权限和模型能力。
+业务侧可以使用 Spring AI。下面假设 `chatClient` 已指向网关、配置虚拟 Key 和 `chat-prod` 模型别名，`text` 是待总结内容：
 
-业务侧：
-
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    api_key="sk-virtual-key",
-    base_url="https://llm-gateway.example.com/v1",
-)
-
-resp = client.chat.completions.create(
-    model="chat-prod",
-    messages=[{"role": "user", "content": "总结这段文本"}],
-)
+```java
+String answer = chatClient.prompt()
+        .user("请总结：" + text)
+        .call().content();
 ```
 
 ## ⚠️ 生产坑
@@ -110,13 +96,14 @@ resp = client.chat.completions.create(
 
 ## 🎯 面试 / 选型
 
-> [!question] 高频问题
-> - Q: 为什么需要 AI 网关？
->   - A: 统一协议、集中鉴权、模型路由、成本统计、限流降级，并把业务代码和供应商解耦。
-> - Q: LiteLLM 和 One-API 怎么选？
->   - A: 需要工程化路由、fallback、Python SDK 和细粒度网关能力，选 LiteLLM；需要轻量渠道聚合、额度和用户管理，One-API 更直接。
-> - Q: 网关层最容易踩什么坑？
->   - A: 把所有模型抽象成完全一样，忽略上下文窗口、工具调用、流式输出、价格和安全策略差异。
+> [!question]- 为什么需要 AI 网关？
+> 统一协议、集中鉴权、模型路由、成本统计、限流降级，并把业务代码和供应商解耦。
+
+> [!question]- LiteLLM 和 One-API 怎么选？
+> 需要工程化路由、fallback、Python SDK 和细粒度网关能力，选 LiteLLM；需要轻量渠道聚合、额度和用户管理，One-API 更直接。
+
+> [!question]- 网关层最容易踩什么坑？
+> 把所有模型抽象成完全一样，忽略上下文窗口、工具调用、流式输出、价格和安全策略差异。
 
 ## ✅ 精通检查清单
 
@@ -135,4 +122,5 @@ resp = client.chat.completions.create(
 ## 📚 参考资料
 
 - [LiteLLM Docs](https://docs.litellm.ai/)
+- [Spring AI：OpenAI Chat 配置](https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html)
 - [One-API GitHub](https://github.com/songquanpeng/one-api)

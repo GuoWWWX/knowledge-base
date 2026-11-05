@@ -6,125 +6,57 @@ tags:
   - 主题/RAG
   - 阶段/06
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
 
-# Ragas评估实践
+# 📊 Ragas 评估实践
 
 > [!abstract] 一句话总结
-> Ragas 是 RAG/LLM 应用评估框架，用固定样例集和指标衡量回答是否忠实、相关、召回是否命中；学习重点是把“感觉效果不错”改成可重复的离线评估。
+> Ragas 提供 RAG 和大模型应用的评估指标，帮助比较不同方案；评估结果仍需结合标准答案、来源和人工抽检。
 
-## 📌 定位
+## 🎯 如何准备一条评估样例？
 
-Ragas 不是线上监控平台，而是评估工具。它通常和 Langfuse、Dify、RAGFlow、LangChain 一起使用：平台产生日志和样例，Ragas 负责对样例打指标，结果再回写到看板或 CI。
+例如问题是“普通员工北京出差的住宿上限是多少？”样例应记录用户问题、系统实际回答、实际检索到的片段，以及人工确认的参考答案或相关证据。测试数据和知识库版本需要固定，否则无法判断改动前后的差异。
 
-适合评估：
+> [!example] 一条示意样例
+> 问题：普通员工北京住宿上限？
+> 检索上下文：普通员工在北京住宿上限为 550 元/天。
+> 实际回答：550 元/天；参考答案：550 元/天。
 
-- RAG 回答是否基于给定 context。
-- 检索片段是否覆盖标准答案。
-- 生成答案是否回答了用户问题。
-- Prompt、chunk、embedding、rerank、模型版本变更前后的效果差异。
+## 🧩 常见指标看什么？
 
-## 🤔 解决什么问题 / 为什么需要
+| 指标 | 关注点 | 限制 |
+| :--- | :--- | :--- |
+| Faithfulness | 回答是否得到给定上下文支持 | 上下文本身可能过期或错误 |
+| Answer Relevancy | 回答是否针对问题 | 相关不等于事实正确 |
+| Context Precision | 有用片段是否排在前面 | 具体计算取决于指标实现和输入 |
+| Context Recall | 所需信息是否被检索到 | 通常需要参考信息，口径因实现而异 |
 
-- **把主观判断量化**：用一组固定问题比较不同方案，而不是凭几条 demo 判断。
-- **定位 RAG 失败阶段**：context 差说明召回问题，faithfulness 差说明生成幻觉。
-- **支持回归测试**：模型或 Prompt 更新后跑同一批样例，防止旧能力退化。
-- **积累面试表达**：能讲清评估集、指标、阈值、抽样和人工复核。
+不同指标可能需要参考答案、裁判模型或 Embedding 模型，输入字段和 API 会随 Ragas 版本变化。选用时先对照该版本的官方指标说明，不要混用不同版本的示例。
 
-## 🧩 核心指标
+## 🔍 同一个样例怎么定位问题？
 
-| 指标 | 看什么 | 常见用途 |
-| ---- | ---- | -------- |
-| Faithfulness | 答案是否被 context 支持。 | 识别幻觉和无依据补充。 |
-| Answer Relevancy | 答案是否回应问题。 | 识别答非所问。 |
-| Context Precision | 排在前面的 context 是否有用。 | 调 TopK、rerank 和检索排序。 |
-| Context Recall | 标准答案需要的信息是否被召回。 | 判断知识库是否漏召回。 |
-| Answer Correctness | 答案和参考答案是否一致。 | 有标准答案的数据集适用。 |
+如果检索上下文只有“部门总监的上限为 800 元/天”，而系统回答“普通员工为 800 元/天”，应该先检查是否漏召回普通员工条款，再检查回答是否错误使用了总监条款。即使回答照着检索片段复述，也不能仅凭忠实度断言业务答案正确。
+如果原文实际已更新为 600 元/天，评测参考答案仍是旧版的 550 元/天，评分差异可能来自数据版本，而非系统退化。因此评测记录需要保存问题、候选、回答、参考事实与其来源版本。
 
-**指标组合解读原则**：`Faithfulness` 衡量生成内容与所给检索上下文的一致性（用于检测模型幻觉），而最终答案的业务正确性同时取决于召回上下文自身是否完整准确；因此生产评估需将检索指标（`Context Precision` / `Context Recall`）与生成指标（`Faithfulness` / `Answer Correctness`）联合分析，并按各指标的数据契约传入对应字段（如无标注标准答案的场景可选用仅依赖 `question`、`contexts` 与 `answer` 的指标）。
+## ⚙️ 怎样做回归？
 
-## ⚙️ 评估流程
+1. 从真实问题、历史失败案例和边界场景构建评测集，脱敏并记录参考来源。
+2. 固定文档快照、模型、检索参数与裁判配置，得到基线。
+3. 调整切分、检索或模型后运行同一批问题，比较逐题结果、延迟和成本。
+4. 人工复核低分、高风险和抽样正常结果；区分评估器误判、召回失败和回答错误。
+5. 将稳定样例用于发布前回归，阈值由业务风险和基线决定。
 
-```mermaid
-flowchart LR
-    A[收集问题集] --> B[准备 reference/context]
-    B --> C[运行 RAG 链路]
-    C --> D[生成 answer]
-    D --> E[Ragas evaluate]
-    E --> F[人工复核坏例]
-    F --> G[调整检索/Prompt/模型]
-```
+## ⚠️ 指标不能替代什么？
 
-1. 从线上日志、客服 FAQ、业务验收题中选样例，按主题和难度分层。
-2. 为每条样例保存 `question`、`answer`、`contexts`、`ground_truth` 或 `reference`。
-3. 固定模型、Prompt、chunk、TopK、rerank 配置，跑出基线分数。
-4. 每次改动只变一个关键参数，避免不知道分数变化来自哪里。
-5. 对低分样例人工复核，区分评估器误判、召回失败、生成幻觉和参考答案错误。
-6. 把稳定样例接入 CI 或发布前检查。
+模型裁判可能误判；评估集标注不完整时，指标也可能失真。回答忠于错误资料仍可能得到较高忠实度，必须检查原始资料的版本和真实性，也不能只看平均分。
 
-## 💻 示例
+> [!question]- Faithfulness 高，是否就说明答案真实？
+> 不一定。它主要检查答案是否受到给定上下文支持；如果上下文过期或本身错误，回答仍可能忠实地复述错误内容。
 
-```python
-from datasets import Dataset
-from ragas import evaluate
-from ragas.metrics import Faithfulness, AnswerRelevancy, ContextPrecision
+## 🔗 关联与资料
 
-dataset = Dataset.from_dict({
-    "question": ["合同付款条件是什么？"],
-    "answer": ["验收通过后 30 日内付款。"],
-    "contexts": [
-        ["合同第 5 条：甲方应在验收通过后 30 日内支付款项。"],
-    ],
-    "ground_truth": ["验收通过后 30 日内付款。"],
-})
-
-result = evaluate(
-    dataset,
-    metrics=[Faithfulness(), AnswerRelevancy(), ContextPrecision()],
-)
-
-print(result)
-```
-
-> [!note] 依赖与环境配置说明
-> 以上示例基于 `ragas==0.2.15` 与 `datasets` 库编写。运行评估时需显式配置裁判模型（Evaluator LLM）与 Embedding 模型凭证，并将评估过程自身的 Token 消耗纳入预算；跨版本升级 Ragas 时应对照官方迁移指南同步更新 Dataset 字段名与指标构造接口。
-
-## ⚠️ 生产坑
-
-- 样例集只有简单 FAQ，分数很高但上线后复杂组合问题全失败。
-- 评估模型和生产模型混用成本高且有偏差，要记录 evaluator model 版本。
-- context 中混入过多无关片段，答案碰巧正确，但 context precision 会暴露检索噪声。
-- 只看平均分会掩盖关键业务问题，必须查看低分样例和高风险主题。
-- 评估实验未锁定裁判模型版本、温度参数与数据集快照，或忽略远程推理的采样波动；关键架构变更应在固定配置下执行多次评测取均值，并配合人工复核坏例。
-
-## 🎯 面试 / 选型
-
-> [!question] 高频问题
-> - Q: Ragas 如何判断 RAG 失败点？
->   - A: context recall/precision 低多半是检索问题，faithfulness 低是答案没有被 context 支持，answer relevancy 低是回答没有对准问题。
-> - Q: 没有标准答案能评估吗？
->   - A: 可以用 faithfulness、answer relevancy，以及专门的 `LLMContextPrecisionWithoutReference`；示例中的 `ContextPrecision` 需要参考答案，但高风险场景仍要抽样人工复核。
-> - Q: Ragas 和 Langfuse 怎么分工？
->   - A: Langfuse 采集、管理和展示样例与分数；Ragas 计算评估指标。
-
-## ✅ 精通检查清单
-
-- 能构造一份 RAG 评估数据集。
-- 能解释 faithfulness、answer relevancy、context precision 的含义。
-- 能对比两套 chunk/TopK/rerank 配置并给出选择理由。
-- 能把低分样例转成修复任务。
-
-## 🔗 关联笔记
-
-- [[_index]]
-- [[06-Langfuse接入]]
-- [[04-RAGFlow]]
-- [[../00-总览/学习仪表盘]]
-
-## 📚 参考资料
-
-- [Ragas Docs](https://docs.ragas.io/)
-- [Ragas GitHub](https://github.com/explodinggradients/ragas)
+- [[08-LLM评估指标体系]]；[[09-AI应用评估数据集与回归测试]]；[[../03-知识库技术-RAG/03-前沿演进与质量评估|RAG 评估与溯源]]。
+- [Ragas：指标列表](https://docs.ragas.io/en/latest/concepts/metrics/available_metrics/)

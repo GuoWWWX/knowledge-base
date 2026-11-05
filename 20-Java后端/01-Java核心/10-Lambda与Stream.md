@@ -6,10 +6,11 @@ tags:
   - 主题/Java核心
   - 阶段/01
 created: 2026-07-04
-updated: 2026-08-06
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
+
 # Lambda与Stream
 
 > [!abstract] 一句话总结
@@ -285,7 +286,38 @@ Map<String, Map<String, Long>> stats = users.stream()
 - **性能对比要实测**：for 循环、stream、parallelStream 三选一，小数据量下 for 和 stream 差别很小，parallel 常更慢；拿数据量说话，不凭感觉。
 - **看线程名**：并行流压测时若 `ForkJoinPool.commonPool-worker-*` 卡着 RPC/锁/DB，其他用 commonPool 的模块全被拖慢。
 - **副作用排查**：Stream 里修改外部 List/Map（`forEach` 里 put）在多线程下必出问题；用 `collect` 收敛，不用 `forEach` 堆积。
-- **`toList()` 不可变**：JDK 16+ 的 `stream().toList()` 返回不可变列表（`add` 抛异常），需要可变集合用 `.collect(Collectors.toList())`。
+- **列表可修改性要看契约**：JDK 16+ 的 `stream().toList()` 返回不可修改列表；`Collectors.toList()` 不保证结果的类型和可修改性。明确需要可变 ArrayList 时，用 `.collect(Collectors.toCollection(ArrayList::new))`。这些操作都不自动复制元素，见 [[17-对象语义与拷贝]]。
+
+## 🧰 常见业务操作：转换、合并与收集
+
+### map 与 flatMap
+
+map 将每个元素转换成一个结果；flatMap 将每个元素转换成 Stream，再把这些流中的元素汇合。下面片段需要导入 `java.util.*`，JDK 16+ 可用：
+
+```java
+List<List<String>> groups = List.of(List.of("Ada", "Bob"), List.of("Grace"));
+List<Integer> sizes = groups.stream().map(List::size).toList();       // [2, 1]
+List<String> names = groups.stream().flatMap(List::stream).toList(); // [Ada, Bob, Grace]
+```
+
+### toMap 的重复键必须有明确规则
+
+两参数 `Collectors.toMap` 遇到重复键会抛 IllegalStateException，不会自动覆盖。按业务选择拒绝、合并、保留首个或最后一个值。下面片段需要导入 `java.util.*` 和 `java.util.stream.Collectors`，可放入 main：
+
+```java
+Map<String, Integer> counts = List.of("a", "b", "a").stream()
+    .collect(Collectors.toMap(x -> x, x -> 1, Integer::sum, LinkedHashMap::new));
+System.out.println(counts); // {a=2, b=1}，累加并保持首次插入顺序
+List<String> mutable = List.of("a", "b").stream()
+    .collect(Collectors.toCollection(ArrayList::new));
+mutable.add("c");           // 明确允许修改
+```
+
+四参数版本还能指定 Map 实现；需要顺序时不要依赖默认实现碰巧保序。null 值也不能当作所有收集器都支持的统一契约，应在上游明确处理缺值。
+
+### reduce 与 collect
+
+reduce 适合把元素归约成一个值（如求和），collect 适合累积到容器。不要在 reduce 中用共享可变 ArrayList 当 identity；并行时还必须满足结合律和合并协议。Optional 的转换、惰性备用值与 Stream 衔接见 [[09-Optional与空值处理]]。
 
 ## ⚠️ 踩坑与注意事项
 
@@ -371,6 +403,7 @@ IntStream.range(0, 8).parallel()
 ## 📚 参考资料
 
 - [Dev.java Tutorials](https://dev.java/learn/)
+- [Collectors.toList / toCollection / toMap API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/stream/Collectors.html)
 - [Oracle Java Documentation](https://docs.oracle.com/en/java/)
 - [JLS 15.27 - Lambda Expressions](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.27)
 - [JEP 335 / JEP 314：Stream 优化与 Spliterator](https://openjdk.org/jeps/335)

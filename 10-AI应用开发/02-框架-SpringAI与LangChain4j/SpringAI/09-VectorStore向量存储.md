@@ -18,8 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 9 课，RAG 检索底座**。前置：[[03-PromptTemplate]]、[[07-Advisor拦截器]]；本节讲 `VectorStore` 的写入、相似度检索与注入 Prompt。
-- **延伸**：完整 RAG 工程（文档解析、切分、Embedding、召回、评估）在下一章 [[../../03-知识库技术-RAG/_index|知识库技术 RAG]]。
+本篇介绍 `VectorStore` 的写入和相似度检索，以及如何结合 [[03-PromptTemplate]]、[[07-Advisor拦截器]] 使用检索结果。文档解析、切分、向量化与评估等完整流程见 [[../../03-知识库技术-RAG/_index|RAG 专题]]。
 
 ## 📌 这是什么
 
@@ -43,7 +42,7 @@ flowchart LR
 | ---- | ---- |
 | 不知道企业私有知识 | 可检索内部文档 |
 | 容易编造 | 用资料约束回答 |
-| 模型知识有时效性 | 文档更新即可生效 |
+| 模型知识有时效性 | 文档更新后同步索引，才可能检索到新内容 |
 | 长文档塞不进上下文 | 只取相关片段 |
 
 ---
@@ -59,7 +58,7 @@ flowchart LR
 | `QuestionAnswerAdvisor` | 把检索结果自动注入 Prompt |
 
 > [!info] 版本说明（2026-08）
-> Spring AI 2.0 精简了向量库实现清单（移除 SAP HANA / Infinispan 模块），当前主流实现为 pgvector、Redis、Milvus、Chroma、MongoDB Atlas、Elasticsearch、Qdrant 等；本课讲的是与实现无关的抽象层（`VectorStore` 接口），选型见 [[../../03-知识库技术-RAG/15-向量库选型对比|RAG 章向量库选型]]。
+> Spring AI 2.0 精简了向量库实现清单（移除 SAP HANA / Infinispan 模块），当前主流实现为 pgvector、Redis、Milvus、Chroma、MongoDB Atlas、Elasticsearch、Qdrant 等；本课讲的是与实现无关的抽象层（`VectorStore` 接口），选型见 [[../../03-知识库技术-RAG/01-RAG核心原理与全链路实战|RAG 章向量库选型]]。
 
 ---
 
@@ -125,18 +124,19 @@ String answer = chatClient.prompt()
 
 ## ⚠️ 常见坑
 
-- [ ] **只调模型不评估检索**：RAG 质量大多先坏在检索。
-- [ ] **没有 metadata**：后续做权限、来源引用、更新删除都会困难。
-- [ ] **切片太随意**：按段落、标题、语义边界切通常更稳。
-- [ ] **忽略删除和更新**：知识库不是一次性导入，生命周期要设计。
-- [ ] **把低相关片段塞给模型**：会诱导模型回答偏题。
+- 回答不准时，先检查解析、切分和检索结果，再调整模型。
+- 保留必要的元数据，方便权限过滤、来源引用和文档更新。
+- 切分时结合标题、段落等结构，并检查重要内容是否完整。
+- 设计文档更新和删除流程，避免旧片段继续被召回。
+- 不相关的片段可能干扰模型回答，应结合评测调整检索。
 
 ## 🎯 面试速记
 
-> - **Q: VectorStore 在 RAG 中做什么？**
->   - A: 保存文档向量，并根据用户问题做语义相似度检索，找出相关上下文。
-> - **Q: RAG 的质量关键在哪里？**
->   - A: 文档切分、Embedding、召回、重排、Prompt 合成和权限过滤。
+> [!question]- VectorStore 在 RAG 中做什么？
+> 保存文档向量，并根据用户问题做语义相似度检索，找出相关上下文。
+
+> [!question]- RAG 的质量关键在哪里？
+> 文档切分、Embedding、召回、重排、Prompt 合成和权限过滤。
 
 ## 🔗 关联阅读
 
@@ -149,5 +149,3 @@ String answer = chatClient.prompt()
 
 - [Spring AI Vector Databases](https://docs.spring.io/spring-ai/reference/api/vectordbs.html)
 - [Spring AI ETL Pipeline](https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html)
-
-

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,8 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 6 课，TypeScript 子区起点**：与第 1 课对称，建立 Java → TypeScript 的语法与心智对照。
-- **延伸**：[[07-Node-pnpm-环境配置]]（环境）、[[08-Next.js-AppRouter基础]]（全栈结构）。
+本篇从 Java 视角介绍 TypeScript 的常用语法，之后可继续学习 [[07-Node-pnpm-环境配置]] 和 [[08-Next.js-AppRouter基础]]。
 
 ## 🎯 学习目标
 
@@ -44,9 +43,10 @@ mastery: ⭐☆☆☆☆
 
 ## 📦 环境与包管理
 
+先安装 Node.js 和 pnpm；安装方式见 [[07-Node-pnpm-环境配置]]。
+
 ```bash
 node -v
-corepack enable
 pnpm -v
 pnpm install
 pnpm dev
@@ -89,7 +89,7 @@ type ChatResponse = {
 };
 ```
 
-**TypeScript 类型在编译后会被擦除**：`as ChatResponse` 仅提供编译期类型断言，处理接口入参与模型输出等外部 JSON 数据时，需配合 Zod 等库进行运行时校验。
+**TypeScript 类型在编译后会被擦除**：`as ChatResponse` 仅提供编译期类型断言，处理接口入参与模型输出等外部 JSON 数据时，需配合 Zod 等库进行运行时校验。 ^ts-runtime-validation
 
 ## 🧩 函数、异步、解构
 
@@ -154,11 +154,9 @@ export async function POST(req: Request) {
 
 ## 🤖 Vercel AI SDK 最小心智
 
-本节与后续两篇统一基于 **AI SDK 5**（`ai@5`、`@ai-sdk/react@2`、`@ai-sdk/openai@2`）编写，采用 `sendMessage`、`message.parts` 与 `toUIMessageStreamResponse` 等新版 API（替代 v4 的 `handleSubmit`、`message.content` 与 `toDataStreamResponse`）。
-
+本节与后续两篇统一基于 **AI SDK 5**（`ai@5`、`@ai-sdk/react@2`、`@ai-sdk/openai@2`）编写，采用 `sendMessage`、`message.parts` 与 `toUIMessageStreamResponse` 等该版本 API（替代 v4 的 `handleSubmit`、`message.content` 与 `toDataStreamResponse`）。
 数据流是：组件用 `sendMessage` 提交 UI 消息 → 服务端校验并用 `convertToModelMessages` 转换 → `streamText` 调模型 → `toUIMessageStreamResponse` 返回 → 前端渲染 `message.parts`。
-
-完整可运行的配套示例见 [[09-Vercel-AI-SDK核心]] 和 [[10-Vercel-AI-SDK-useChat流式UI]]。
+相关服务端和前端调用片段见 [[09-Vercel-AI-SDK核心]] 和 [[10-Vercel-AI-SDK-useChat流式UI]]；运行时还需要项目配置、依赖和模型凭据。
 
 | 关键词 | 作用 |
 | ------ | ---- |
@@ -168,6 +166,8 @@ export async function POST(req: Request) {
 | `"use client"` | 声明 React 客户端组件 |
 
 ## 🧪 常用检查命令
+
+`dev`、`lint`、`typecheck`、`build` 需要在项目的 `package.json` 中存在；没有时先参考项目 README。
 
 ```bash
 pnpm install

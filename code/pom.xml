@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.knowledge</groupId>
+    <artifactId>knowledge-code-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Knowledge Base - Independent Code Parent POM</name>
+    <description>知识库独立工程根父 POM - 集中仲裁管理 Java 21、Spring Boot 3、Spring AI 及中间件版本</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>21</java.version>
+
+        <!-- 核心生态版本统一仲裁 -->
+        <spring.boot.version>3.3.5</spring.boot.version>
+        <spring.ai.version>1.0.0-M5</spring.ai.version>
+        <mysql.version>8.4.0</mysql.version>
+        <redisson.version>3.37.0</redisson.version>
+        <rabbitmq.client.version>5.21.0</rabbitmq.client.version>
+        <lombok.version>1.18.34</lombok.version>
+        <jol.version>0.17</jol.version>
+        <bytebuddy.version>1.14.19</bytebuddy.version>
+        <guava.version>33.3.1-jre</guava.version>
+        <fastjson2.version>2.0.53</fastjson2.version>
+        <junit.jupiter.version>5.10.3</junit.jupiter.version>
+    </properties>
+
+    <modules>
+        <!-- ==================================================== -->
+        <!-- 20-Java后端: 知识点核心实验模块 (扁平两层)           -->
+        <!-- ==================================================== -->
+        <module>20-java/01-java-core</module>
+        <module>20-java/02-jvm</module>
+        <module>20-java/03-concurrency</module>
+        <module>20-java/04-spring</module>
+        <module>20-java/05-database</module>
+        <module>20-java/06-middleware</module>
+        <module>20-java/07-distributed</module>
+        <module>20-java/08-design-patterns</module>
+
+        <!-- ==================================================== -->
+        <!-- 10-AI应用开发: 核心演练模块 (扁平两层)               -->
+        <!-- ==================================================== -->
+        <module>10-ai/01-frameworks</module>
+        <module>10-ai/02-rag</module>
+        <module>10-ai/03-context</module>
+        <module>10-ai/04-agent</module>
+
+        <!-- ==================================================== -->
+        <!-- projects: 完整 Spring Boot 实战微服务工程            -->
+        <!-- ==================================================== -->
+        <module>projects/project-seckill</module>
+        <module>projects/project-shortlink</module>
+        <module>projects/project-enterprise-rag</module>
+        <module>projects/project-react-agent</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot 3.3.5 依赖物料清单 (BOM) -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring AI 1.0.0-M5 依赖物料清单 (BOM) -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring.ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- MySQL 8.4 驱动 -->
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${mysql.version}</version>
+            </dependency>
+
+            <!-- Redisson 高性能 Redis 客户端与分布式锁 -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+
+            <!-- RabbitMQ 官方 AMQP 客户端 -->
+            <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>${rabbitmq.client.version}</version>
+            </dependency>
+
+            <!-- OpenJDK JOL 对象内存布局分析工具 -->
+            <dependency>
+                <groupId>org.openjdk.jol</groupId>
+                <artifactId>jol-core</artifactId>
+                <version>${jol.version}</version>
+            </dependency>
+
+            <!-- ByteBuddy 字节码生成工具 -->
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${bytebuddy.version}</version>
+            </dependency>
+
+            <!-- Google Guava 工具包 -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+
+            <!-- FastJSON2 高性能 JSON 序列化 -->
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+
+            <!-- Lombok 注解简化器 -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
+            <!-- JUnit 5 单元测试框架 -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Maven Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <source>21</source>
+                        <target>21</target>
+                        <encoding>UTF-8</encoding>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring.boot.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

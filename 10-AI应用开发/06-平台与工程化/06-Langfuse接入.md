@@ -19,9 +19,7 @@ mastery: ⭐☆☆☆☆
 ## 📌 定位
 
 Langfuse 解决的是“线上模型为什么这样回答”的问题。它不是业务日志替代品，也不是单纯 APM，而是专门面向 LLM 链路的 trace 平台。
-
 适合接入的链路：
-
 - Chat/RAG/Agent 的一次用户请求。
 - 模型输入输出、token、耗时、模型名、成本。
 - 检索片段、工具调用、重试和异常。
@@ -29,10 +27,11 @@ Langfuse 解决的是“线上模型为什么这样回答”的问题。它不�
 
 ## 🤔 解决什么问题 / 为什么需要
 
-- **线上复盘**：保留 Prompt、上下文、工具结果和模型输出，避免只剩一句“用户说效果不好”。
-- **成本治理**：按模型、用户、应用、租户统计 token、耗时和失败率。
-- **评估闭环**：把线上坏例加入 dataset，用 Ragas 或自定义 evaluator 回放。
-- **Prompt 管理**：版本化 Prompt，比较新旧版本在同一批样例上的表现。
+Langfuse 可以把模型调用、检索和工具执行串成可排查的记录：
+- 按需要记录 Prompt、上下文、工具结果和模型输出，并控制脱敏与访问权限。
+- 按模型、用户或租户统计 Token、耗时和失败率。
+- 将线上问题样本加入数据集，用 Ragas 或自定义评估器回放。
+- 管理 Prompt 版本，并用同一批样例比较效果。
 
 ## 🧩 核心组件
 
@@ -63,29 +62,16 @@ flowchart LR
 5. 把检索、rerank、工具调用写成 span，方便定位 RAG 或 Agent 失败点。
 6. 对关键样例打 score，并把坏例加入 dataset 做回归。
 
-## 💻 接入示例
+## 💻 Java 埋点示意
 
-以下示例基于 Langfuse Python SDK v3 的上下文管理器 API（`start_as_current_observation`）编写；运行时通过环境变量配置 `LANGFUSE_PUBLIC_KEY`、`LANGFUSE_SECRET_KEY` 与服务地址（需注意与 v2 版本 `langfuse.trace()` 接口的用法区分）。
+假设项目已配置 Micrometer Observation 和 OpenTelemetry 导出，`ragService` 为业务服务；下方片段只展示一次业务步骤，不会自动配置 Langfuse 接收端，未在本机运行。
 
-```python
-from langfuse import get_client
-
-langfuse = get_client()
-with langfuse.start_as_current_observation(
-    as_type="span", name="contract-qa",
-) as span:
-    span.update(metadata={"tenant": "demo"})
-    with langfuse.start_as_current_observation(
-        as_type="generation", name="answer", model="qwen-plus",
-        input=[{"role": "user", "content": "付款条件是什么？"}],
-    ) as generation:
-        # 仅演示埋点；真实调用后填入模型返回的 output 和 usage
-        generation.update(
-            output="示例：验收后 30 日内付款。",
-            usage_details={"input": 1200, "output": 80},
-        )
-langfuse.flush()  # 短脚本退出前等待上报，服务中不要每次请求都阻塞 flush
+```java
+Observation.createNotStarted("rag.answer", observationRegistry)
+    .observe(() -> ragService.answer(question));
 ```
+
+接入 Langfuse 还需要配置 OTLP 导出地址、认证、采样和敏感信息处理，具体方式以所用版本的官方文档为准。验证时用同一请求 ID 核对业务日志和 trace。
 
 ## ⚠️ 生产坑
 
@@ -97,13 +83,14 @@ langfuse.flush()  # 短脚本退出前等待上报，服务中不要每次请求
 
 ## 🎯 面试 / 选型
 
-> [!question] 高频问题
-> - Q: Langfuse 和普通日志平台有什么区别？
->   - A: 普通日志偏文本和系统事件；Langfuse 按 LLM 链路组织 trace、span、generation、prompt、score 和 dataset。
-> - Q: 接 Langfuse 最少要记录什么？
->   - A: trace_id、用户/租户、模型名、输入、输出、token、耗时、错误、检索片段和工具结果。
-> - Q: Langfuse 怎么和 Ragas 配合？
->   - A: Langfuse 负责采集线上样例和存 score，Ragas 负责对 RAG 样例计算 faithfulness、context precision、answer relevancy 等指标。
+> [!question]- Langfuse 和普通日志平台有什么区别？
+> 普通日志偏文本和系统事件；Langfuse 按 LLM 链路组织 trace、span、generation、prompt、score 和 dataset。
+
+> [!question]- 接 Langfuse 最少要记录什么？
+> 至少关联请求标识、模型、耗时、用量和错误；用户、租户和业务内容按排查需要记录，并做好脱敏、权限控制与保留期限管理。
+
+> [!question]- Langfuse 怎么和 Ragas 配合？
+> Langfuse 负责采集线上样例和存 score，Ragas 负责对 RAG 样例计算 faithfulness、context precision、answer relevancy 等指标。
 
 ## ✅ 精通检查清单
 
@@ -121,5 +108,5 @@ langfuse.flush()  # 短脚本退出前等待上报，服务中不要每次请求
 
 ## 📚 参考资料
 
-- [Langfuse Docs](https://langfuse.com/docs)
+- [Langfuse Docs](https://langfuse.com/docs)；[Spring AI Observability](https://docs.spring.io/spring-ai/reference/observability/index.html)
 - [Langfuse Self-hosting](https://langfuse.com/self-hosting)

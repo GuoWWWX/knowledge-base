@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,13 +18,11 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 9 课**：前置 [[08-Next.js-AppRouter基础]]，本篇讲 Vercel AI SDK 的核心 API（generateText / streamText / tool）。
-- **延伸**：[[10-Vercel-AI-SDK-useChat流式UI]] 做前端 UI。
+本篇在 [[08-Next.js-AppRouter基础]] 之后，介绍 Vercel AI SDK 的 generateText、streamText 和 tool 等核心 API；前端流式交互可继续看 [[10-Vercel-AI-SDK-useChat流式UI]]。
 
 ## 📌 这是什么
 
-它把不同模型厂商的调用方式统一成一套 TypeScript API：
-
+它通过 provider 为不同模型提供相似的 TypeScript 调用接口；各模型支持的能力仍可能不同：
 - provider：例如 `@ai-sdk/openai`、`@ai-sdk/anthropic`。
 - `generateText`：一次性生成文本。
 - `streamText`：边生成边返回，适合聊天 UI。
@@ -46,7 +44,7 @@ mastery: ⭐☆☆☆☆
 ```bash
 pnpm add ai@5 @ai-sdk/openai@2 zod@3
 pnpm dev
-pnpm typecheck
+pnpm typecheck # 仅当 package.json 定义了该脚本
 ```
 
 `.env.local`：
@@ -57,8 +55,7 @@ OPENAI_API_KEY=sk-...
 
 ## 💻 最小示例
 
-以下以 **AI SDK 5** 为基线，provider 包配套安装。UI 接口接收的是 `UIMessage[]`，转成模型消息后再调用模型。
-
+以下以 **AI SDK 5** 为示例基线（不是最新版本），provider 包配套安装；实际项目应按所用版本的官方文档核对。UI 接口接收的是 `UIMessage[]`，转成模型消息后再调用模型。
 一次性生成：
 
 ```ts
@@ -91,6 +88,11 @@ export async function POST(req: Request) {
 }
 ```
 
+## 🔄 流式接口与前端的关系
+
+用户发送问题后，服务端把消息转换成模型可处理的格式，再调用 `streamText`；`toUIMessageStreamResponse()` 将生成过程包装成前端可消费的响应。前端收到增量消息后更新界面，具体 Hook 见 [[10-Vercel-AI-SDK-useChat流式UI]]。
+示例只说明调用关系：`req.json()` 读到的消息仍需在服务端校验，模型密钥不能放进浏览器。出现空回答时，应区分接口未收到消息、模型请求失败和前端未正确消费流。
+
 ## 🤖 AI 生态落点
 
 - Chat UI：后端 `streamText`，前端 `useChat`。
@@ -117,19 +119,21 @@ const getWeather = tool({
 
 - `streamText` 返回的是流，不要用 `Response.json` 包住。
 - provider 包和 `ai` 主包版本要兼容。
-- 工具调用除了通过 Schema 校验参数格式外，还应在 `execute` 函数内校验当前用户的操作权限与业务约束。启用多步工具调用时，建议通过 `stopWhen`（如 `stepCountIs(5)`）显式限制最大步数，并做好超时控制与写操作幂等处理。
+- 工具参数通过 Schema 校验后，仍需在服务端检查用户权限与业务约束。
+- 多步工具调用要设置步数和超时限制；写操作还要考虑幂等。
 - 不要在客户端组件里直接调用带 Key 的 provider。
 - RAG 上下文要限制长度，避免单次请求 Token 消耗过高或增加首字延迟。
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: `generateText` 和 `streamText` 怎么选？
->   - A: 短任务、后台任务用 `generateText`；聊天和长回答用 `streamText` 改善首 token 体验。
-> - Q: Vercel AI SDK 和直接调 OpenAI SDK 的区别？
->   - A: AI SDK 统一 provider、流式协议、前端 Hook 和工具调用，适合全栈 Chat 应用。
-> - Q: 工具调用最重要的工程点是什么？
->   - A: 工具描述、参数 schema、权限校验、超时和执行日志。
+> [!question]- `generateText` 和 `streamText` 怎么选？
+> 短任务、后台任务用 `generateText`；聊天和长回答用 `streamText` 改善首 token 体验。
+
+> [!question]- Vercel AI SDK 和直接调 OpenAI SDK 的区别？
+> AI SDK 统一 provider、流式协议、前端 Hook 和工具调用，适合全栈 Chat 应用。
+
+> [!question]- 工具调用最重要的工程点是什么？
+> 工具描述、参数 schema、权限校验、超时和执行日志。
 
 项目里可以用它做：流式客服、AI 搜索框、带工具调用的业务助手、前端可调试模型 Playground。
 

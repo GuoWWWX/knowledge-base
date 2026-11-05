@@ -1,0 +1,134 @@
+<scheme name="Dracula Java Enhanced" version="142" parent_scheme="Darcula">
+  <metaInfo>
+    <property name="created">2026-11-03</property>
+    <property name="description">经典吸血鬼 Dracula 官方高对比度配色 (针对 Java 21 / Spring / 注解深度增强)</property>
+    <property name="ide">idea</property>
+  </metaInfo>
+  <colors>
+    <option name="CARET_COLOR" value="aeafad" />
+    <option name="CARET_ROW_COLOR" value="323443" />
+    <option name="CONSOLE_BACKGROUND_KEY" value="282a36" />
+    <option name="GUTTER_BACKGROUND" value="282a36" />
+    <option name="INDENT_GUIDE" value="3b3d4d" />
+    <option name="LINE_NUMBERS_COLOR" value="6272a4" />
+    <option name="SELECTION_BACKGROUND" value="44475a" />
+  </colors>
+  <attributes>
+    <option name="TEXT">
+      <value>
+        <option name="FOREGROUND" value="f8f8f2" />
+        <option name="BACKGROUND" value="282a36" />
+      </value>
+    </option>
+    <!-- 关键字 (class, public, return 等): 经典粉红霓虹加粗 -->
+    <option name="JAVA_KEYWORD">
+      <value>
+        <option name="FOREGROUND" value="ff79c6" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 字符串: 暖金黄 -->
+    <option name="JAVA_STRING">
+      <value>
+        <option name="FOREGROUND" value="f1fa8c" />
+      </value>
+    </option>
+    <!-- 数值与常量: 紫罗兰色 -->
+    <option name="JAVA_NUMBER">
+      <value>
+        <option name="FOREGROUND" value="bd93f9" />
+      </value>
+    </option>
+    <!-- 注解 (@Service, @Override, @Autowired 等): 亮绿高亮加粗 -->
+    <option name="ANNOTATION_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="50fa7b" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 类名 (Class): 冰蓝青色 -->
+    <option name="CLASS_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="8be9fd" />
+      </value>
+    </option>
+    <!-- 接口名 (Interface): 冰蓝青色斜体 -->
+    <option name="INTERFACE_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="8be9fd" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- 成员变量: 浅粉橙 -->
+    <option name="INSTANCE_FIELD_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="ffb86c" />
+      </value>
+    </option>
+    <!-- 静态常量: 紫罗兰斜体加粗 -->
+    <option name="STATIC_FIELD_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="bd93f9" />
+        <option name="FONT_TYPE" value="3" />
+      </value>
+    </option>
+    <!-- 局部变量: 明亮白 -->
+    <option name="LOCAL_VARIABLE_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="f8f8f2" />
+      </value>
+    </option>
+    <!-- 入参形参: 亮橙色 -->
+    <option name="PARAMETER_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="ffb86c" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- 方法声明与调用: 活力鲜绿加粗 -->
+    <option name="METHOD_DECLARATION_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="50fa7b" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <option name="METHOD_CALL_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="50fa7b" />
+      </value>
+    </option>
+    <!-- 注释: 经典灰紫斜体 -->
+    <option name="JAVA_LINE_COMMENT">
+      <value>
+        <option name="FOREGROUND" value="6272a4" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <option name="JAVA_BLOCK_COMMENT">
+      <value>
+        <option name="FOREGROUND" value="6272a4" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <option name="JAVA_DOC_COMMENT">
+      <value>
+        <option name="FOREGROUND" value="6272a4" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- Javadoc 标签: 粉色加粗 -->
+    <option name="JAVA_DOC_TAG">
+      <value>
+        <option name="FOREGROUND" value="ff79c6" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 泛型类型参数: 亮青色 -->
+    <option name="TYPE_PARAMETER_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="8be9fd" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+  </attributes>
+</scheme>

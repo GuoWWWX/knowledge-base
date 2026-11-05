@@ -6,7 +6,7 @@ tags:
   - 主题/Java核心
   - 阶段/01
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
@@ -32,10 +32,10 @@ mastery: ⭐⭐⭐☆☆
 ## 🤔 解决什么问题 / 为什么需要
 
 - **为什么不可变？** 四个原因环环相扣：
-  1. **安全**：String 常作文件名、类名、URL、密码等敏感数据，被外部改掉会出漏洞；且 String 常作为方法参数传入，可变的话调用方无法保证参数不被改。
-  2. **缓存 hashCode**：不可变 ⇒ 哈希值只需算一次（String 内部缓存 `int hash` 字段），HashMap 频繁 get 时省掉重复计算。
-  3. **常量池复用**：只有不可变，多个引用共享同一个实例才安全——内容不会悄悄变。
-  4. **线程安全**：不可变对象天然线程安全，无需同步。
+      1. **安全**：String 常作文件名、类名、URL、密码等敏感数据，被外部改掉会出漏洞；且 String 常作为方法参数传入，可变的话调用方无法保证参数不被改。
+      2. **缓存 hashCode**：不可变 ⇒ 哈希值只需算一次（String 内部缓存 `int hash` 字段），HashMap 频繁 get 时省掉重复计算。
+      3. **常量池复用**：只有不可变，多个引用共享同一个实例才安全——内容不会悄悄变。
+      4. **线程安全**：不可变对象天然线程安全，无需同步。
 - **为什么需要常量池？** 程序里大量重复字符串（如状态名、日志模板、字段名），池化让它们共享内存，避免每个字面量都新建对象。
 - **为什么需要 StringBuilder？** String 不可变 ⇒ `+` 拼接每次产生新对象；循环内拼接 N 次就是 O(N²) 的复制成本，必须用可变的 StringBuilder。
 
@@ -79,7 +79,18 @@ flowchart TD
 // JDK 9+: private final byte[] value;  private final byte coder;  // LATIN1 / UTF16
 ```
 
-JDK 9 引入 **Compact Strings**：纯 ASCII 字符串用 `byte[]`（Latin-1，1 字节/字符）存储，只有含中文等多字节字符才用 UTF-16（2 字节/字符），堆内存平均省一半。这也是为什么 `"abc".length()` 返回 3 而 `"中文".length()` 返回 2——length 按**字符**数算，不是字节数（字节数用 `getBytes().length`）。
+JDK 9 引入 **Compact Strings**：启用该优化时，内容能全部用 Latin-1 表示的字符串用每个代码单元 1 字节存储（不只 ASCII，也包括 `é` 等）；否则使用 UTF-16，每个代码单元 2 字节。这会减少符合条件的字符串内容存储，不代表所有字符串或整个对象的内存都减半。
+
+`length()` 返回 **UTF-16 代码单元数量**，与内部压缩存储和对外编码无关。`"abc".length()` 是 3，`"中文".length()` 是 2，而 `"😀".length()` 也是 2，因为这个补充字符需要一对代理项。Unicode 码点数可用 `codePointCount`；用户看到的一个字形还可能由多个码点组合，不能把这三者等同。字节数必须先指定编码，如 `getBytes(StandardCharsets.UTF_8).length`。
+
+下面是可放入 main 的验证片段，需要导入 `java.nio.charset.StandardCharsets`：
+
+```java
+String emoji = "😀";
+System.out.println(emoji.length());                              // 2，UTF-16 代码单元
+System.out.println(emoji.codePointCount(0, emoji.length()));      // 1，Unicode 码点
+System.out.println(emoji.getBytes(StandardCharsets.UTF_8).length); // 4，UTF-8 字节
+```
 
 ### equals 为什么快？
 
@@ -129,7 +140,7 @@ jmap -histo:live <pid> | findstr "String"
 
 - **慢接口排查**：循环内 `s += x` 是典型的 O(N²) 隐患，`jstack` 看热点栈 + 代码审查定位；大循环拼接用 StringBuilder 并预估容量。
 - **内存排查**：`jmap -histo` 看 `char[]/byte[]` 占比；日志、错误码等大量重复字符串可 `intern()` 去重，但**池是全局的、不可回收**，滥用会撑满堆（见踩坑）。
-- **编码排查**：`getBytes()` 不带 Charset 会用平台默认编码（Windows GBK），跨环境不一致——统一 `StandardCharsets.UTF_8`（详见 [[11-IO与NIO]]）。
+- **编码排查**：`getBytes()` 不带 Charset 会使用默认字符集；JDK 17 及以前通常与平台有关，JDK 18 起默认 UTF-8（兼容配置等情况另论）。文件或网络协议仍应显式约定字符集，如 `StandardCharsets.UTF_8`（详见 [[11-IO与NIO]]）。
 - **== 误用排查**：看到 `==` 比字符串多半是 bug；`equals` 也可能 NPE（用 `"常量".equals(var)` 或 `Objects.equals`）。
 
 ## ⚠️ 踩坑与注意事项
@@ -205,3 +216,4 @@ for (int i = 0; i < 100_000; i++) bad += i;   // O(N²)，明显更慢
 - [Dev.java Tutorials](https://dev.java/learn/)
 - [Oracle Java Documentation](https://docs.oracle.com/en/java/)
 - [JDK 源码 String.java](https://github.com/openjdk/jdk/blob/master/src/java.base/share/classes/java/lang/String.java)
+- [String.length / codePointCount API（JDK 21）](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html#length())

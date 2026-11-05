@@ -62,6 +62,7 @@ graph TD
 以实现一个**包含系统提示词、动态参数注入与结构化对象返回**的订单审核服务为例，对比两者的代码风格：
 
 ### 1. Spring AI：Fluent API 链式调用
+
 ```java
 // Spring AI：通过 ChatClient 链式组装请求并映射结果
 @Service
@@ -83,6 +84,7 @@ public class OrderService {
 ```
 
 ### 2. LangChain4j：AiServices 声明式接口
+
 ```java
 // LangChain4j：通过接口与注解声明契约，运行时生成动态代理
 public interface OrderFraudAuditor {
@@ -100,10 +102,8 @@ OrderFraudAuditor auditor = AiServices.builder(OrderFraudAuditor.class)
 OrderAnalysisResult result = auditor.audit(orderText);
 ```
 
-> [!TIP]
-> **编程模型特点**：
-> - **Spring AI (`ChatClient`)** 与 `RestClient`、`WebClient` 的链式调用风格一致，适合在单次请求中灵活调整参数、动态挂载 `Advisor` 拦截器或直接处理 `Flux` 流；
-> - **LangChain4j (`AiServices`)** 将提示词模板与业务方法签名绑定，隐藏了底层调用细节，便于上层业务像调用普通 Java 接口一样使用 AI 服务并进行 Mock 测试。
+> [!tip] 两种调用方式
+> `ChatClient` 使用链式调用，便于在请求中调整参数和挂载 Advisor；`AiServices` 把提示词与接口方法绑定，业务代码可以通过接口调用，也便于替换成测试实现。
 
 ---
 
@@ -132,44 +132,45 @@ flowchart TD
 ## ⚠️ 工程选型与治理注意事项
 
 ### 1. 保持单一模块内的框架收敛
-- **混用成本**：在同一微服务模块中同时引入 `spring-ai` 与 `langchain4j` 会带来额外的工程复杂度：
-  - **抽象不互通**：两套框架的 `Message`、`ChatMemory`、`@Tool` 及向量检索接口彼此独立，会话上下文与工具定义无法直接跨框架共享；
-  - **依赖管理成本**：两者传递依赖的 HTTP 客户端、JSON 序列化库或字节码工具可能存在版本差异，增加依赖仲裁负担；
-  - **团队维护分化**：链式调用与声明式接口并存会导致日志审计、异常处理与监控埋点需要维护两套实现。
-- **工程建议**：同一业务服务优先统一使用一套主框架；若因特定模块能力确需共存，应按服务边界或独立适配层（Adapter）进行隔离。
+
+在同一服务中混用两个框架时，需要考虑：
+- 消息、记忆、工具和向量检索接口不能直接互换，需要做适配。
+- 两套框架的传递依赖可能发生版本冲突。
+- 日志、异常处理和监控可能需要维护两套接入方式。
+
+通常可以先为同一服务确定主框架；确需共存时，再按模块或适配层划清边界。
 
 ### 2. 版本锁定与 BOM 管理
-- 两个框架均处于持续迭代阶段（如 Spring AI 从 1.x 升级到 2.0 时调整了 Options Builder 与 `ChatMemory` 接口，移除了 `PromptChatMemoryAdvisor`）。
-- **工程建议**：生产项目应锁定正式发布版本（GA），通过官方 BOM（`spring-ai-bom` 或 `langchain4j-bom`）统一管理子模块版本，并在升级前通过集成测试验证核心链路。
+
+两个框架都在持续更新。项目可以通过 `spring-ai-bom` 或 `langchain4j-bom` 统一子模块版本，升级前查看变更并用集成测试验证模型、记忆和工具调用等链路。
 
 ### 3. 补齐统一的可观测性与安全治理
-- 无论选择哪个框架，生产环境均需确保模型调用具备超时控制、Token 用量统计、链路追踪（TraceId/MDC）以及输入输出敏感信息过滤。若使用 LangChain4j，可通过自定义 `ChatModelListener` 对接企业现有的 Micrometer / OpenTelemetry 体系。
+
+模型调用需要考虑超时、Token 用量、链路追踪和敏感信息过滤。使用 LangChain4j 时，可以通过 `ChatModelListener` 对接现有监控系统。
 
 ---
 
 ## 🎯 高频面试问题
 
-> [!question] 常见面试问题解析
-> 
-> **Q1：请从设计理念、编程范式和流式处理三个方面，对比 Spring AI 与 LangChain4j 的异同？**
-> - **答**：
+> [!question]- Q1：请从设计理念、编程范式和流式处理三个方面，对比 Spring AI 与 LangChain4j 的异同？
 >   1. **设计理念**：Spring AI 是 Spring 官方项目，深度集成 Spring Boot 自动配置、依赖注入与 Micrometer 可观测性体系；LangChain4j 则是框架中立的 Java 库，既支持纯 Java 与 Quarkus，也提供 Spring Boot Starter；
 >   2. **编程范式**：Spring AI 以 `ChatClient` 的 **Fluent 链式 API** 为核心，通过 `Advisor` 责任链实现记忆、RAG 和日志等横切逻辑；LangChain4j 主打 **`AiServices` 声明式接口**，基于 JDK 动态代理将注解与接口方法转化为模型调用链；
 >   3. **流式处理**：Spring AI 原生基于 Project Reactor 返回 `Flux<String>` / `Flux<ChatResponse>`，与 WebFlux 响应式编程模型无缝衔接；LangChain4j 则主要基于 `StreamingChatResponseHandler` 回调或 `TokenStream` 处理增量输出。
->
-> **Q2：在实际项目中如何进行技术选型？**
-> - **答**：
->   主要评估三个维度：① **基础技术栈**：若核心服务基于匹配的 Spring Boot 体系，且已广泛使用 WebFlux、Micrometer 和 Spring Security，优先选择 **Spring AI** 以保持生态统一；若为非 Spring 环境、Quarkus 或轻量级独立应用，选择 **LangChain4j**；② **编程偏好**：偏好显式链式编排与统一拦截器链选 Spring AI，偏好面向接口声明服务契约选 LangChain4j；③ **特定组件支持**：核对目标大模型或向量数据库在对应框架中的适配成熟度。
->
-> **Q3：为什么通常建议在一个服务模块中统一主框架，而不是混用 Spring AI 与 LangChain4j？**
-> - **答**：
->   虽然两者在技术上可以共存，但在同一模块混用会带来三方面工程成本：① **核心抽象隔离**：两者的消息模型、`ChatMemory`、`@Tool` 注解及向量存储接口互不兼容，同一会话或工具链需要重复适配；② **依赖版本仲裁**：各自引入的底层网络库与工具包可能引发版本冲突；③ **治理与观测重复建设**：审计日志、异常重试与 Token 监控需要针对两套 API 分别实现。因此在单一服务内统一主框架能显著降低维护成本。
+
+> [!question]- Q2：在实际项目中如何进行技术选型？
+> 可以从三方面判断：
+> - 看现有技术栈：Spring Boot 项目可以优先评估 Spring AI；纯 Java 或 Quarkus 项目可以评估 LangChain4j。
+> - 看调用方式：`ChatClient` 偏链式编排，`AiServices` 偏接口声明。
+> - 核对项目需要的模型、向量库和其他组件是否得到充分支持。
+
+> [!question]- Q3：为什么通常建议在一个服务模块中统一主框架，而不是混用 Spring AI 与 LangChain4j？
+> 两套框架的消息、记忆和工具接口不能直接互换，底层依赖也可能冲突；日志、异常处理和监控需要分别接入。在同一模块确定主框架，可以减少这些适配工作。
 
 ---
 
 ## 🪝 知识复盘卡
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │             Spring AI vs LangChain4j 复盘卡             │
 ├────────────────────────────────────────────────────────┤

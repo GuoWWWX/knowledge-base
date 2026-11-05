@@ -12,7 +12,7 @@ mastery: ⭐☆☆☆☆
 > [!info] 本区说明
 > Codex 是 OpenAI 的 coding agent。这里按产品定位、执行模型、上下文工程和安全治理拆解它。
 
-## 文档清单
+## 📚 文档清单
 
 - [ ] [[01-Codex产品定位与总体架构]]
 - [ ] [[02-Codex一次任务执行全链路]]
@@ -20,14 +20,14 @@ mastery: ⭐☆☆☆☆
 - [ ] [[04-Codex上下文工程-AGENTS-MCP-Skills]]
 - [ ] [[99-Codex总结与复习]]
 
-## 学习顺序
+## 🧭 学习顺序
 
 1. 先读 [[01-Codex产品定位与总体架构]]，建立产品心智。
 2. 再读 [[02-Codex一次任务执行全链路]]，理解一次任务的完整链路。
 3. 然后按需深入 [[03-Codex执行模型-线程-沙箱-审批]] 与 [[04-Codex上下文工程-AGENTS-MCP-Skills]]。
 4. 最后用 [[99-Codex总结与复习]] 自测，并对照 [[../02-编程Agent通用架构图]] 回看六层架构。
 
-## 拆解重点
+## 📌 拆解重点
 
 | 主题 | 学什么 |
 | ---- | ------ |
@@ -39,7 +39,7 @@ mastery: ⭐☆☆☆☆
 | MCP / Skills | 如何扩展外部工具和任务工作流 |
 | Subagents | 如何把复杂任务拆给并行代理 |
 
-## 与现有笔记的关系
+## 📌 与现有笔记的关系
 
 - [[../../05-Agent-MCP-Skills/16-AGENTS规范详解]]
 - [[../../05-Agent-MCP-Skills/09-MCP协议详解]]
@@ -48,5 +48,5 @@ mastery: ⭐☆☆☆☆
 
 ## 📚 参考资料
 
-- [OpenAI Codex Documentation](https://developers.openai.com/codex/)
-- [OpenAI Codex Manual](https://developers.openai.com/codex/codex-manual.md)
+- [OpenAI Codex Documentation](https://learn.chatgpt.com/docs/glossary)
+- [Codex 环境](https://learn.chatgpt.com/docs/environments/modes)；[Codex 审批与安全](https://learn.chatgpt.com/docs/agent-approvals-security)

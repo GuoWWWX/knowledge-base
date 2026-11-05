@@ -6,7 +6,7 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -19,13 +19,13 @@ mastery: ⭐☆☆☆☆
 ## 📌 这是什么
 
 Multi-Agent Supervisor 包含：
-
 1. **Supervisor**：理解目标、选择 worker、合并结果、处理冲突。
 2. **Worker Agent**：订单、售后、知识库、数据分析等专业 Agent。
 3. **Shared State**：任务状态、证据、工具结果、决策记录。
-4. **Policy**：谁能调用哪些 MCP tools，哪些步骤需要人工确认。
+4. **Policy**：谁能调用哪些工具，哪些步骤需要人工确认。
 
 不要为了显得高级就拆多 Agent。单 Agent 能稳定完成的任务，不需要 supervisor。
+可以把 Supervisor 理解为任务协调者：它不需要亲自查询订单，而是决定把什么问题交给谁，并检查结果是否足以回答用户。Worker 只处理分配给自己的子任务；是否使用独立模型、进程或服务取决于实现，不是多 Agent 的必要条件。
 
 ## 🤔 解决什么问题 / 为什么需要
 
@@ -34,7 +34,19 @@ Multi-Agent Supervisor 包含：
 - 需要并行执行多个只读查询，再由主控汇总。
 - 需要让专业 Agent 的上下文更短、更稳定。
 
+## 🗣️ 跟着一次订单延误处理
+
+用户问“订单 A1001 为什么还没到，能申请补偿吗？”假设订单查询返回物流单号 `S001`，物流查询返回“运输延误”，售后政策允许符合条件的用户申请补偿。一次可能的分工如下：
+1. Supervisor 把订单号交给订单 Agent；订单 Agent 在鉴权后返回订单状态和物流单号。
+2. Supervisor 将物流单号交给物流 Agent，得到延误信息；政策查询可在没有依赖时并行进行。
+3. Supervisor 比对订单、物流和政策结果，向用户说明已知情况；是否符合补偿条件仍需按实际政策核验。
+4. 用户需要申请时，再按权限和业务规则创建申请；需要审批的操作不能因为某个 Agent 建议执行就跳过审批。
+
+如果订单查询失败，物流 Agent 不应编造单号；如果物流状态与订单状态冲突，Supervisor 应补查、说明不确定或转人工。这些返回值都是示意数据，并非运行结果。
+
 ## 🧩 角色拆分
+
+下面是本例的角色和权限划分，实际哪些角色可以调用工具由业务策略决定。
 
 | 角色 | 负责 | 禁止 |
 | ---- | ---- | ---- |
@@ -50,9 +62,9 @@ Multi-Agent Supervisor 包含：
 flowchart LR
     A[用户目标] --> B[Supervisor分类]
     B --> C[Order Agent]
-    B --> D[Shipping Agent]
-    B --> E[Support Agent]
-    C --> F[共享结果]
+    C -->|物流单号| D[Shipping Agent]
+    B --> E[Support Agent<br/>查询政策]
+    C --> F[汇总结果]
     D --> F
     E --> F
     F --> G[Supervisor汇总验收]
@@ -60,9 +72,9 @@ flowchart LR
 
 1. 先定义 worker 能力边界和可用工具，不共享全量工具。
 2. Supervisor 输出结构化分派计划：worker、任务、输入、验收标准。
-3. worker 返回结构化结果：status、facts、confidence、needHuman。
-4. Supervisor 只基于 worker facts 汇总，遇到冲突要求补查或转人工。
-5. 对并行 worker 设置总超时、单 worker 超时和成本预算。
+3. worker 返回状态、结果及来源，并标明需要人工处理的情况；把事实与模型推测分开。
+4. Supervisor 核对来源和关键结果，遇到冲突或缺失时补查、说明不确定或转人工。
+5. 只并行执行互不依赖的任务，并设置总超时、单 worker 超时和成本预算。
 
 ## 💻 Java / Spring AI 示例
 
@@ -72,42 +84,26 @@ interface WorkerAgent {
 }
 
 record WorkerTask(String worker, String instruction, Map<String, Object> input) {}
-record WorkerResult(String worker, String status, List<String> facts, boolean needHuman) {}
+record Fact(String content, String source) {}
+record WorkerResult(String worker, String status, List<Fact> facts, boolean needHuman) {}
 ```
+
+以下是顺序派发的简化片段，`workers`、任务与结果类型由应用实现，`tasks` 假设已经按依赖顺序准备好；它没有实现任务间结果绑定、超时或重试，未在本机运行。返回的 `facts` 仍需检查来源，不能因为字段叫 facts 就直接相信。
 
 ```java
-@Service
-class SupervisorAgent {
-    private final Map<String, WorkerAgent> workers;
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);  // 并行执行池
-
-    List<WorkerResult> dispatch(List<WorkerTask> tasks) {
-        // 并行执行所有 worker（只读查询场景），总超时兜底
-        try {
-            return pool.invokeAll(tasks.stream()
-                            .map(task -> (Callable<WorkerResult>) () -> workers.get(task.worker()).run(task))
-                            .toList(), 30, TimeUnit.SECONDS)
-                    .stream()
-                    .map(f -> {
-                        try { return f.get(); }
-                        catch (Exception e) { return new WorkerResult("", "error", List.of("worker 超时或失败: " + e.getMessage()), true); }
-                    })
-                    .toList();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("worker 并行执行被中断", e);
-        }
+for (WorkerTask task : tasks) {
+    WorkerAgent worker = workers.get(task.worker());
+    if (worker == null) return "无法处理，请转人工";
+    WorkerResult result = worker.run(task);
+    if (!"SUCCESS".equals(result.status()) || result.needHuman()) {
+        return "信息不足，请转人工处理";
     }
-
-    String summarize(String userGoal, List<WorkerResult> results) {
-        return chatClient.prompt()
-                .system("只根据 worker facts 汇总答案；冲突或缺事实时要求人工处理。")
-                .user("用户目标：" + userGoal + "\nworker结果：" + results)
-                .call()
-                .content();
-    }
+    results.add(result);
 }
+return verifyAndSummarize(userGoal, results);
 ```
+
+`verifyAndSummarize` 也是应用自定义方法，用于检查关键结果并汇总，不能代替业务系统的权限校验。真实实现还需要把上一步的物流单号传给下一步，而不是提前假设单号已知。
 
 ## ⚠️ 工程坑
 
@@ -119,13 +115,14 @@ class SupervisorAgent {
 
 ## 🎯 面试问题
 
-> [!question] 高频问题
-> - Q: 什么时候需要 Multi-Agent？
->   - A: 当任务确实跨领域、需要不同工具和权限、或需要并行专业处理时；普通工具调用任务用单 Agent 更简单。
-> - Q: Supervisor 的核心职责是什么？
->   - A: 分派、约束、验收和合并；它不应绕过 worker 边界直接执行所有工具。
-> - Q: 多 Agent 怎么避免互相污染上下文？
->   - A: worker 只返回结构化 facts 和状态，Supervisor 明确区分事实、推断和待确认事项。
+> [!question]- 什么时候需要 Multi-Agent？
+> 当任务确实跨领域、需要不同工具和权限、或需要并行专业处理时；普通工具调用任务用单 Agent 更简单。
+
+> [!question]- Supervisor 的核心职责是什么？
+> 分派、约束、验收和合并；谁能直接调用哪些工具，由应用和业务策略明确控制。
+
+> [!question]- 多 Agent 怎么避免互相污染上下文？
+> worker 只返回结构化 facts 和状态，Supervisor 明确区分事实、推断和待确认事项。
 
 ## ✅ 精通检查清单
 

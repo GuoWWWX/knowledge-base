@@ -10,6 +10,7 @@ updated: 2026-08-03
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 ---
+
 # Map实现-LinkedHashMap与TreeMap
 
 > [!abstract] 一句话总结
@@ -153,6 +154,7 @@ void afterNodeAccess(Node<K,V> e) {
 
 > [!question]- subMap 返回的是什么？
 > 视图（不是拷贝）：原 map 的结构修改会反映到视图，遍历视图时可能抛 ConcurrentModificationException。
+
 ## 🛠️ 排查 / 实践要点
 
 - 遍历顺序敏感的业务（报表、展示顺序）用 LinkedHashMap，别依赖 HashMap 的"恰好顺序"。

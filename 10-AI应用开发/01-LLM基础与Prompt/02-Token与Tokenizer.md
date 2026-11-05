@@ -6,7 +6,7 @@ tags:
   - 主题/LLM
   - 阶段/01
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐⭐⭐⭐⭐
 ---
@@ -33,13 +33,13 @@ flowchart TD
     subgraph 流派二["粒度 2: 整词级切分 (Word-level)"]
         B1["按完整单词切分: 'apple', 'unbelievable'"]
         B2["【优势】序列长度短，单步语义完整"]
-        B3["【局限】派生词与专有名词会导致词表急剧膨胀；遇到未登录词（OOV）时只能退化为 <UNK> 标记，丢失语义信息"]
+        B3["【局限】派生词与专有名词会导致词表膨胀；没有回退机制时，未登录词可能变成 <UNK>"]
     end
 
     subgraph 主流方案["现代主流: 子词切分 (Subword Tokenization，如 Byte-level BPE)"]
         C1["高频词整词保留: 'apple' -> 1 个 Token"]
-        C2["低频词或复合词拆分为常见子词片段: 'unbelievable' -> 'un' + 'believ' + 'able'"]
-        C3["【工程收益】将词表规模控制在合理区间（通常 5 万～20 万），同时兼顾较短的序列长度与任意文本的无损表示"]
+        C2["低频词拆分示意: 'unbelievable' -> 'un' + 'believ' + 'able'；实际结果取决于分词器"]
+        C3["【工程收益】兼顾词表规模和序列长度；字节级回退可以覆盖任意 UTF-8 文本"]
     end
 
     流派一 & 流派二 --> 主流方案
@@ -52,6 +52,7 @@ flowchart TD
 主流大模型（如 GPT 系列、Claude、DeepSeek、Llama 等）广泛采用基于字节的 **BPE（Byte Pair Encoding）** 或其变体算法构建词表。
 
 ### BPE 词表训练的核心迭代过程：
+
 1. **初始化**：将训练语料拆分为最基础的字符或 UTF-8 字节单元，构成初始基础词表；
 2. **频次统计**：扫描语料库，统计当前所有相邻 Token 对（Pair）共同出现的频次；
 3. **合并高频对**：将出现频次最高的一对相邻单元合并为一个新的子词 Token，并加入词表；
@@ -83,21 +84,20 @@ w i d e s t : 3 次
 ## 🔍 三、典型分词现象与工程问题剖析
 
 ### 问题 1：为什么大模型直接处理字符级任务（如统计单词 `strawberry` 中字母 `r` 的个数）容易出错？
-- **输入表征粒度**：经过 BPE 分词后，模型接收的是子词级 Token ID（例如 `strawberry` 在部分分词器中被切分为 `str` + `aw` + `berry` 等子词片段，具体切分结果取决于目标模型的 Tokenizer），而非逐字母展开的字符数组。
-- **注意力与推理负担**：虽然模型在预训练中接触过大量单词拼写知识，但在一次前向直接作答中，它需要先在内部隐式还原每个子词对应的字母序列，再完成位置对齐与累加计数，容易在中间环节产生偏差。
-- **工程对策**：通过思维链（或推理模型）让模型先将单词逐字符展开再计数可改善准确率；而在生产系统中，涉及精确字符统计、正则匹配与长度校验的逻辑，应直接交由确定性程序代码或工具调用执行。
+
+模型接收到的是 Token ID，不一定是逐字母展开的字符。假设 `strawberry` 被切成 `str`、`aw`、`berry`，模型仍需根据这些片段判断字母数量；实际切分结果取决于分词器。分词只是影响任务表现的可能因素，不能据此断定每次出错的原因。让模型分步检查有时会改善结果，但精确字符统计、正则匹配和长度校验仍应交给程序执行。
 
 ---
 
 ### 问题 2：为什么大模型直接心算多位数算术可能出现偏差？
-- **数字切分与数位对齐**：不同分词器对长数字的切分策略不同（有的按 1～3 位数字切分，有的按单数字切分）。当一个多位整数被切分为多个长度不一的子词 Token 时，模型在自回归从左到右生成结果的过程中，难以像人类列竖式那样从右向左严格对齐十进制数位并处理连续进位。
-- **工程对策**：分步展开推导有助于缓解简单算术错误；但在金融核算、报表统计、订单计价等业务场景中，必须将数值计算交由后端代码（如 Java `BigDecimal`）、数据库聚合或计算器工具完成，模型仅负责提取参数或解释结果。
+
+不同分词器对长数字的切分方式不同，模型处理多位数时也可能出现数位或进位错误，但不能把每次算错都归因于分词。分步推导有时有帮助，却不能保证正确；金融核算、订单计价等需要精确结果的场景，应使用 Java `BigDecimal`、数据库聚合或计算器工具，并检查传入的数值。
 
 ---
 
 ### 问题 3：为什么相同语义的中英文文本消耗的 Token 数量存在差异？
-- **词表分布与编码密度**：不同模型的 Tokenizer 在训练语料配比与词表规模上存在差异。若词表中英文常见词覆盖更密，单个英文单词往往对应 1 个 Token；而中文常见词组可能合并为 1 个 Token，低频汉字或生僻字符则可能拆分为 1～3 个字节级 Token。
-- **工程对策**：字符数与 Token 数之间没有跨模型通用的固定换算比例，且普通正文、代码、JSON 与多语言混合文本的编码密度各不相同。在制定上下文预算与成本预估时，应采集真实业务样本，使用目标模型对应的分词器实测统计。
+
+不同分词器的词表和训练数据不同：一个常见英文单词或中文词组可能对应一个 Token，生僻字符也可能拆成多个 Token。字符数与 Token 数没有跨模型通用的固定换算比例，正文、代码和 JSON 的情况也不同；计算预算与成本时，应使用目标模型对应的分词器统计实际业务样本。
 
 ---
 
@@ -105,7 +105,10 @@ w i d e s t : 3 次
 
 在 Java 应用开发中，由于 `String.length()` 返回的是 UTF-16 代码单元数量，与模型的 Token 消耗量并不等价，因此需要使用与目标模型词表匹配的分词库进行本地预估。
 
-### 使用本地分词库统计 Token（以 OpenAI 词表对应的 `jtokkit` 为例）：
+### 使用本地分词库统计 Token
+
+以 [jtokkit](https://jtokkit.knuddels.de/docs/getting-started/usage) 为例，词表必须与目标模型匹配，实际请求总用量还包含消息封装和工具等开销。下面省略 import 和应用配置：
+
 ```xml
 <dependency>
     <groupId>com.knuddels</groupId>
@@ -115,38 +118,19 @@ w i d e s t : 3 次
 ```
 
 ```java
-import com.knuddels.jtokkit.Encodings;
-import com.knuddels.jtokkit.api.Encoding;
-import com.knuddels.jtokkit.api.EncodingRegistry;
-import com.knuddels.jtokkit.api.EncodingType;
-
-public class TokenDemo {
-    public static void main(String[] args) {
-        EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
-        // 按目标模型选择匹配的编码表：如 GPT-4 / GPT-3.5 使用 CL100K_BASE，GPT-4o 系列使用 O200K_BASE
-        Encoding enc = registry.getEncoding(EncodingType.CL100K_BASE);
-
-        String prompt = "分布式锁的核心是看门狗自动续期机制。";
-        int[] tokenIds = enc.encode(prompt).toArray();
-        
-        System.out.println("Java String 长度 (UTF-16): " + prompt.length());
-        System.out.println("分词后 Token 数量: " + tokenIds.length);
-    }
-}
+EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
+Encoding encoding = registry.getEncoding(EncodingType.CL100K_BASE);
+int tokens = encoding.countTokens("北京出差住宿标准是多少？");
 ```
 
 ---
 
 ## ⚡ 一分钟面试必杀卡
 
-> [!NOTE] 面试高频问题标准答题套路
-> 
-> **Q1：什么是 BPE（Byte Pair Encoding）算法？大模型为什么广泛使用它？**
-> - **A**：
->   - BPE（字节对编码）是一种基于频次统计的子词（Subword）分词算法。它从基础字符或 UTF-8 字节出发，通过在训练语料中迭代统计并合并出现频率最高的相邻单元对，构建出固定规模（通常 5 万～20 万）的词表。
->   - 它在字符级切分（序列过长导致注意力计算开销大）与整词级切分（词表膨胀且难以处理未登录词 OOV）之间取得了良好平衡：高频词以完整 Token 表示以缩短序列长度，低频词或新词则拆解为常见子词或字节片段，实现任意文本的无损编码。
-> 
-> **Q2：为什么大模型在直接处理字母计数、多位数计算时容易出错？工程上如何解决？**
-> - **A**：
->   - **原因**：模型处理的基本单元是子词级 Token 而非单个字符或对齐的十进制数位，且自回归解码是从左到右逐步生成概率分布，在缺乏显式中间状态时难以直接完成跨子词的字符拆解与从右向左的连续进位对齐。
->   - **工程解决方案**：对于推理过程，可通过显式展开中间步骤降低单步跳跃难度；在生产业务中，涉及精确计数、字符串处理与数值运算的逻辑，应一律通过 Function Calling 调用外部工具或交由后端确定性代码（如 `BigDecimal`）执行。
+复习时可以先尝试回答以下两个问题。
+
+> [!question]- BPE 是什么，为什么常用于分词？
+> BPE 根据训练数据中常见的相邻单元逐步建立子词词表，让常见词可以用较少 Token 表示，也能通过子词处理不常见的文本。具体词表和预处理方式随模型而异。
+
+> [!question]- 模型处理字符计数或多位数计算为什么会出错？
+> Token 不一定与单个字符或数字位对齐，加上生成过程本身可能出错，不能依靠语言模型保证精确结果。需要精确计数或财务计算时，可交给程序或计算工具并核对输入。

@@ -55,12 +55,14 @@ graph TD
 ```
 
 ### 1. `ChatModel`：模型驱动标准契约
+
 `ChatModel` 继承自 `Model<Prompt, ChatResponse>` 和 `StreamingModel<Prompt, ChatResponse>`，职责聚焦于底层通信：
 - **入参**：标准的 `Prompt` 对象（封装 `List<Message>` 与 `ChatOptions`）。
 - **出参**：标准的 `ChatResponse`（包含模型生成的 `Generation` 结果、Token 消耗 `Usage` 以及响应元数据 `ChatResponseMetadata`）。
 - **职责边界**：将标准 `Prompt` 转化为目标供应商的 HTTP 请求载荷，执行网络调用并解析返回结果。需要直接控制底层消息结构与响应元数据时，可直接调用 `ChatModel`。
 
 ### 2. `ChatClient`：业务编排门面
+
 `ChatClient` 内部持有 `ChatModel` 引用，采用委托与建造者模式面向业务开发提供高阶能力：
 - 提供链式 Fluent API（`.system(...)`、`.user(...)`、`.advisors(...)`），简化提示词组装；
 - 管理 **Advisor 拦截器链**，统一执行会话记忆读写、RAG 知识检索与日志审计；
@@ -102,6 +104,7 @@ classDiagram
 ```
 
 ### 动态参数控制：`ChatOptions`
+
 在单次请求中，可通过 `options(...)` 覆盖全局默认采样参数：
 
 ```java
@@ -117,108 +120,28 @@ ChatOptions options = OpenAiChatOptions.builder()
 
 ## 💻 代码实践：ChatClient 装配与调用
 
-### 1. Spring Boot 单例装配（推荐方式）
-Spring AI 自动配置会在容器中注册 `ChatClient.Builder`。通常在配置类中按业务域构建对应的 `ChatClient` 单例 Bean：
+### 1. 构建 ChatClient
+
+假设模型 Starter 已正确配置、Spring 已提供 `ChatClient.Builder`。下面是片段，省略类、注入和依赖；代码尚未连接模型运行。
 
 ```java
-package com.example.ai.config;
-
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-@Configuration
-public class AiClientConfig {
-
-    @Bean
-    public ChatClient customerServiceChatClient(ChatClient.Builder builder) {
-        return builder
-                // 1. 设置默认系统提示词
-                .defaultSystem("""
-                    你是电商平台的智能导购助手。
-                    回答请保持礼貌客观，仅推荐系统已上架的商品。
-                    """)
-                // 2. 挂载默认拦截器（调试日志 + 会话记忆）
-                .defaultAdvisors(
-                        new SimpleLoggerAdvisor(), // 开发调试日志（生产环境需注意敏感数据脱敏）
-                        MessageChatMemoryAdvisor.builder(
-                                MessageWindowChatMemory.builder().build()).build()
-                )
-                // 3. 设置默认模型参数
-                .defaultOptions(org.springframework.ai.chat.prompt.ChatOptions.builder()
-                        .temperature(0.7)
-                        .build())
-                .build();
-    }
-}
+ChatClient client = builder.defaultSystem("你是电商导购助手。").build();
+String answer = client.prompt().user("推荐一台轻薄笔记本").call().content();
 ```
 
-### 2. 四种典型业务调用场景
+### 2. 获取不同类型的结果
+
+`client` 已配置，`ProductRecommendation` 是应用定义的类型；调用结构化输出后仍需验证字段和业务规则。
 
 ```java
-package com.example.ai.service;
-
-import com.example.ai.dto.ProductRecommendation;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-
-@Service
-public class ShoppingAssistantService {
-
-    private final ChatClient chatClient;
-
-    public ShoppingAssistantService(ChatClient customerServiceChatClient) {
-        this.chatClient = customerServiceChatClient;
-    }
-
-    /**
-     * 场景 A：同步调用，提取纯文本结果
-     */
-    public String askDirectly(String question) {
-        return chatClient.prompt()
-                .user(question)
-                .call()
-                .content();
-    }
-
-    /**
-     * 场景 B：结构化输出，反序列化为 Java Record / POJO
-     */
-    public ProductRecommendation recommendProduct(String userRequirement) {
-        return chatClient.prompt()
-                .user("用户需求：" + userRequirement)
-                .call()
-                .entity(ProductRecommendation.class);
-    }
-
-    /**
-     * 场景 C：获取完整 ChatResponse，读取 Token 用量与响应元数据
-     */
-    public ChatResponse askWithMetrics(String promptText) {
-        return chatClient.prompt()
-                .user(promptText)
-                .call()
-                .chatResponse();
-    }
-
-    /**
-     * 场景 D：响应式流式输出（用于 SSE）并传入会话 ID
-     */
-    public Flux<String> streamChat(String conversationId, String userMessage) {
-        return chatClient.prompt()
-                .user(userMessage)
-                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
-                .stream()
-                .content();
-    }
-}
+ProductRecommendation dto = client.prompt().user("推荐轻薄笔记本")
+        .call().entity(ProductRecommendation.class);
+ChatResponse response = client.prompt().user("介绍产品").call().chatResponse();
+Flux<String> stream = client.prompt().user("介绍产品").stream().content();
 ```
+
+`content()` 取文本，`chatResponse()` 可以读取响应元数据，`stream().content()` 返回增量文本。用户会话隔离与记忆配置见 [[08-ChatMemory记忆]]。
+
 
 ---
 
@@ -242,70 +165,58 @@ flowchart TD
     OAI --> S2
 ```
 
+假设 `localModel` 和 `cloudModel` 已在 Spring 中分别配置和注入，以下只展示构建关系：
+
 ```java
-@Configuration
-public class MultiModelConfig {
-
-    @Bean
-    public ChatClient localPrivateClient(@Qualifier("ollamaChatModel") ChatModel localModel) {
-        return ChatClient.builder(localModel)
-                .defaultSystem("你是运行在本地内网环境的数据助手。")
-                .build();
-    }
-
-    @Bean
-    public ChatClient publicCloudClient(@Qualifier("openAiChatModel") ChatModel cloudModel) {
-        return ChatClient.builder(cloudModel)
-                .defaultSystem("你是面向公网业务的智能助手。")
-                .build();
-    }
-}
+ChatClient localClient = ChatClient.builder(localModel).build();
+ChatClient cloudClient = ChatClient.builder(cloudModel).build();
 ```
+
+实际注入时可使用 `@Qualifier` 区分 Bean，名称以项目配置为准。
 
 ---
 
 ## ⚠️ 生产实践与常见误区
 
-### 1. 避免在业务代码中直接拼接底层 `ChatModel.call(new Prompt(...))`
-- **原因**：直接调用 `ChatModel` 会绕过 `ChatClient` 上统一配置的默认系统提示词、`Advisor` 拦截链与结构化转换器，增加重复样板代码。
-- **建议**：常规业务统一通过 `ChatClient` 调用；仅在编写底层框架扩展或自定义基础设施组件时直接操作 `ChatModel`。
+### 1. 选择 `ChatClient` 或 `ChatModel`
+
+`ChatClient` 可以统一配置系统提示词、Advisor 和输出转换；直接调用 `ChatModel` 不会经过这些 `ChatClient` 配置。普通业务可以优先使用 `ChatClient`，需要直接操作底层消息和响应时也可以使用 `ChatModel`。
 
 ### 2. 复用 `ChatClient` 单例 Bean
-- **原因**：`ChatClient` 本身是线程安全的不可变配置门面，每次调用 `.prompt()` 都会创建独立的请求构建上下文。
-- **建议**：在配置类中将 `ChatClient` 声明为 `@Bean` 单例复用，避免在每次请求中重复执行 `builder.build()`。
+
+通常可以复用配置好的 `ChatClient`，请求级参数在每次调用时设置；Advisor 和工具中如果包含共享状态，仍需单独检查线程安全。
 
 ### 3. 结构化校验与分布式记忆配置
-- **结构化输出校验**：`.entity(DTO.class)` 默认通过格式提示词与 JSON 反序列化生成目标对象（若需底层模型强制遵循 JSON Schema，需结合对应 Provider 的 Structured Outputs 选项配置），业务层仍应对返回对象的关键字段进行非空与合法性校验。
-- **会话记忆持久化**：示例中的默认 `MessageWindowChatMemory` 使用内存存储，仅适用于单实例开发验证；生产环境多实例部署时需配置 Redis 或 JDBC 等共享 `ChatMemoryRepository`，并由服务端基于登录态传入经过鉴权的 `conversationId`。
+
+结构化输出和会话记忆分别需要检查：
+- `.entity(DTO.class)` 转换成功后，业务层仍要检查必填字段和取值范围。
+- 如果要求模型按 JSON Schema 输出，需要确认对应 Provider 的支持情况并配置相应选项。
+- 多实例部署时，可以使用 Redis 或 JDBC 等共享 `ChatMemoryRepository`；`conversationId` 应由服务端认证并校验归属。
 
 ### 4. 采集 `ChatResponse` 中的 Token 用量指标
-- **建议**：在生产环境中通过自定义 `Advisor` 或 Micrometer 观测机制提取 `chatResponse.getMetadata().getUsage()`，监控输入与输出 Token 消耗。
+
+可以通过自定义 `Advisor` 或 Micrometer 观测机制读取 `chatResponse.getMetadata().getUsage()`，记录输入与输出 Token 用量；实际返回情况取决于模型服务。
 
 ---
 
 ## 🎯 高频面试问题
 
-> [!question] 常见面试问题解析
-> 
-> **Q1：请从设计模式和架构分层角度，说明 Spring AI 中 `ChatClient` 与 `ChatModel` 的分工？**
-> - **答**：
+> [!question]- Q1：请从设计模式和架构分层角度，说明 Spring AI 中 `ChatClient` 与 `ChatModel` 的分工？
 >   - **驱动适配层（`ChatModel`）**：采用**适配器模式（Adapter）**，定义统一的模型调用契约，将标准 `Prompt` 与 `ChatResponse` 映射到各模型厂商的 HTTP 接口与报文格式；
 >   - **业务门面层（`ChatClient`）**：采用**门面模式（Facade）与建造者模式（Builder）**，面向业务开发提供链式 Fluent API，封装提示词模板渲染、结构化实体映射与流式转换；
 >   - **横切增强层（`Advisor`）**：在 `ChatClient` 中集成基于责任链的 `Advisor` 机制，使会话记忆、RAG 检索、日志审计与安全过滤与核心业务代码解耦。
->
-> **Q2：使用 `ChatClient` 接收流式响应时，底层是如何工作的？**
-> - **答**：
->   底层基于 Project Reactor 响应式流规范。调用 `.stream()` 时，`ChatModel` 与模型服务端建立流式 HTTP 连接（通常为 `text/event-stream`），将增量返回的数据块解析为 `ChatResponse` 并封装为 `Flux<ChatResponse>`。在控制器层返回 `Flux<String>` 并声明 `produces = MediaType.TEXT_EVENT_STREAM_VALUE`，即可向前端持续推送增量文本。
->
-> **Q3：在多模型并存（如本地 Ollama + 云端 OpenAI）场景下，Spring AI 如何管理不同模型？**
-> - **答**：
+
+> [!question]- Q2：使用 `ChatClient` 接收流式响应时，底层是如何工作的？
+>   底层基于 Project Reactor 响应式流规范。调用 `.stream()` 会构建响应式流，实际订阅时 `ChatModel` 与模型服务端建立流式 HTTP 连接（通常为 `text/event-stream`），将增量返回的数据块解析为 `ChatResponse` 并封装为 `Flux<ChatResponse>`。在控制器层返回 `Flux<String>` 并声明 `produces = MediaType.TEXT_EVENT_STREAM_VALUE`，即可向前端持续推送增量文本。
+
+> [!question]- Q3：在多模型并存（如本地 Ollama + 云端 OpenAI）场景下，Spring AI 如何管理不同模型？
 >   各模型 Starter 会在容器中注册对应名称的 `ChatModel` Bean。开发者可以在 `@Configuration` 配置类中通过 `@Qualifier("openAiChatModel")` 或 `@Qualifier("ollamaChatModel")` 注入指定驱动，分别构建面向不同业务场景的 `ChatClient` Bean，使上层服务使用统一的 API 完成按场景路由或主备切换。
 
 ---
 
 ## 🪝 知识复盘卡
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │               ChatClient 与 ChatModel 复盘卡            │
 ├────────────────────────────────────────────────────────┤

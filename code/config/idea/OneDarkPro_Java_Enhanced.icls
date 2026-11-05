@@ -1,0 +1,176 @@
+<scheme name="One Dark Pro Java Enhanced" version="142" parent_scheme="Darcula">
+  <metaInfo>
+    <property name="created">2026-11-03</property>
+    <property name="description">专为 Java 21 / Spring Boot 深度优化的 One Dark Pro 工业级高对比度护眼配色方案</property>
+    <property name="ide">idea</property>
+  </metaInfo>
+  <colors>
+    <option name="CARET_COLOR" value="528bff" />
+    <option name="CARET_ROW_COLOR" value="2c313c" />
+    <option name="CONSOLE_BACKGROUND_KEY" value="282c34" />
+    <option name="GUTTER_BACKGROUND" value="282c34" />
+    <option name="INDENT_GUIDE" value="3b4048" />
+    <option name="LINE_NUMBERS_COLOR" value="636d83" />
+    <option name="SELECTION_BACKGROUND" value="3e4451" />
+    <option name="SELECTION_FOREGROUND" value="" />
+    <option name="SOFT_WRAP_SIGN_COLOR" value="5c6370" />
+  </colors>
+  <attributes>
+    <option name="TEXT">
+      <value>
+        <option name="FOREGROUND" value="abb2bf" />
+        <option name="BACKGROUND" value="282c34" />
+      </value>
+    </option>
+    <!-- Java 关键字 (class, public, return 等): 醒目紫罗兰加粗 -->
+    <option name="JAVA_KEYWORD">
+      <value>
+        <option name="FOREGROUND" value="c678dd" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 字符串字面量: 护眼温润绿 -->
+    <option name="JAVA_STRING">
+      <value>
+        <option name="FOREGROUND" value="98c379" />
+      </value>
+    </option>
+    <!-- 数值与字面量: 橙黄色 -->
+    <option name="JAVA_NUMBER">
+      <value>
+        <option name="FOREGROUND" value="d19a66" />
+      </value>
+    </option>
+    <!-- 注解 (@Service, @Override, @Bean 等): 亮金黄色加粗 -->
+    <option name="ANNOTATION_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="e5c07b" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 类名 (Class): 明亮黄色 -->
+    <option name="CLASS_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="e5c07b" />
+      </value>
+    </option>
+    <!-- 接口名 (Interface): 蓝绿色 -->
+    <option name="INTERFACE_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="56b6c2" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- 抽象类: 浅姜黄斜体 -->
+    <option name="ABSTRACT_CLASS_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="e5c07b" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- 枚举: 浅橙色加粗 -->
+    <option name="ENUM_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="d19a66" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 实例字段 (成员变量): 浅红/珊瑚粉 -->
+    <option name="INSTANCE_FIELD_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="e06c75" />
+      </value>
+    </option>
+    <!-- 静态变量 / 常量 (static final): 亮红加粗斜体 -->
+    <option name="STATIC_FIELD_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="e06c75" />
+        <option name="FONT_TYPE" value="3" />
+      </value>
+    </option>
+    <!-- 局部变量: 优雅灰白 -->
+    <option name="LOCAL_VARIABLE_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="abb2bf" />
+      </value>
+    </option>
+    <!-- 方法入参形参: 浅杏色 -->
+    <option name="PARAMETER_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="d19a66" />
+      </value>
+    </option>
+    <!-- 方法声明与定义: 科技亮蓝加粗 -->
+    <option name="METHOD_DECLARATION_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="61afef" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 方法调用: 科技亮蓝 -->
+    <option name="METHOD_CALL_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="61afef" />
+      </value>
+    </option>
+    <!-- 静态方法调用: 科技亮蓝斜体 -->
+    <option name="STATIC_METHOD_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="61afef" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- 行注释: 低饱和灰绿斜体，不喧宾夺主 -->
+    <option name="JAVA_LINE_COMMENT">
+      <value>
+        <option name="FOREGROUND" value="7f848e" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- 块注释: 低饱和灰绿斜体 -->
+    <option name="JAVA_BLOCK_COMMENT">
+      <value>
+        <option name="FOREGROUND" value="7f848e" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- Javadoc 文档注释: 典雅灰蓝 -->
+    <option name="JAVA_DOC_COMMENT">
+      <value>
+        <option name="FOREGROUND" value="7f848e" />
+        <option name="FONT_TYPE" value="2" />
+      </value>
+    </option>
+    <!-- Javadoc 标签 (@param, @return 等): 纯净紫色加粗 -->
+    <option name="JAVA_DOC_TAG">
+      <value>
+        <option name="FOREGROUND" value="c678dd" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- Lambda 表达式形参 -->
+    <option name="LAMBDA_PARAMETER_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="e5c07b" />
+      </value>
+    </option>
+    <!-- 泛型类型参数 (<T>, <K, V>): 青色加粗 -->
+    <option name="TYPE_PARAMETER_NAME_ATTRIBUTES">
+      <value>
+        <option name="FOREGROUND" value="56b6c2" />
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <!-- 括号与操作符: 自然银灰 -->
+    <option name="JAVA_BRACKETS">
+      <value>
+        <option name="FOREGROUND" value="abb2bf" />
+      </value>
+    </option>
+    <option name="JAVA_OPERATION_SIGN">
+      <value>
+        <option name="FOREGROUND" value="56b6c2" />
+      </value>
+    </option>
+  </attributes>
+</scheme>

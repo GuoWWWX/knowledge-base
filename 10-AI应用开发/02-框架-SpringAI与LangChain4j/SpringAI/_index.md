@@ -13,10 +13,13 @@ mastery: ⭐☆☆☆☆
 # 🌱 Spring AI 子区
 
 > [!info] 本区说明
-> Spring AI 是 Spring 官方出品的 Java AI 框架，深度融入 Spring Boot 生态（自动配置、Bean、可观测性）。本子区 9 篇从搭建到原语逐个讲透。**这是 02 章的学习主线**。
+> Spring AI 是 Spring 官方出品的 Java AI 框架，深度融入 Spring Boot 生态（自动配置、Bean、可观测性）。本子区从搭建到原语逐个讲透，并补充了 2.x 工具调用专题。**这是 02 章的学习主线**。
 
 > [!info] 版本现状（2026-08）
-> **Spring AI 2.0.0 GA**（Boot 4.x / MCP SDK 2.0 / Options 全 builder / 记忆需显式 conversationId）。维护线 1.1.8、1.0.9；迁移参考[官方 Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html)。
+> **Spring AI 2.0.0 GA**（Boot 4.x / MCP SDK 2.0 / Options 全 builder / 多用户记忆应显式传入经鉴权的 conversationId）。维护线 1.1.8、1.0.9；迁移参考[官方 Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html)。
+
+> [!info] 更新补充（2026-10-30）
+> 官方发布页列出的 2.0 正式维护版本为 2.0.2，2.1.0-RC1 是预发布版。旧笔记保留其示例基线，新增能力参见 [[10-2.x工具调用循环与动态工具发现]]。
 
 ## 📚 知识笔记清单（按学习顺序编号，顺着编号读即可）
 
@@ -29,6 +32,7 @@ mastery: ⭐☆☆☆☆
 - [x] [[07-Advisor拦截器]] — 对话链路增强（记忆 / RAG / 观测）
 - [x] [[08-ChatMemory记忆]] — 多轮会话上下文（2.0 记忆三件套）
 - [x] [[09-VectorStore向量存储]] — 向量检索与 RAG
+- [ ] [[10-2.x工具调用循环与动态工具发现]] — ToolCallingAdvisor、工具搜索与版本边界
 
 ## 🧭 学习路线
 

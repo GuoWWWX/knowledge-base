@@ -1,0 +1,10 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: enterprise-rag-service
+
+rag:
+  confidence-threshold: 0.25
+  default-top-k: 3

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,13 +18,11 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 12 课**：前置 [[11-LangChain.js简介]]，本篇建立 Mastra 的 Agent / Workflow 心智。
-- **延伸**：[[13-TS与Java-AI生态对照]] 做整体选型。
+本篇在 [[11-LangChain.js简介]] 之后，介绍 Mastra 的 Agent 和 Workflow 概念；语言与框架的分工对照见 [[13-TS与Java-AI生态对照]]。
 
 ## 📌 这是什么
 
 读 Mastra 项目时，先找四类对象：
-
 - Agent：面向某个任务的模型助手。
 - Tool：Agent 能调用的业务函数。
 - Workflow：多步骤流程编排。
@@ -49,7 +47,7 @@ mastery: ⭐☆☆☆☆
 ```bash
 pnpm install
 pnpm dev
-pnpm typecheck
+pnpm typecheck # 仅当 package.json 定义了该脚本
 pnpm build
 ```
 
@@ -64,28 +62,21 @@ pnpm add -D mastra
 
 ## 💻 最小示例
 
-下面通过结构化示例展示 Tool 输入定义与 Agent 指令组装的核心要素（实际开发中通过 `@mastra/core` 的 `createTool` 与 `Agent` 类声明）：
+下面按当前官方文档展示 `createTool` 的定义片段；返回值是模拟数据，尚未接入知识库或执行 Agent。框架接口会变化，请按项目锁定版本核对。
 
 ```ts
+import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 
-const searchDocsTool = {
+const searchDocs = createTool({
   id: "searchDocs",
   description: "根据问题检索知识库片段",
   inputSchema: z.object({ query: z.string() }),
-  execute: async ({ query }: { query: string }) => {
-    return [{ title: "RAG 笔记", content: `匹配问题：${query}` }];
-  },
-};
-
-const supportAgent = {
-  name: "support-agent",
-  instructions: "基于知识库回答问题，不知道就说明缺少资料。",
-  tools: { searchDocsTool },
-};
+  execute: async ({ query }) => ({ result: `模拟结果：${query}` }),
+});
 ```
 
-真实项目里会用 Mastra 的 Agent/Tool API 来声明，上面只保留最小结构，方便先看懂代码意图。
+实际项目可将工具注册给 Agent；工具执行权限仍由服务端负责，不能仅依赖模型决定是否调用。
 
 ## 🤖 AI 生态落点
 
@@ -104,13 +95,14 @@ const supportAgent = {
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: Mastra 适合解决什么问题？
->   - A: 适合用 TypeScript 组织 Agent、工具、记忆和多步骤 AI Workflow。
-> - Q: 它和直接用 Vercel AI SDK 有什么区别？
->   - A: AI SDK 更偏模型调用和 UI 流；Mastra 更偏 Agent/Workflow 应用结构。
-> - Q: 业务 Agent 上线最怕什么？
->   - A: 工具越权、写操作不可追踪、记忆污染、异常步骤不可恢复。
+> [!question]- Mastra 适合解决什么问题？
+> 适合用 TypeScript 组织 Agent、工具、记忆和多步骤 AI Workflow。
+
+> [!question]- 它和直接用 Vercel AI SDK 有什么区别？
+> AI SDK 更偏模型调用和 UI 流；Mastra 更偏 Agent/Workflow 应用结构。
+
+> [!question]- 业务 Agent 上线最怕什么？
+> 工具越权、写操作不可追踪、记忆污染、异常步骤不可恢复。
 
 项目里可以用它做：内部业务助手、自动化文档处理流水线、带工具调用的运营 Agent。
 

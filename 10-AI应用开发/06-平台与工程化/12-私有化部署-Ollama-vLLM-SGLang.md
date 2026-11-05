@@ -19,14 +19,13 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **私有推理服务选型课**：承接 [[10-LiteLLM与One-API]] 与 [[11-AI网关生产架构-限流-计费-审计]] 的网关视角，落到模型服务本身的部署、压测与验收。
-- **前置知识**：模型选型参考 [[../01-LLM基础与Prompt/05-主流模型选型对比]]，多供应商接入与切换见 [[../02-框架-SpringAI与LangChain4j/SpringAI/05-多模型接入与切换]]。
+本篇承接 [[10-LiteLLM与One-API]] 和 [[11-AI网关生产架构-限流-计费-审计]]，介绍推理服务的选型、压测与验收。模型选型和多供应商接入可分别参考 [[../01-LLM基础与Prompt/05-主流模型选型对比]]、[[../02-框架-SpringAI与LangChain4j/SpringAI/05-多模型接入与切换]]。
 
-## 为什么 2026 岗位会问
+## 🎯 什么时候考虑私有部署
 
-国内企业尤其关注数据合规、国产模型、私有部署和成本控制。AI 应用开发不一定要训练模型，但要知道什么时候用云 API，什么时候用本地模型，什么时候上推理服务。
+当业务对数据出域、模型可控性或成本有特定要求时，可以评估私有部署。是否自建推理服务还要结合模型能力、硬件和运维成本判断。
 
-## 三类工具定位
+## 🧩 三类工具定位
 
 | 工具 | 定位 | 适合 |
 | ---- | ---- | ---- |
@@ -34,15 +33,15 @@ mastery: ⭐☆☆☆☆
 | vLLM | 高吞吐推理服务 | OpenAI 兼容 API、批量并发、生产服务 |
 | SGLang | 面向复杂生成程序的高性能运行时 | Agent、多轮工具调用、结构化生成、高并发 |
 
-## 选型心法
+## ⚖️ 选型考虑
 
-- 开发调试：Ollama 最快。
+- 开发调试：Ollama 可作为简单的本地模型运行入口，启动和响应速度仍要实测。
 - 生产 API 服务：优先看 vLLM / SGLang。
 - 强 Java 后端团队：模型服务独立部署，Java 通过 OpenAI-compatible API 调用。
 - 对延迟敏感：压测 TTFT、TPOT、并发和 KV cache。
 - 对成本敏感：小模型处理高频简单任务，大模型处理复杂任务。
 
-## 典型架构
+## 🏗️ 典型架构
 
 ```mermaid
 flowchart LR
@@ -54,37 +53,43 @@ flowchart LR
     B --> G[Trace + Billing + Rate Limit]
 ```
 
-## OpenAI Compatible API 的意义
+## 🧠 PagedAttention 和 RadixAttention 解决什么问题？
+
+生成时，服务通常需要保存已经计算过的 KV Cache，后续 Token 才能复用。每个请求的长度不同，并发时这些缓存会占用大量显存，固定预留整块连续空间可能浪费资源。
+**PagedAttention** 将 KV Cache 划分为块，按需映射到不必连续的显存位置，有助于减少预分配浪费。**RadixAttention** 利用共享前缀组织和复用缓存，例如多个请求带同一段长制度时，后续请求可能复用先前前缀的计算。两者关注点不同；缓存命中和性能收益受模型、版本、配置和请求模式影响，需要实测。
+
+## 🔌 OpenAI Compatible API 的意义
 
 vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Java 应用来说，这意味着：
-
 - 调用层可以统一到一个模型网关。
 - Spring AI / LangChain4j 的适配成本降低。
 - 云模型和私有模型可以做灰度切换。
 - 评估集可以复用同一套请求结构。
 
-## 私有化验收清单
+## ✅ 私有化验收清单
 
 - [ ] 模型许可证允许商用和私有部署。
-- [ ] **显存容量核算与压测**：综合计入模型权重、并发请求的 KV Cache 占用及 CUDA 运行时开销（权重量化与 KV Cache 量化分别独立计算），并通过真实上下文长度与并发压测确定单机容量。
+- [ ] 分别估算模型权重和 KV Cache，加上运行时显存开销。
+- [ ] 使用实际上下文长度和并发量压测，确认单机容量。
 - [ ] 支持流式输出和超时取消。
 - [ ] 有 OpenAI-compatible API 或清晰 SDK。
 - [ ] 日志/Trace 脱敏，检查遥测、外部工具和回退云模型路径，避免“模型在内网、数据仍出域”。
 - [ ] 有模型版本、Prompt 版本和回滚策略。
 - [ ] 网关层做限流、熔断、额度和审计。
 
-## 常见坑
+## ⚠️ 常见问题
 
 - 只看单轮效果，不测并发吞吐。
 - 本地能跑，不代表生产显存和延迟可接受。
 - 忘记模型许可证，后续商用合规有风险。
-- 忽略私有化中小参数模型与云端旗舰模型在复杂推理上的能力边界，上线前需针对 JSON 结构化输出、Function Calling 准确率与长上下文指令遵循做专项评测。
+- 不同模型能力有差异，上线前需测试结构化输出、工具调用和长上下文任务。
 
-## 面试讲法
+## ❓ 面试问题
 
-> 私有化部署我会分开发、服务、治理三层看。Ollama 适合本地开发，vLLM/SGLang 适合生产推理服务，Java 侧通过模型网关统一调用。上线前必须压测并发、延迟、显存、上下文长度、结构化输出和工具调用能力。
+> [!question]- 选择私有化推理工具时需要考虑什么？
+> Ollama 可用于本地开发，vLLM 和 SGLang 可作为推理服务的候选。选型时要结合模型兼容性、硬件和运维能力，并测试并发、延迟、显存、结构化输出与工具调用效果。
 
-## 关联
+## 🔗 关联笔记
 
 - [[_index]]
 - [[10-LiteLLM与One-API]]
@@ -96,4 +101,6 @@ vLLM、SGLang、Ollama 都在不同程度上支持 OpenAI 风格接口。对 Jav
 - [Ollama Documentation](https://docs.ollama.com/)
 - [vLLM Documentation](https://docs.vllm.ai/)
 - [SGLang Documentation](https://docs.sglang.ai/)
+- [SGLang 论文](https://arxiv.org/abs/2312.07104)
+- [vLLM KV Cache 实现](https://docs.vllm.ai/en/v0.5.3.post1/automatic_prefix_caching/details.html)
 - [Spring AI OpenAI Chat](https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html)

@@ -1,0 +1,9 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: react-agent-service
+
+agent:
+  max-steps: 6

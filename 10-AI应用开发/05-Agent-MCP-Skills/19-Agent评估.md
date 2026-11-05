@@ -6,132 +6,70 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
 
-# Agent评估
+# 🧪 Agent 评估
 
-> [!abstract] 一句话总结
-> Agent 评估要同时评估最终答案和过程行为：是否选对 Skill、是否调用正确工具、是否遵守权限、是否在预算内完成。
+> [!abstract] 本文要解决什么
+> Agent 的回答看起来正确，不代表它查了正确的数据、使用了正确的工具，也不代表执行过程符合权限。评估需要同时检查最终结果和关键行为。
 
-## 📌 这是什么
+## 🎯 为什么只看最终答案不够？
 
-传统问答评估看“答案对不对”；Agent 评估还要看过程：
+用户问“订单 A1001 的物流状态”，测试数据中订单状态是“运输中”。如果 Agent 没有查订单，只是猜出了“运输中”，这次答案碰巧正确，但不能说明它真的完成了查询。反过来，工具调用顺序与预想略有不同，也不一定代表失败：可能存在另一条同样可靠、安全的路径。
 
-1. **任务理解**：是否识别意图、约束、风险等级。
-2. **计划质量**：步骤是否必要，是否遗漏关键动作。
-3. **工具行为**：是否调用正确 Java Tool / MCP Tool，参数是否符合 schema。
-4. **结果质量**：答案是否引用工具事实，是否结构化，是否满足用户目标。
-5. **治理指标**：成本、延迟、步数、安全拦截、人工接管率。
+所以每个用例除了预期答案，还要写清楚哪些过程是必须发生的、哪些行为绝不能发生。不要把所有可能正确的路径都硬编码成唯一顺序。
 
-## 🤔 解决什么问题 / 为什么需要
+## 📋 一组订单查询用例
 
-- **避免只凭体感上线**：demo 看起来聪明，不代表稳定处理边界样例。
-- **定位回归来源**：prompt、模型、Skill、MCP server 任一变化都可能影响结果。
-- **比较方案**：同一套样本跑 ReAct、Plan-and-Execute、Supervisor，才能看清取舍。
-- **支撑持续改进**：把线上失败样本沉淀成评测集，形成闭环。
+下表中的订单、权限和返回结果都是测试环境中预先设定的。测试前需要固定或模拟工具结果，才能判断 Agent 是否依据了正确的事实。
 
-## 🧩 指标设计
+| 场景 | 测试条件 | 期望结果与关键行为 |
+| :--- | :--- | :--- |
+| 正常查询 | 当前用户有权查询 A1001，物流状态为运输中 | 查询正确订单，回答运输中，不编造签收时间 |
+| 无权访问 | A1001 属于其他用户 | 服务端拒绝读取，不向模型和用户泄露订单信息 |
+| 工具超时 | 查询接口一直超时 | 在限制内结束或按规则重试，说明暂时无法查询 |
+| 信息不足 | 用户只说“查一下我的订单” | 按产品规则询问订单号或调用允许的订单列表工具 |
 
-| 指标 | 判定方式 | 说明 |
-| ---- | -------- | ---- |
-| `task_success` | 人工标注或业务断言 | 最终是否完成用户任务。 |
-| `tool_precision` | 期望工具 vs 实际工具 | 防止乱调工具。 |
-| `arg_valid_rate` | JSON schema / Bean Validation | 参数是否可执行。 |
-| `groundedness` | 答案是否来自工具或证据 | 控制幻觉。 |
-| `safety_pass` | 是否触发越权、泄露 | 安全红线指标。 |
-| `cost_p95` | token + API 成本 | 防止少量请求过贵。 |
-| `latency_p95` | 端到端耗时 | 影响用户体验。 |
+这些用例分别覆盖正常路径、权限、异常和信息不足。实际还应加入空结果、数据不一致、参数错误等场景，并把线上发现的问题持续补入评测集。
 
-## ⚙️ 落地步骤
+## 📊 评估哪些方面？
 
-```mermaid
-flowchart LR
-    A[线上失败/业务样本] --> B[构造评测集]
-    B --> C[固定模型和工具版本]
-    C --> D[运行Agent]
-    D --> E[过程断言]
-    E --> F[答案评分]
-    F --> G[生成回归报告]
-```
+| 评估方面 | 可以检查什么 |
+| :--- | :--- |
+| 任务结果 | 是否完成用户目标，事实、条件和引用是否正确 |
+| 工具行为 | 必要工具是否调用，参数是否正确，有无多余或被禁止的调用 |
+| 权限与安全 | 越权访问是否被拒绝，敏感信息是否泄露 |
+| 效率与成本 | 模型和工具调用次数、总耗时、Token 与外部接口费用 |
 
-1. 收集 30 到 100 个真实样本，覆盖正常、边界、越权、工具异常、信息不足。
-2. 为每个样本写期望：应调用哪个工具、哪些参数必须出现、最终答案必须包含哪些事实。
-3. 固定模型版本、prompt 版本、Skill 版本、MCP server 版本，评估时记录到报告。
-4. 对工具调用做程序断言，对自然语言答案用人工评分或 LLM-as-judge 辅助评分。
-5. 把评估放进 CI 或发布门禁，至少阻止安全和工具调用回归。
+结果中的事实可以由业务断言或人工检查；工具名、参数和调用次数适合用程序断言；自然语言表达可以由人工或模型辅助评分。模型评委也会误判，需要先用人工标注样本校准，不应单独作为关键业务正确的依据。
 
-## 💻 Java / Spring AI 示例
+## ☕ Java 测试怎么写？
+
+下面是假设测试框架已经捕获工具调用的断言片段，`run`、`ToolCall` 和测试替身需要由项目提供，并非可直接运行的完整测试。测试替身预设 A1001 的状态为“运输中”。
 
 ```java
-record EvalCase(
-        String id,
-        String userMessage,
-        String expectedTool,
-        List<String> mustContain) {
-}
+assertThat(run.toolCalls())
+        .contains(new ToolCall("queryOrder", Map.of("orderId", "A1001")));
+assertThat(run.finalAnswer()).contains("运输中");
+assertThat(run.finalAnswer()).doesNotContain("已签收");
 ```
 
-```java
-@Test
-void shouldCallOrderToolAndUseToolFact() {
-    EvalCase c = new EvalCase(
-            "order-status-001",
-            "帮我查一下订单 A100 的物流状态",
-            "queryOrderStatus",
-            List.of("已发货", "顺丰"));
+这只能覆盖部分要求：还要验证当前用户对订单有权限，以及测试替身确实返回了预期数据。“包含运输中”也不保证其他描述都正确；对时间、金额等关键事实，需要额外断言或人工核验。
 
-    AgentRun run = agentRunner.run(c.userMessage());
+## 🔄 如何用于回归？
 
-    assertThat(run.toolCalls()).extracting(ToolCall::name).contains(c.expectedTool());
-    assertThat(run.finalAnswer()).contains(c.mustContain().toArray(String[]::new));
-    assertThat(run.totalSteps()).isLessThanOrEqualTo(4);
-}
-```
+先从常见业务和失败场景建立一小批有预期结果的样例，记录模型、提示词、工具与 Skill 的版本。修改其中一项后，用同一批样例比较结果，并单独查看安全失败、关键任务失败、耗时和成本的变化。模型输出有随机性，必要时对同一用例重复运行；不要只依赖一次结果或一个平均分。
 
-```java
-@Tool(description = "查询订单状态，只能查询当前登录用户订单")
-String queryOrderStatus(String orderId) {
-    capturedToolCalls.add(new ToolCall("queryOrderStatus", Map.of("orderId", orderId)));
-    return "订单 A100 已发货，承运商：顺丰";
-}
-```
+> [!question]- Agent 评估和 RAG 评估有什么不同？
+> RAG 重点检查检索证据是否相关、答案是否依据证据；Agent 还需要检查工具选择与参数、权限、副作用以及多步骤执行过程。使用 RAG 的 Agent 两部分都要评估。
 
-## ⚠️ 工程坑
+> [!question]- 工具调用都正确，答案就一定正确吗？
+> 不一定。模型仍可能误读工具返回或编造细节，因此过程和最终答案都需要检查。
 
-- 只评估最终文本，不评估工具路径；模型可能蒙对答案但没查真实数据。
-- 评测集全是理想问题，没有越权、脏输入、工具超时、信息不足样例。
-- 每次评估都换模型或工具版本，回归原因不可追踪。
-- LLM-as-judge 没有校准，评分标准漂移。
-- 只看平均分，不看安全红线和高价值场景的失败率。
+## 🔗 关联与资料
 
-## 🎯 面试问题
-
-> [!question] 高频问题
-> - Q: Agent 评估和 RAG 评估有什么不同？
->   - A: RAG 重点看召回和 groundedness；Agent 还要看计划、工具选择、参数、权限、步数和成本。
-> - Q: 如何验证模型正确调用了工具？
->   - A: 在测试替身或 trace 中捕获工具调用，断言工具名、参数和调用次数，再检查最终答案是否引用工具结果。
-> - Q: LLM-as-judge 能不能完全替代人工？
->   - A: 不能。它适合批量辅助评分，但安全、合规、关键业务样本仍要人工标注或程序断言。
-
-## ✅ 精通检查清单
-
-- 能设计包含正常、边界和安全样例的评测集。
-- 能区分答案指标、过程指标和成本指标。
-- 能用 Java 测试捕获工具调用并做断言。
-- 能把线上失败样本转成回归用例。
-
-## 🔗 关联笔记
-
-- [[_index]]
-- [[18-Agent可观测]]
-- [[17-Agent-MCP-Skills组合实战]]
-- [[../00-总览/学习仪表盘]]
-
-## 📚 参考资料
-
-- [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
-- [OpenAI Platform Docs](https://platform.openai.com/docs/)
+- [[18-Agent可观测|Agent 可观测]]、[[20-Agent安全与防注入|安全与防注入]]、[[../03-知识库技术-RAG/_index|RAG 文档]]
+- [Spring AI：Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)

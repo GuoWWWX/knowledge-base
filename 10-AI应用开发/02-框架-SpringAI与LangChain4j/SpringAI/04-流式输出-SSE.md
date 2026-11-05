@@ -10,20 +10,18 @@ updated: 2026-09-28
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
+
 # 🌊 流式输出 SSE
 
 > [!abstract] 一句话总结
 > 流式输出把“等完整答案”改成“边生成边返回”，SSE 是 Java Web 场景里最简单稳定的文本流传输方式。
 
-> [!info] 两个"SSE"别混（2025 传闻澄清）
-> - **本课的 SSE**：Web 标准 `text/event-stream`，后端用 HTTP 流把模型输出推给前端（Chat UI 打字机效果）——**没被取代**，是 AI 流式响应的标配（ChatGPT/Claude 网页、OpenAI 兼容接口流式响应都是它）。
-> - **MCP 协议里的 SSE 传输**：MCP Client↔Server 的传输通道，2025-06-18 规范已移除，由 **Streamable HTTP / HTTP**（2025-11-25 规范化）取代——那是协议层的事，与本课无关（见 05-Agent-MCP-Skills/09-MCP协议详解）。
-> - 面试一句话："MCP 的 SSE 传输被 Streamable HTTP 取代了；Web 前端的 SSE 仍是流式输出的标准格式。"
+> [!info] MCP 与页面中的 SSE
+> 本节使用 Web 的 `text/event-stream` 向前端发送增量内容。MCP 早期也有 HTTP + SSE 传输，后来引入 Streamable HTTP；后者在部分响应中仍可以使用 SSE。旧传输主要用于兼容已有客户端，具体见 [[../../05-Agent-MCP-Skills/09-MCP协议详解|MCP 协议]]。
 
 ## 🎯 本节定位
 
-- **本章第 4 课，输出体验**。前置：[[02-ChatClient与ChatModel]] 的同步调用；本节把它升级为流式输出，会用到 Spring WebFlux 的 `Flux` 响应式流类型（只需基本用法；想深入理解事件循环、背压、为什么不能阻塞 IO，见 [[../../../20-Java后端/04-Spring生态/09-WebFlux与响应式编程|WebFlux 与响应式编程]]）。
-- **延伸**：流式响应的工程注意点见本节“工程注意点”；前端消费方式见“EventSource”示例。
+本节在 [[02-ChatClient与ChatModel]] 的同步调用基础上学习流式输出，示例使用 Spring WebFlux 的 `Flux`。事件循环和背压的原理见 [[../../../20-Java后端/04-Spring生态/09-WebFlux与响应式编程|WebFlux 与响应式编程]]；前端消费方式和工程注意点见下文。
 
 ## 📌 这是什么
 
@@ -49,7 +47,7 @@ sequenceDiagram
 
 | 普通响应 | 流式响应 |
 | ---- | ---- |
-| 首字慢，用户等待 | 首 token 快，体验好 |
+| 等生成完整回答后再显示 | 通常可更早显示已有片段；实际首字时间仍受模型和网络影响 |
 | 长答案容易超时 | 持续输出保持连接活跃 |
 | 只能一次性展示 | 可做打字机效果 |
 
@@ -77,7 +75,7 @@ class StreamController {
 }
 ```
 
-前端用 `EventSource`：
+前端用 `EventSource`；浏览器默认会重连，本例在连接出错或结束时关闭连接。实际项目应定义明确的结束/错误事件，并处理取消与重复请求：
 
 ```javascript
 const source = new EventSource("/chat/stream?message=解释RAG");
@@ -106,11 +104,11 @@ AI 聊天的“模型往前端吐字”优先选 SSE；停止生成也可通过 
 
 ## ⚙️ 工程注意点
 
-- **关闭代理层响应缓冲**：网关或 Nginx 需关闭响应缓冲（如 `proxy_buffering off;`），避免分块事件被缓存后一次性返回给前端。
-- **区分 SSE 事件与模型 Token**：服务端推送的每个 SSE 事件对应模型流式返回的一个增量文本片段（Chunk），与底层分词器的单个 Token 并非严格一一对应。
-- **前端鉴权与请求方式选择**：浏览器原生 `EventSource` 仅支持 `GET` 请求且不支持自定义请求头；若需发送 `POST` JSON 请求体或携带 `Authorization` Header，前端通常使用 `fetch` API 读取 `ReadableStream`（或使用 `@microsoft/fetch-event-source`）。
-- **断线重连与幂等防重**：大模型生成具有非确定性且消耗算力，客户端断线后不应盲目自动重发生成请求，应结合请求 ID（`requestId`）做状态查询、去重或取消控制。
-- **结果落库与内容审核**：流式推送过程中应累加文本片段进行增量安全审核，并在流结束时一次性持久化完整回答，避免按片段高频写入数据库。
+- 检查网关或 Nginx 的响应缓冲，例如 `proxy_buffering off;`，避免片段被攒到最后才返回。
+- SSE 事件中的文本片段不一定等于分词器中的一个 Token。
+- 原生 `EventSource` 使用 GET 且不能自定义请求头；需要 POST 或 `Authorization` 时，可用 `fetch` 读取 `ReadableStream`。
+- 断线后不要盲目重复生成，可结合 `requestId` 查询状态、去重或取消。
+- 按需要审核流式内容；结束后保存完整回答，避免每个片段都写一次数据库。
 
 ---
 
@@ -123,17 +121,18 @@ AI 聊天的“模型往前端吐字”优先选 SSE；停止生成也可通过 
 
 ## ⚠️ 常见坑
 
-- [ ] **用了 Spring MVC 却返回 Flux**：流式体验建议配 WebFlux 或确认容器异步支持。
-- [ ] **Nginx 缓冲**：代理层缓冲会导致前端一次性收到全部内容。
-- [ ] **异常只在日志里**：流中报错要给前端一个可识别的错误事件或结束状态。
-- [ ] **逐片段存库**：通常只在流结束后保存完整答案，避免大量小写入。
+- 使用 Spring MVC 返回流时，确认容器和部署环境支持相应的异步处理。
+- 代理层缓冲可能让前端一次性收到全部内容。
+- 流中发生错误时，前端需要能识别错误事件或结束状态。
+- 通常在流结束后保存完整回答，避免每个片段都写入数据库。
 
 ## 🎯 面试速记
 
-> - **Q: SSE 为什么适合大模型输出？**
->   - A: 大模型输出天然是单向增量文本，SSE 简单、基于 HTTP、浏览器原生支持。
-> - **Q: 流式接口怎么做？**
->   - A: 后端用 `ChatClient.stream()` 返回 `Flux`，接口声明 `text/event-stream`，前端用 `EventSource` 消费。
+> [!question]- SSE 为什么适合大模型输出？
+> 大模型输出天然是单向增量文本，SSE 简单、基于 HTTP、浏览器原生支持。
+
+> [!question]- 流式接口怎么做？
+> 后端用 `ChatClient.stream()` 返回 `Flux`，接口声明 `text/event-stream`，前端用 `EventSource` 消费。
 
 ## 🔗 关联阅读
 
@@ -146,3 +145,4 @@ AI 聊天的“模型往前端吐字”优先选 SSE；停止生成也可通过 
 
 - [Spring AI Chat Client Streaming](https://docs.spring.io/spring-ai/reference/api/chatclient.html)
 - [Spring Framework WebFlux](https://docs.spring.io/spring-framework/reference/web/webflux.html)
+- [MCP 传输方式](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)

@@ -6,7 +6,7 @@ tags:
   - 主题/Agent
   - 阶段/05
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 强化中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -19,13 +19,11 @@ repo: 未绑定
 
 ## 🎯 本节定位
 
-- **本章第 7 个项目，端到端业务 Agent**。前置：03 RAG、04 多轮、05 ReAct、06 MCP 四个项目，以及阶段五 [[../05-Agent-MCP-Skills/21-Agent权限治理与分级自治]]。
-- **延伸**：08 场景选型把本项目经验映射到 AI 客服、AI 搜索、办公助手等面试场景。
+本项目整合 RAG、多轮对话、ReAct 和 MCP，建议先完成前面的相关项目，并了解 [[../05-Agent-MCP-Skills/21-Agent权限治理与分级自治|Agent 权限治理]]。后续场景篇会把这些能力映射到客服、搜索和办公等业务。
 
 ## 📌 项目背景
 
 真实业务系统很少只需要“回答问题”，通常还要查知识库、调用业务接口、保留会话上下文，并在高风险步骤让人确认。这个项目用于把前面分散学习的 RAG、记忆、MCP、Skills 和 Agent 编排整合成一个端到端案例。
-
 可选业务场景：
 
 | 场景 | Agent 任务 | 高风险动作 |
@@ -39,6 +37,7 @@ repo: 未绑定
 
 ## 🎯 项目目标
 
+本页是项目规划，未绑定代码仓库；以下能力和验收项需要实际实现并测试后再作为项目成果介绍。
 - [ ] 明确一个真实业务场景和可量化任务目标。
 - [ ] 使用 Plan-Execute 或状态机编排复杂任务。
 - [ ] 整合 RAG 检索、多轮记忆、MCP 工具和 Skills 指令。
@@ -66,7 +65,7 @@ flowchart TD
     C --> D[Plan Validator]
     D --> E[Task State Machine]
     E --> F[Executor Agent]
-    F --> G[RAG Retriever]
+    F --> G["RAG Retriever（服务端权限过滤）"]
     F --> H[Tool Gateway]
     H --> J[权限/参数/风险校验]
     J --> K{风险等级}
@@ -80,6 +79,14 @@ flowchart TD
     N --> O
     O --> P[Langfuse Trace + Audit Log]
 ```
+
+## 📋 分阶段实现
+
+- [ ] 先实现订单只读查询和制度检索，记录来源与调用结果。
+- [ ] 添加工具白名单、用户与资源授权，覆盖越权拒绝。
+- [ ] 为退款申请加入审批、过期和执行前复核，写操作使用稳定幂等键。
+- [ ] 持久化任务状态和审计记录，验证超时、拒绝审批与重复请求。
+- [ ] 用固定任务集记录成功率、人工接管、耗时和成本，保留失败样例。
 
 ## 🧩 Agent 状态机
 
@@ -105,7 +112,7 @@ stateDiagram-v2
 | 等级 | 动作 | 示例 | 控制 |
 | ---- | ---- | ---- | ---- |
 | L0 只读 | 查询知识和状态 | 查制度、查订单 | 权限过滤、引用溯源 |
-| L1 草稿 | 生成建议 | 生成回复话术、SQL 草稿 | 标记草稿，不落库 |
+| L1 草稿 | 生成建议 | 生成回复话术、SQL 草稿 | 标记草稿；保存草稿不等于执行对外业务动作 |
 | L2 低风险自动执行 | 可撤销动作 | 创建工单标签、生成报表 | 幂等、限流、审计 |
 | L3 高风险需审批 | 影响用户权益 | 退款、发券、改地址 | 人工确认、二次校验 |
 | L4 禁止自治 | 高危动作 | 转账、删库、改权限 | 拒绝或转人工工单 |
@@ -124,12 +131,15 @@ C --> D[工具白名单]
 D --> E[参数 Schema 校验]
 E --> F[资源权限校验]
 F --> G[风险等级判断]
-G --> H{是否需要审批}
+G --> Z{策略是否禁止}
+Z -->|禁止| X[拒绝或转人工]
+Z -->|允许| H{是否需要审批}
 H -->|否| I[执行工具]
 H -->|是| J[创建审批任务]
+J -->|批准且复核通过| I
+J -->|拒绝或过期| X
 I --> K[审计日志]
-J -->|批准后重新校验| C
-J --> K
+X --> K
 ```
 
 ### 工具定义示例
@@ -145,49 +155,13 @@ J --> K
 
 ## 🧾 审计表设计
 
-```sql
-CREATE TABLE agent_task (
-  id BIGINT PRIMARY KEY,
-  tenant_id BIGINT NOT NULL,
-  user_id BIGINT NOT NULL,
-  session_id VARCHAR(128) NOT NULL,
-  goal TEXT NOT NULL,
-  plan JSON NOT NULL,
-  status VARCHAR(32) NOT NULL,
-  risk_level VARCHAR(16) NOT NULL,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL
-);
+| 记录 | 关键字段 | 用途 |
+| :--- | :--- | :--- |
+| 任务 | 任务 ID、租户、用户、目标、计划、状态、时间 | 跟踪进度和失败位置 |
+| 工具调用 | 工具、参数摘要、授权结果、风险、幂等键、状态 | 审计操作与重复请求 |
+| 审批 | 审批人、目标动作、参数摘要、资源版本、有效期、结果 | 防止批准后动作被替换 |
 
-CREATE TABLE agent_tool_call_log (
-  id BIGINT PRIMARY KEY,
-  task_id BIGINT NOT NULL,
-  step_no INT NOT NULL,
-  tool_name VARCHAR(128) NOT NULL,
-  arguments JSON NOT NULL,
-  risk_level VARCHAR(16) NOT NULL,
-  auth_result VARCHAR(32) NOT NULL,
-  idempotency_key VARCHAR(128),
-  status VARCHAR(32) NOT NULL,
-  result_summary TEXT,
-  error_message TEXT,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL,
-  UNIQUE KEY uk_task_idempotency(task_id, idempotency_key)
-);
-
-CREATE TABLE agent_approval (
-  id BIGINT PRIMARY KEY,
-  task_id BIGINT NOT NULL,
-  tool_call_id BIGINT NOT NULL,
-  approver_id BIGINT NOT NULL,
-  status VARCHAR(32) NOT NULL,
-  reason TEXT,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL
-);
-```
-
+表结构、索引和保留期限应按实际数据库与业务规则设计，不把示意字段当成完整生产 DDL。
 上述表结构展示了核心审计模型。在实际生产中，审批记录需绑定目标工具名、规范化参数摘要、资源版本号与审批有效期；审批通过后执行前应再次复核权限与参数一致性（若参数发生变更需重新发起审批），同时在下游业务接口侧实现幂等保障。
 
 ## 🔁 超时、重试与幂等
@@ -214,8 +188,7 @@ CREATE TABLE agent_approval (
 
 ## 👀 可观测字段
 
-Langfuse / 日志至少记录：
-
+Langfuse / 日志可按排障和审计需要记录以下字段；先确定脱敏、访问权限与保留期限，不必默认保存完整原文：
 - `tenantId / userId / sessionId / taskId`
 - 用户目标、生成计划、计划校验结果
 - 每一步工具名、参数摘要、耗时、状态
@@ -229,9 +202,7 @@ Langfuse / 日志至少记录：
 ### 任务 1：客服查询订单并生成回复
 
 用户：客户问“我的订单为什么还没发货？”
-
 流程：
-
 1. Agent 查询订单状态。
 2. RAG 检索发货时效规则。
 3. 生成客服回复草稿。
@@ -240,17 +211,17 @@ Langfuse / 日志至少记录：
 ### 任务 2：客户申请小额补偿券
 
 流程：
-
 1. 查询订单是否延迟。
 2. 检索补偿规则。
-3. 判断补偿金额是否低于自动阈值。
-4. 根据风险分级策略，发券操作归属 L3 级动作，自动生成审批单等待人工确认（若业务允许小额自动发放，可配置独立的额度阈值规则降级为 L2 执行）。
+3. 根据规则检查补偿金额和适用条件。
+4. 按本例的风险分级，发券属于 L3，生成审批单等待人工确认。
 5. 审批通过并复核后执行，写审计日志。
+
+如果业务明确允许小额发券自动执行，可以另设 L2 的额度与适用条件，并按该规则执行授权、幂等和审计。
 
 ### 任务 3：退款申请
 
 流程：
-
 1. 查询订单、支付、物流状态。
 2. RAG 检索退款政策。
 3. 生成退款建议。
@@ -281,29 +252,35 @@ Langfuse / 日志至少记录：
 
 ### 30 秒版
 
-业务 Agent 的核心是将 RAG 检索、工具调用、多轮记忆与审批工作流有机结合，并通过服务端 Tool Gateway 统一实施权限校验、参数验证、风险分级、幂等控制与操作审计。
+> [!question]- 用 30 秒介绍业务 Agent 系统的重点是什么？
+> 业务 Agent 的核心是将 RAG 检索、工具调用、多轮记忆与审批工作流有机结合，并通过服务端 Tool Gateway 统一实施权限校验、参数验证、风险分级、幂等控制与操作审计。
 
 ### 2 分钟版
 
-我会把 Agent 看成一个状态机：先理解用户目标并生成计划，再校验计划风险，然后逐步调用 RAG 和业务工具。所有工具调用都经过 Java 服务端的 Tool Gateway，做用户权限、工具白名单、参数校验和风险分级。低风险动作可以自动执行，高风险动作必须人工确认，禁止类动作只能生成建议或工单。整个过程用 Langfuse 和审计表记录，方便排查和评估。
+> [!question]- 业务 Agent 的执行和权限如何设计？
+> 我会把 Agent 看成一个状态机：先理解用户目标并生成计划，再校验计划风险，然后逐步调用 RAG 和业务工具。所有工具调用都经过 Java 服务端的 Tool Gateway，做用户权限、工具白名单、参数校验和风险分级。低风险动作可以自动执行，高风险动作必须人工确认，禁止类动作只能生成建议或工单。整个过程用 Langfuse 和审计表记录，方便排查和评估。
 
 ### 项目版
 
-在智能客服 Agent 项目里，我会让 Agent 先查订单，再检索政策，生成处理建议。查询类是 L0，回复草稿是 L1，打标签是 L2，退款和发券是 L3 必须审批，改权限和转账是 L4 禁止执行。这样既能展示 Agent 自动化能力，又能体现生产级权限治理和风险控制。
+> [!question]- 如何用客服场景说明业务 Agent 的风险分级？
+> 在智能客服 Agent 项目里，我会让 Agent 先查订单，再检索政策，生成处理建议。查询类是 L0，回复草稿是 L1，打标签是 L2，退款和发券是 L3 必须审批，改权限和转账是 L4 禁止执行。这样既能展示 Agent 自动化能力，又能体现生产级权限治理和风险控制。
 
 ## 🎯 高频追问
 
-> [!question] 高频问题
-> - Q: Agent 为什么不能直接操作所有工具？
->   - A: 模型输出不是可信指令，真正的鉴权、参数校验、审批和审计必须在服务端完成。
-> - Q: 如何防止 Agent 越权？
->   - A: 工具白名单、租户/角色权限、参数级校验、风险分级、人工审批和审计日志。
-> - Q: 工具调用失败怎么办？
->   - A: 区分可重试和不可重试错误；低风险临时失败可退避重试，高风险失败转人工，所有步骤记录状态和幂等键。
-> - Q: Agent 和 Workflow 有什么区别？
->   - A: Workflow 路径固定、可控性强；Agent 更灵活但风险更高。生产上通常用状态机/Workflow 约束 Agent，而不是完全放任。
-> - Q: 如何评估 Agent 效果？
->   - A: 看任务完成率、工具调用成功率、人工接管率、错误率、平均步骤数、P95 延迟、Token 成本和高风险动作审批通过率。
+> [!question]- Agent 为什么不能直接操作所有工具？
+> 模型输出不是可信指令，真正的鉴权、参数校验、审批和审计必须在服务端完成。
+
+> [!question]- 如何防止 Agent 越权？
+> 工具白名单、租户/角色权限、参数级校验、风险分级、人工审批和审计日志。
+
+> [!question]- 工具调用失败怎么办？
+> 区分可重试和不可重试错误；低风险临时失败可退避重试，高风险失败转人工，所有步骤记录状态和幂等键。
+
+> [!question]- Agent 和 Workflow 有什么区别？
+> Workflow 路径固定、可控性强；Agent 更灵活但风险更高。生产上通常用状态机/Workflow 约束 Agent，而不是完全放任。
+
+> [!question]- 如何评估 Agent 效果？
+> 看任务完成率、工具调用成功率、人工接管率、错误率、平均步骤数、P95 延迟、Token 成本和高风险动作审批通过率。
 
 ## 🔗 关联笔记
 

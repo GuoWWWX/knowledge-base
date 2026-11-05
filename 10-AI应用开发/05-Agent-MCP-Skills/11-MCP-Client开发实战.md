@@ -6,132 +6,132 @@ tags:
   - 主题/MCP
   - 阶段/05
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
 
-# MCP-Client开发实战
+# MCP Client 开发实战
 
 > [!abstract] 一句话总结
-> MCP Client 负责发现 MCP Server 暴露的 tools/resources/prompts，把它们转换成 Agent 可调用的 ToolCallback，并处理连接、鉴权、超时和降级。
+> MCP Client 连接 Server、发现工具并转发调用。Spring AI 可以把远端工具接入 `ChatClient`，模型提出调用请求后，由应用通过 MCP 执行。
 
-## 📌 这是什么
+## 🎯 从订单问题看 Client 做什么
 
-在 Spring AI 应用里，MCP Client 通常做三件事：
-
-1. 连接一个或多个 MCP Server。
-2. 拉取并缓存 tools 列表和 JSON schema。
-3. 把 MCP tool 包装进 `ChatClient` 的工具调用流程，让模型按 schema 发起调用。
-
-MCP Client 不应该只是“能连上”。它还要决定哪些工具给当前 Agent、当前用户、当前场景使用。
-
-## 🤔 解决什么问题 / 为什么需要
-
-- **跨进程复用工具**：Agent 服务不必把所有业务 SDK 都打进同一个进程。
-- **动态发现能力**：新增 MCP server 后，客户端可拉取 tools 列表。
-- **隔离故障**：某个 MCP server 超时，不应拖垮整个 Agent。
-- **统一治理**：对远端工具调用统一加 trace、权限、限流和重试。
-
-## 🧩 客户端职责
-
-| 职责 | 做法 | 风险 |
-| ---- | ---- | ---- |
-| 连接管理 | stdio / Streamable HTTP 客户端连接与会话配置 | 本地和生产 transport 不一致。 |
-| 工具筛选 | 按场景和权限选择 tools | 全量暴露导致模型乱调。 |
-| Schema 缓存 | 缓存 `tools/list` | 版本更新后要刷新。 |
-| 调用治理 | 超时、重试、熔断 | 重试写操作可能造成重复执行。 |
-| 可观测 | trace MCP round-trip | 无法定位是模型错还是 server 错。 |
-
-## ⚙️ 实现步骤
+接着 [[10-MCP-Server开发-Java实战|上一节的订单 Server]]：用户问“订单 A100 到哪了？”，Server 已暴露 `queryOrderStatus` 工具。Client 要先连接这个 Server、获取工具定义，再让应用把工具提供给模型；模型选择查询时，Client 才把订单号发给 Server。
+Client 不负责凭空知道订单状态，模型也不会直接调用远程 Java 方法。业务校验仍由 Server 执行，模型拿到工具结果后再组织回答。
 
 ```mermaid
-flowchart LR
-    A[配置MCP Server] --> B[初始化Client]
-    B --> C[拉取Tools]
-    C --> D[按场景过滤]
-    D --> E[注册到ChatClient]
-    E --> F[模型选择Tool]
-    F --> G[调用远端MCP]
+sequenceDiagram
+    participant U as 用户
+    participant H as Spring AI 应用
+    participant M as 模型
+    participant C as MCP Client
+    participant S as 订单 MCP Server
+    C->>S: 初始化并获取 tools/list
+    U->>H: 订单 A100 到哪了？
+    H->>M: 问题和工具定义
+    M-->>H: 请求 queryOrderStatus
+    H->>C: 传入 orderId
+    C->>S: tools/call
+    S-->>C: 返回订单状态
+    C-->>H: 工具结果
+    H->>M: 提供工具结果
+    M-->>H: 根据结果生成回答
+    H-->>U: 展示回答
 ```
 
-1. 为每个 MCP server 配置名称、传输方式、地址、认证和超时。
-2. 启动时或首次请求时获取 tools 列表，记录 server version 和 tool schema hash。
-3. 在业务层做工具白名单：订单 Agent 只拿订单、物流、客服工单工具。
-4. 通过 Spring AI MCP ToolCallbackProvider 注入 `ChatClient`。
-5. 对 MCP 调用结果做结构化校验和异常映射，失败时允许 Agent 走降级回答。
+## 🧩 准备客户端项目
 
-## 💻 Java / Spring AI 示例
+本篇按 Spring AI 2.x 同步客户端说明。先准备一个能调用模型的 Spring Boot 项目，按 [[../02-框架-SpringAI与LangChain4j/SpringAI/01-Spring-AI项目搭建|Spring AI 项目搭建]] 配好 BOM、模型 Starter 和凭据，再添加 MCP Client Starter：
+
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-starter-mcp-client</artifactId>
+</dependency>
+```
+
+本例假设上一节的订单 Server 已在本机启动。MCP Client 项目和 Server 项目是两个应用；只想检查 Server 时，可以先用 Inspector，不需要模型密钥。
+
+## 🔌 连接订单 Server
+
+在客户端的 `application.yml` 中填写服务基地址和 MCP 端点：
 
 ```yaml
 spring:
   ai:
     mcp:
       client:
-        enabled: true
-        request-timeout: 5s
-        sse:
+        request-timeout: 10s
+        streamable-http:
           connections:
             order:
-              url: https://mcp.example.com/order
+              url: http://127.0.0.1:8080
+              endpoint: /mcp
 ```
+
+`order` 是客户端配置中的连接名称；`url` 加 `endpoint` 对应 Server 的 `http://127.0.0.1:8080/mcp`。如果两个应用都启动了 Web 服务，客户端还要使用不同端口。远程服务应按实际地址和认证方式配置；请求超时不等于下游工作一定停止。
+
+## 💻 把远程工具交给 ChatClient
+
+在默认自动配置启用且 MCP 连接成功的情况下，Spring AI 可提供 `ToolCallbackProvider`。下面将该 Provider 注册到 `ChatClient`；假设模型配置、MCP 连接和 Spring Bean 扫描均已就绪，省略 imports，示例尚未连接模型运行。
 
 ```java
 @Configuration
-class AgentClientConfig {
+class OrderChatConfig {
+
     @Bean
-    ChatClient orderAgent(ChatClient.Builder builder, ToolCallbackProvider mcpTools) {
-        return builder
-                .defaultSystem("""
-                        你是订单客服 Agent。优先使用订单和物流 MCP 工具。
-                        工具失败时说明无法自动查询，并创建人工工单。
-                        """)
-                .defaultToolCallbacks(mcpTools)
-                .build();
+    ChatClient orderChatClient(ChatClient.Builder builder, ToolCallbackProvider mcpTools) {
+        return builder.defaultTools(mcpTools).build();
     }
 }
 ```
 
+业务代码注入这个 `orderChatClient` 后，即可发起请求：
+
 ```java
-String answer = orderAgent.prompt()
-        .user("订单 A100 到哪里了？")
+String answer = orderChatClient.prompt()
+        .user("查询订单 A100 的状态，请先调用订单查询工具。")
         .call()
         .content();
 ```
 
-## ⚠️ 工程坑
+应用把工具定义与问题交给模型；如果模型选择 `queryOrderStatus`，Spring AI 调用对应的 `ToolCallback`，再通过 MCP Client 请求 Server。模型不一定每次都选对工具，排查时应同时看模型请求、工具调用和服务端返回。
+这里用 `defaultTools(mcpTools)` 是 Spring AI 2.x 写法；1.x 注册 Provider 或 Callback 使用 `defaultToolCallbacks(...)`，以项目对应版本文档为准。Provider 暴露的是工具；Resources 和 Prompts 需要通过相应 MCP 操作读取，并不会都变成 `ToolCallback`。
 
-- 把所有 MCP tools 一次性注册给所有 Agent，导致工具选择混乱和 token 浪费。
-- 客户端没有设置 request timeout，远端 MCP 卡住后用户请求一直等待。
-- 对写工具做自动重试，但没有幂等键。
-- 忽略 server schema 变化，线上出现“模型传旧参数、server 要新参数”。
-- 只记录最终回答，不记录 MCP server、tool name、arguments、latency。
+## 🛡️ 工具选择与身份
 
-## 🎯 面试问题
+上面的演示只连接一个模拟 Server，直接注册其工具。真实应用不应默认把所有工具交给所有用户：可以按 Agent 场景筛选工具，并在 Server 端再次验证调用者是否有权执行具体操作；工具可见不代表已授权。
+MCP 连接可能由多个请求复用，连接身份、当前用户和会话不是同一个概念。用户凭据应通过可信的认证机制按实际请求传递并由 Server 验证，不能把模型提供的用户 ID 或普通元数据当成身份凭证。
 
-> [!question] 高频问题
-> - Q: MCP Client 在 Agent 架构中放在哪里？
->   - A: 放在 Agent Runtime 与外部能力之间，把远端 MCP tools 转换成模型可调用的工具，并负责连接、过滤和治理。
-> - Q: 为什么不能把所有 tools 都交给模型？
->   - A: 工具太多会增加 token、降低选择准确率，还会扩大权限面；应按场景和用户权限过滤。
-> - Q: MCP 调用失败怎么处理？
->   - A: 记录 trace，区分连接失败、schema 错误、业务异常；只读查询可重试，写操作要幂等或转人工。
+## 🔍 出错时怎么查
 
-## ✅ 精通检查清单
+- 连接失败：检查 Server 是否启动、地址、端点和传输方式是否一致。
+- 工具列表为空：检查 Server 注册、客户端配置以及是否关闭了 ToolCallback 自动配置。
+- 模型没有调用：检查应用实际提供的工具、描述、问题和模型对工具调用的支持。
+- 调用失败：区分协议、鉴权、业务和网络错误，结合两端日志定位。
 
-- 能配置 Spring AI MCP Client 连接远端 server。
-- 能解释 ToolCallbackProvider 如何接入 ChatClient。
-- 能设计工具白名单和超时策略。
-- 能处理 MCP schema 版本变化。
+Server 更新工具定义后，客户端需要按自身实现刷新列表；支持变更通知时也要检查通知是否启用。可以为只读查询设置有限重试和退避；写操作必须先考虑幂等，不能对所有失败一律重试。
+
+## ❓ 自测
+
+> [!question]- MCP Client 和模型分别做什么？
+> 模型根据提供的工具定义提出调用意图；Client 与 Server 通信、发送工具参数并接收结果。应用负责把两者接起来。
+
+> [!question]- 为什么连接成功不代表当前用户有权限？
+> 连接只说明双方可以通信。用户身份和对具体订单的访问权限仍需认证与服务端授权。
+
+> [!question]- Inspector 能调用工具，为什么模型还是没有调用？
+> 先检查 `ChatClient` 是否拿到工具、模型是否支持工具调用，再查看描述、问题和模型产生的调用记录。
 
 ## 🔗 关联笔记
 
-- [[_index]]
-- [[09-MCP协议详解]]
-- [[10-MCP-Server开发-Java实战]]
-- [[../00-总览/学习仪表盘]]
+- [[_index]] · [[09-MCP协议详解]] · [[10-MCP-Server开发-Java实战]]
+- [[12-MCP调试-Inspector]] · [[../00-总览/学习仪表盘]]
 
 ## 📚 参考资料
 
-- [Spring AI MCP Client Boot Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-client-boot-starter-docs.html)
-- [Model Context Protocol Docs](https://modelcontextprotocol.io/)
+- [Spring AI MCP Client Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-client-boot-starter-docs.html)
+- [Spring AI MCP 安全配置](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-security.html)
+- [Spring AI 1.x ChatClient API](https://docs.spring.io/spring-ai/docs/1.0.x/api/org/springframework/ai/chat/client/ChatClient.Builder.html)

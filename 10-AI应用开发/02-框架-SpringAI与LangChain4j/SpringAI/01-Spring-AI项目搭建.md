@@ -18,13 +18,11 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 1 课，Spring AI 的入门课**。前置：上一章 [[../../01-LLM基础与Prompt/_index|LLM 基础与 Prompt]] 的模型、Token、Prompt 概念；本节目标是跑通“Spring Boot + Starter + 配置 + 调用”的最小链路。
-- **延伸**：调用入口的细节在下一课 [[02-ChatClient与ChatModel]]；多 Provider 接入在 [[05-多模型接入与切换]]。
+本节从 Spring Boot 和模型 Starter 出发，跑通一次 `ChatClient` 调用。前置知识是 [[../../01-LLM基础与Prompt/_index|LLM 基础与 Prompt]] 中的模型和 Token 概念；调用细节见 [[02-ChatClient与ChatModel]]，多模型接入见 [[05-多模型接入与切换]]。
 
 ## 📌 这是什么
 
 Spring AI 是 Spring 生态里的 AI 应用框架。它把模型调用、提示词、工具调用、记忆、向量库、RAG 等能力抽象成 Spring Boot 熟悉的 Bean、AutoConfiguration 和 Starter。
-
 最小项目只需要三件事：
 
 ```text
@@ -79,7 +77,7 @@ Spring Boot 应用
 
 > [!info] 版本现状（2026-08）
 > - **Spring AI 2.0.0 已 GA**（2026-06 发布）：基于 **Spring Boot 4.x**，MCP SDK 升级到 **2.0**。
-> - 2.0 主要变化（影响写代码）：模型 Options 全面改为 **builder 模式**（setter 移除，如 `OpenAiChatOptions.builder().temperature(0.7).build()`）；`PromptChatMemoryAdvisor` 移除，记忆类 Advisor 必须显式传 conversationId；SAP HANA / Infinispan 向量库模块移除；ChatModel / Tool Calling 可观测性增强。
+> - 2.0 主要变化（影响写代码）：模型 Options 全面改为 **builder 模式**（setter 移除，如 `OpenAiChatOptions.builder().temperature(0.7).build()`）；`PromptChatMemoryAdvisor` 移除，多用户场景应为记忆类 Advisor 显式传入经鉴权的 conversationId；SAP HANA / Infinispan 向量库模块移除；ChatModel / Tool Calling 可观测性增强。
 > - 维护线：1.1.8（Boot 3.5.x）、1.0.9；**新项目直接上 2.0**，老项目迁移参考[官方 Upgrade Notes](https://docs.spring.io/spring-ai/reference/upgrade-notes.html)。
 > - 本课其余内容（BOM 管理、`ChatClient.Builder`、`spring.ai.openai.*` 配置）在 2.0 中保持不变。
 
@@ -144,17 +142,18 @@ curl "http://localhost:8080/chat?message=用一句话解释Spring AI"
 
 ## ⚠️ 常见坑
 
-- [ ] **版本不一致**：Spring Boot、Spring AI、模型 Starter 版本不匹配，优先检查 BOM。
-- [ ] **Key 写死**：学习可以临时写，项目中必须走环境变量或 Secret。
-- [ ] **模型名过期**：模型 Provider 经常调整名称，报 400 时先查模型配置。
-- [ ] **代理和网络**：本地能跑不代表服务器能连，部署前要验证出口网络。
+- 检查 Spring Boot、Spring AI 和模型 Starter 的版本是否兼容。
+- 不要把 API Key 提交到仓库，使用环境变量或密钥管理系统。
+- 返回 400 时，先检查模型名称和服务商的配置要求。
+- 本地能连接模型不代表服务器也能连接，部署前要验证出口网络。
 
 ## 🎯 面试速记
 
-> - **Q: Spring AI 项目最小组成是什么？**
->   - A: Spring Boot 应用、模型 Starter、模型配置、`ChatClient` 或 `ChatModel` 调用入口。
-> - **Q: 为什么推荐 BOM？**
->   - A: Spring AI 模块多且版本联动，BOM 能统一管理兼容版本，减少依赖冲突。
+> [!question]- Spring AI 项目最小组成是什么？
+> Spring Boot 应用、模型 Starter、模型配置、`ChatClient` 或 `ChatModel` 调用入口。
+
+> [!question]- 为什么推荐 BOM？
+> Spring AI 模块多且版本联动，BOM 能统一管理兼容版本，减少依赖冲突。
 
 ## 🔗 关联阅读
 
@@ -167,5 +166,3 @@ curl "http://localhost:8080/chat?message=用一句话解释Spring AI"
 
 - [Spring AI Reference Documentation](https://docs.spring.io/spring-ai/reference/)
 - [Spring AI Chat Client API](https://docs.spring.io/spring-ai/reference/api/chatclient.html)
-
-

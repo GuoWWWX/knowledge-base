@@ -6,7 +6,7 @@ tags:
   - 主题/Skills
   - 阶段/05
 created: 2026-05-31
-updated: 2026-09-28
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -14,189 +14,97 @@ mastery: ⭐☆☆☆☆
 # 📦 Skills（SKILL.md）详解
 
 > [!abstract] 一句话总结
-> Agent Skills 是 Anthropic 在 2025 年下半年推出的新原语：用一个 **Markdown 文件夹（含 SKILL.md）打包"怎么做某件事"的程序化知识**，Agent 按需渐进式加载。2026 年快速普及，Microsoft Agent Framework 等已支持。
+> Skill 把一类任务的操作指引和配套资源放进一个目录；支持 Skills 的宿主可以在需要时提供这些内容，让 Agent 复用做事的方法。
 
-## 📌 这是什么
+## 📌 为什么需要 Skill
 
-一个 Skill 就是一个 **文件夹**，告诉 Agent“做某类任务时，应该按什么流程、用什么工具、套什么模板”。
+假设每周都要整理周报：收集工作记录、区分完成与进行中、标出风险、按模板输出。如果每次都把要求重新发给 AI，既麻烦，也容易漏掉某一步。把这些要求写成 `weekly-report` Skill 后，支持 Skills 的宿主就可以在处理周报任务时使用这套指引。
+Skill 适合封装重复使用的流程、检查项和模板。它仍然是给 Agent 的指引，不是写进去就一定会执行的程序，也不能凭空获得访问 Jira、Git 等系统的权限。
+
+## 🧩 一个 Skill 里面有什么
+
+一个 Skill 至少包含 `SKILL.md`；脚本、模板和参考资料按需添加：
 
 ```text
-my-skill/
-├── SKILL.md          # 必需：YAML frontmatter + Markdown 指令
-├── scripts/          # 可选：脚本文件
-├── templates/        # 可选：模板文件
-└── references/       # 可选：参考资料
+weekly-report/
+├── SKILL.md                     # 必需：名称、描述与主要步骤
+├── references/
+│   └── report-template.md       # 可选：周报模板
+└── scripts/                     # 可选：程序或脚本
 ```
 
-## 🤔 解决什么问题
-
-> [!quote] 核心痛点
-> 把所有指令塞进一个巨大的 System Prompt → LLM 会迷失在中间、忽略关键约束、上下文爆炸。
-> Skills 把"做事方法"模块化，**用到哪个加载哪个**。
-
-| 没有 Skills | 有 Skills |
-| ----------- | --------- |
-| 巨型 System Prompt | 模块化的能力包 |
-| 所有指令一直占上下文 | 按需加载，省上下文 |
-| 难复用、难维护 | 文件夹可复制、可版本管理 |
-| 团队各写各的 | 团队共享标准流程 |
-
----
-
-## 🧩 核心概念
-
-### SKILL.md 结构
-
-```markdown
----
-name: invoice-processor
-description: 当用户上传发票时，提取信息并填入财务系统
----
-
-# 处理流程
-
-1. 读取发票图片，调用 OCR 工具提取字段
-2. 校验金额、税号、日期
-3. 调用财务系统 MCP Server 写入
-4. 失败时记录到 errors.log 并通知用户
-```
-
-- **YAML frontmatter**：最小只需 `name` + `description`
-- **Markdown body**：详细的步骤指令
-
-### 最关键设计：渐进式上下文披露（Progressive Disclosure）
-
-> [!important] 这是 Skills 的核心加载机制
-> Agent 启动时**仅读取所有 SKILL.md 的元数据**（name + description），当具体任务匹配时**才加载完整正文指令**，并在执行过程中按需读取 `scripts/`、`templates/` 或 `references/` 下的资源；任务完成后由宿主环境根据上下文策略管理窗口生命周期。
-
-```mermaid
-flowchart TD
-    A[Agent 启动] --> B[扫描所有 SKILL.md<br/>只读元数据 name+description]
-    B --> C[用户提需求]
-    C --> D{匹配哪个 Skill?}
-    D --> E[加载完整 SKILL.md 指令]
-    E --> F[按指令执行<br/>调用 scripts/templates]
-    F --> G[任务结束<br/>由宿主管理上下文]
-    
-    style B fill:#e1f5ff
-    style E fill:#fce4ec
-    style G fill:#c8e6c9
-```
-
-这样即使挂载上百个 Skill，启动阶段也仅占用极少量的元数据上下文。
-
----
-
-## ⚙️ Skills 与其他概念的关系
-
-### Skills vs MCP
-
-| 维度 | Skills | MCP |
-| ---- | ------ | --- |
-| **本质** | 程序化知识 / 作业流程规范（SOP） | 连接外部系统的开放通信协议 |
-| **回答** | "**怎么做**这件事" | "**用什么**做这件事" |
-| **形式** | Markdown 文件夹与配套脚本 | JSON-RPC 2.0 协议服务 |
-| **加载** | 渐进式按需加载 | 运行时远程或本地调用 |
-| **典型场景** | 周报生成、合同审查、故障排查规约 | 查数据库、调内部 API、读写文件 |
-| **工程定位** | 领域 SOP 与指令模板封装 | 标准化工具与上下文通信层 |
-
-> 详细对比和组合用法见 [[17-Agent-MCP-Skills组合实战]]
-
-### Skills vs LLM Wiki
-
-> [!note] 都用 Markdown 组织 AI 上下文，思路一脉相承
-> - **LLM Wiki**：知识"是什么"（陈述性知识）
-> - **Skills**：知识"怎么做"（程序化知识）
-> - 你的 Obsidian 仓库可以同时有 Wiki 和 Skills
-
----
-
-## 💻 实践：设计一个 Skill
-
-### 示例：周报生成 Skill
+`SKILL.md` 上半部分是 YAML 元数据，下半部分是 Markdown 指引。例如：
 
 ```markdown
 ---
 name: weekly-report
-description: 当用户要写周报时，从 Jira 和 Git 收集本周工作，按公司模板生成
+description: 根据用户提供的工作记录整理周报，适用于生成周报草稿。
 ---
 
-# 周报生成流程
+# 整理周报
 
-## 第一步：收集数据
-1. 调用 Jira MCP Server，查询本周状态变更的 issue
-2. 调用 Git MCP Server，查询本周 commit
-
-## 第二步：归类
-按“已完成 / 进行中 / 下周计划”三类整理
-
-## 第三步：套模板
-使用 templates/weekly-template.md 的格式
-
-## 第四步：输出
-- 突出本周关键成果
-- 风险项单独标红
-- 控制在 500 字以内
+1. 确认统计范围，读取用户提供或已授权的数据。
+2. 按已完成、进行中、风险归类；缺失的信息标记待确认。
+3. 参考 references/report-template.md 输出草稿，不编造内容。
 ```
 
-### 测试方式
+按照 [Agent Skills 格式规范](https://agentskills.io/specification)，`name` 必填、长度为 1～64 个字符，须与目录名一致，只能使用小写字母、数字和连字符，连字符不能在开头、结尾或连续出现；`description` 必填且非空，最多 1024 个字符，应说明做什么、何时使用。上面的例子引用了模板，实际创建时还需要把模板文件放到对应位置；完整实作见 [[14-设计自己的Skill实战]]。
 
-```text
-☑ 放到 Claude.ai 的 Skills 目录
-☑ 或 Claude Code 的 .claude/skills/ 目录
-☑ 提"帮我写周报"，观察是否自动加载该 Skill
-```
+## ⚙️ Skill 是怎么被使用的
 
-> 完整实战见：[[../08-项目实战/07-项目-业务Agent系统]]
+以支持渐进式加载的宿主为例，用户说“帮我整理周报”后，通常会经历下面几步：
+1. 宿主发现可用 Skill，向模型提供名称和描述。
+2. 模型或宿主判断 `weekly-report` 与任务有关，读取 `SKILL.md` 正文。
+3. 如果流程需要，再读取模板、参考资料，或请求调用可用工具。
+4. 宿主负责执行允许的工具调用，Agent 根据结果生成周报。
 
----
+这里的“渐进式”是先提供简短信息、需要时再读取详情，有助于减少一次性放入上下文的内容；名称和描述本身仍会占用空间。**发现位置、自动选择、加载时机和上下文保留都由具体宿主决定**，不能认为所有产品实现完全一样。
+例如 Claude Code 支持项目内 `.claude/skills/weekly-report/SKILL.md`，也支持通过 `/weekly-report` 显式调用；其他产品应查自己的安装和调用方式。只把文件放到任意目录，不代表当前 Agent 一定能发现它。
 
-## 🆚 三个 Markdown 标准别搞混
+## 🆚 Skill、MCP 和其他文件
 
-| 文件 | 给谁看 | 干什么 |
-| ---- | ------ | ------ |
-| **SKILL.md** | Agent | 教 Agent 怎么做某类任务 |
-| **AGENTS.md** | 编程 Agent | 告诉 Agent 项目怎么 build/test/规范 |
-| **README.md** | 人类 | 项目说明 |
+| 名称 | 主要作用 | 周报例子 |
+| ---- | -------- | -------- |
+| Skill / `SKILL.md` | 提供某类任务的流程与资源 | 规定如何整理工作记录、使用周报模板 |
+| MCP | 规定宿主与外部能力通信的协议 | 通过 MCP Server 查询已授权的工单 |
+| `AGENTS.md` | 向支持它的编程 Agent 提供项目约定 | 告知 Java 项目的测试命令和修改边界 |
+| `README.md` | 主要介绍项目，供开发者使用 | 说明周报项目如何安装和启动 |
 
-> AGENTS.md 详见 [[16-AGENTS规范详解]]
+四者可以配合，也可以独立使用：Skill 告诉 Agent 如何整理周报，MCP 可提供查工单的工具；如果用户已经贴出全部记录，就不一定需要 MCP。`AGENTS.md` 也能被人阅读，`README.md` 也能被 Agent 阅读，区别主要在用途，而不是谁能打开文件。
+类似地，LLM Wiki 更偏向组织“业务知识是什么”，Skill 更偏向整理“任务怎么做”；实际内容也可能交叉，相关知识见 [[../03-知识库技术-RAG/_index]]。
 
----
+> [!warning] 指引不等于授权
+> Skill 可以建议使用某个工具，但实际能否调用取决于宿主、工具配置和用户授权。外部 Skill 的指令和脚本也需要审查，不能因为它是 `SKILL.md` 就直接信任。
 
-## ⚠️ 踩坑与注意事项
+## 🧪 怎么检查一个 Skill 是否好用
 
-- [ ] **description 是关键**：写不好 Agent 不会触发这个 Skill
-- [ ] **别写太长**：SKILL.md 正文要精简，详细资料放 references/
-- [ ] **一个 Skill 一件事**：别把多个任务塞一个 Skill
-- [ ] **Skill 调 MCP 要确保 Server 在线**：组合使用时的依赖
-- [ ] **外部 Skill 与脚本需安全审查**：渐进式加载解决的是上下文体积管理，引入第三方 Skill 时仍需评审其指令内容，并对 `scripts/` 的执行权限进行沙箱与授权限制
+先用明确的周报请求检查能否被发现和使用，再用相似但不需要生成周报的问题检查是否误触发。还要检查模板是否存在、记录不足时是否标记待确认，以及工具不可用时能否说明缺失的数据。输出像周报并不能单独证明 Skill 被加载；应结合宿主的 Skill 列表或执行记录判断。
 
----
+## 🎯 自测
 
-## 🎯 面试问题
+> [!question]- `SKILL.md` 和 Skill 是什么关系？
+> Skill 是一个目录，`SKILL.md` 是其中必需的入口文件，包含名称、描述和任务指引；模板、脚本等是可选配套资源。
 
-> [!question] 高频问题
-> - **Q: Skills 是什么？解决什么问题？**
->   - A: 用 Markdown 文件夹打包"怎么做事"的程序化知识，Agent 按需加载，避免巨型 System Prompt 和上下文爆炸。
-> - **Q: 什么是渐进式上下文披露？**
->   - A: 启动只读 SKILL.md 元数据，任务匹配才加载完整指令，结束后丢弃。让大量 Skill 也不占上下文。
-> - **Q: Skills 和 MCP 的区别？**
->   - A: Skills 是"怎么做"（程序化知识），MCP 是"用什么"（外部连接）。常组合用：Skill 描述流程，流程里调用 MCP 工具。
-> - **Q: SKILL.md 最小结构？**
->   - A: YAML frontmatter 的 name + description，加 Markdown 正文指令。
+> [!question]- Skill 和 MCP 分别解决什么问题？
+> Skill 提供任务指引；MCP 让宿主按协议连接工具和其他上下文。Skill 可以指导 Agent 使用 MCP 工具，但不能代替工具或授权。
 
----
+> [!question]- 为什么不能只看最终周报判断 Skill 已加载？
+> 模型即使没读取 Skill，也可能根据常识生成类似格式；需要查看宿主提供的加载或执行记录，并核对指引是否生效。
 
 ## 🔗 关联笔记
 
-- [[01-Agent设计模式详解]] —— Skills 是 Agent 的程序化知识
-- [[09-MCP协议详解]] —— Skills 可调用 MCP 工具
-- [[16-AGENTS规范详解]] —— 另一个 Markdown 标准
+- [[01-Agent设计模式详解]] —— Agent 如何组织多步任务
+- [[09-MCP协议详解]] —— MCP 提供哪些连接能力
+- [[14-设计自己的Skill实战]] —— 创建并测试周报 Skill
+- [[16-AGENTS规范详解]] —— 项目指引与 Skill 的区别
 - [[17-Agent-MCP-Skills组合实战]] —— 三者如何协同
-- [[../03-知识库技术-RAG/_index]] —— LLM Wiki 与 Skills 的关系
+- [[../03-知识库技术-RAG/_index]] —— 知识库与知识组织
+- [[../08-项目实战/07-项目-业务Agent系统]] —— Agent 项目实战
 - [[_index]]
 
 ## 📚 参考资料
 
+- [Agent Skills 格式规范](https://agentskills.io/specification)
+- [Claude Code Skills 文档](https://code.claude.com/docs/en/skills)
 - [Anthropic Skills 官方仓库](https://github.com/anthropics/skills)
 - [Microsoft Agent Framework - Skills](https://learn.microsoft.com/en-us/agent-framework/agents/skills)

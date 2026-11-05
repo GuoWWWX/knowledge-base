@@ -6,7 +6,7 @@ tags:
   - 主题/Java核心
   - 阶段/01
 created: 2026-08-03
-updated: 2026-08-08
+updated: 2026-11-01
 status: 已完成
 mastery: ⭐⭐⭐☆☆
 next_review: 2026-08-15
@@ -282,13 +282,28 @@ switch (r) {
 - **`sealed`**：结果类型（成功/失败/进行中）、AST 节点、命令对象。表达"就这几种形态，但每种形态数据不同"。
 - **普通类**：需要开放扩展的抽象（策略、模板方法、框架扩展点）。
 
-顺带一个实测细节，能防止概念混淆：
+枚举是否密封，要看常量有没有专属类体（JLS 8.9）：
 
-```
-enum 也是密封的吗 isSealed = false  (enum 靠另一套机制，不是 sealed)
-```
+- 没有任何常量带类体：枚举隐式为 `final`，`isSealed()` 为 false。
+- 至少一个常量带类体：该类体声明枚举的匿名子类，枚举隐式为 `sealed`，这些匿名子类构成许可的直接子类集合；`isSealed()` 为 true，可用 `getPermittedSubclasses()` 查看，对应 class 文件包含 `PermittedSubclasses`。
+- 两种情况都不允许源码显式把枚举声明为 final 或 sealed，也不允许外部任意继承枚举。
 
-enum 虽然也"限制了继承"，但它走的是 enum 自己的规则，`isSealed()` 返回 `false`，class 文件里也没有 `PermittedSubclasses` 属性。**别把两者当成一回事。**
+保存为 `EnumSealedDemo.java`，用 JDK 21 运行 `java EnumSealedDemo.java`：
+
+```java
+public class EnumSealedDemo {
+    enum Plain { A, B }
+    enum WithBody {
+        A { @Override int code() { return 1; } }, B;
+        int code() { return 0; }
+    }
+    public static void main(String[] args) {
+        System.out.println(Plain.class.isSealed());     // false
+        System.out.println(WithBody.class.isSealed());  // true
+        System.out.println(WithBody.class.getPermittedSubclasses().length); // 1
+    }
+}
+```
 
 ## 🔍 sealed 怎么保证不被绕过
 
@@ -391,7 +406,7 @@ record 生成的 `equals` 对引用类型调用的是 `Objects.equals`，而数�
 
 > [!question]- sealed 和 enum、final 怎么选？
 > - **30 秒**：能列举所有取值且不带数据 → enum；类型固定但每种带不同数据 → sealed + record；不需要子类型 → final。
-> - **2 分钟**：补 sealed 的真正价值是穷尽检查——把"新增类型后漏改 switch"从线上 bug 变成编译错误；补 enum 的 `isSealed()` 是 `false`，两套机制不要混。
+> - **2 分钟**：补 sealed 的价值是穷尽检查——把"新增类型后漏改 switch"提前暴露到编译期；枚举没有常量专属类体时隐式 final，有常量专属类体时隐式 sealed，不能说 `isSealed()` 总是 false。
 
 > [!question]- sealed 怎么防止被绕过？
 > - **30 秒**：`PermittedSubclasses` 属性写进 class 文件，编译期 + 类加载期双重校验，且子类必须与 sealed 类型同模块（或同包）。
@@ -422,11 +437,15 @@ record 生成的 `equals` 对引用类型调用的是 `Objects.equals`，而数�
 
 ## 🔗 关联笔记
 
+- 语言前置：[[06-面向对象与方法调用]]（枚举、继承、内部类）；[[17-对象语义与拷贝]]（防御性拷贝与深不可变）。
+
 - 本章内：上一课 [[13-注解与注解处理器]]；[[12-反射与动态代理/_index|12-反射与动态代理]]（`isRecord`/`getRecordComponents`，以及"继承位被占"的同源限制）；下一课 [[15-虚拟线程]]
 - 应用：[[04-集合框架/01-核心机制与选型]]（record 做 map key 天然满足 equals/hashCode 契约）、[[04-集合框架/04-HashMap原理与扩容]]
 - 延伸：[[10-Lambda与Stream]]（`invokedynamic` 首次调用开销，和 record 值语义方法是同一机制）
 
 ## 📚 参考资料
+
+- [JLS 8.9：Enum Classes](https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.9)
 
 - [JEP 395: Records](https://openjdk.org/jeps/395)
 - [JEP 409: Sealed Classes](https://openjdk.org/jeps/409)

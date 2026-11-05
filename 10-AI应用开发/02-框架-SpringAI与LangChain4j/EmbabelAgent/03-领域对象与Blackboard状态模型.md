@@ -73,7 +73,6 @@ public record LearningPlan(
 ```
 
 这些类型不是为了“面向对象形式感”。它们解决四个具体问题：
-
 1. **规划**：`DraftPlan` 不存在时，需要它的 `review(DraftPlan)` 就不可执行。
 2. **约束**：模型输出必须绑定到字段，而不是返回一段无法验证的自由文本。
 3. **测试**：每个阶段可用普通 Java 对象作为 fixture。
@@ -130,7 +129,6 @@ public LearningPlan finish(ReviewedPlan reviewedPlan) {
 ```
 
 只有在 `ReviewedPlan` 已存在时才具备输入条件。
-
 这形成了 Embabel 最核心的因果链：
 
 ```text
@@ -152,7 +150,6 @@ flowchart LR
 ```
 
 Planner 可以从目标向前反推：
-
 1. 要得到 `LearningPlan`，需要执行 `finish`。
 2. `finish` 需要 `ReviewedPlan`。
 3. 要得到 `ReviewedPlan`，需要执行 `review`。
@@ -185,7 +182,6 @@ public Comparison compare(OriginalText original, RevisedText revised) {
 ```
 
 优先级建议：
-
 1. 首选不同领域类型，直接表达语义。
 2. 确实需要同类型多个对象时，使用 `outputBinding` 和 `@RequireNameMatch`。
 3. 不要让大量裸 `String`、`Map`、`Object` 进入规划图。
@@ -234,14 +230,12 @@ flowchart TD
 ```
 
 注意两点：
-
 - Planner 不是只在最开始运行一次；状态变化后可以重新规划。
 - Action 的外部副作用不会因为 Blackboard 存在就自动回滚，文件、数据库、邮件仍需自行设计幂等和补偿。
 
 ## 9. `clearBlackboard` 什么时候用
 
 `@Action(clearBlackboard = true)` 会在 Action 完成后清除旧状态，只保留本次输出。适合：
-
 - 循环状态要重新产生相同类型。
 - 中间产物很大，后续阶段明确不再需要。
 - 希望切断旧事实对新一轮规划的影响。
@@ -274,7 +268,6 @@ Object finalData;
 ### 判断问题
 
 给每个类型问三句话：
-
 1. 它是否代表一个明确的业务事实？
 2. 产生它是否意味着某一阶段真的完成？
 3. 后续 Action 能否仅凭这个类型判断自己是否具备执行条件？
@@ -285,19 +278,13 @@ Object finalData;
 
 把上一章的单 Action 拆成三个纯 Java Action：
 
-```java
-@Action
-public LearningRequest understand(UserInput input) { /* ... */ }
-
-@Action
-public DraftPlan draft(LearningRequest request) { /* ... */ }
-
-@AchievesGoal(description = "Return a learning plan")
-@Action
-public LearningPlan finish(DraftPlan draft) { /* ... */ }
+```text
+UserInput → understand → LearningRequest
+LearningRequest → draft → DraftPlan
+DraftPlan → finish → LearningPlan（Goal）
 ```
 
-运行 `actions` 和 `x`，然后用 `blackboard` 检查三个阶段对象是否出现。再故意删除 `draft`，观察为什么目标变得不可达。
+具体实现可参照 [[09-实战-学习计划Agent]] 中的关键片段。运行 `actions` 和 `x`，然后用 `blackboard` 检查三个阶段对象是否出现。再故意删除 `draft`，观察为什么目标变得不可达。
 
 ## 自测题
 
@@ -322,4 +309,3 @@ public LearningPlan finish(DraftPlan draft) { /* ... */ }
 - [Embabel Annotation Model](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#reference.annotations)
 - [Embabel Agent Process](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#reference.agent-process)
 - [Embabel Types](https://docs.embabel.com/embabel-agent/guide/1.5.0-SNAPSHOT/#reference.types)
-

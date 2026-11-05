@@ -2,7 +2,7 @@
 title: Codex上下文工程-AGENTS-MCP-Skills
 tags: [领域/AI应用, 类型/知识, 主题/Codex, 主题/上下文工程]
 created: 2026-07-08
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -12,7 +12,7 @@ mastery: ⭐☆☆☆☆
 > [!abstract] 一句话总结
 > Codex 的上下文工程通过分层机制，将项目持久规则、外部工具连接与可复用工作流按需装配到模型上下文中。
 
-## 三类上下文
+## 🧠 三类上下文
 
 | 类型 | 代表机制 | 解决什么 |
 | ---- | -------- | -------- |
@@ -20,41 +20,42 @@ mastery: ⭐☆☆☆☆
 | 外部能力 | MCP | 文档、浏览器、Figma、第三方工具如何接入 |
 | 任务经验 | Skills | 某类任务的固定流程、参考资料、脚本 |
 
-## AGENTS.md：项目级持久指令
+## 📄 AGENTS.md：项目级持久指令
 
-Codex 官方手册说明，Codex 会在开始工作前读取 `AGENTS.md`，并支持全局、项目、子目录层级。越靠近当前目录的规则越具体。
-
+Codex 可以从全局和项目目录分层读取 `AGENTS.md` 等指令文件；项目范围内从仓库根目录向当前工作目录查找，较近的规则后加载。是否加载、覆盖和文件大小限制应以当前配置及官方文档为准。
 这是一种很关键的产品设计：
-
 - 把重复口头提示变成仓库文件。
 - 让团队约定可版本化。
 - 让不同会话、不同人、不同任务共享同一套规则。
 - 支持按目录层级就近覆盖业务约定，而底层的工具执行权限与沙箱安全边界则始终由宿主环境策略统一管控。
 
-## MCP：连接外部工具和上下文
+## 🧠 MCP：连接外部工具和上下文
 
 MCP 让 Codex 可以接入第三方文档、浏览器、Figma、内部系统等。它本质上是工具和上下文的标准接口。
-
 对 AI 应用开发来说，这说明成功 Agent 不会把所有功能写死在客户端里，而是：
-
 1. 用协议连接工具。
 2. 用 schema 描述工具能力。
 3. 用认证和权限控制边界。
 4. 用 server instructions 说明跨工具约束。
 
-## Skills：可复用任务能力
+## 🧩 Skills：可复用任务能力
 
-Codex Skills 使用渐进式披露：初始上下文只放技能名、描述和路径；真正触发时再读取完整 `SKILL.md`。这个设计解决了上下文窗口浪费问题。
-
+Codex Skills 使用渐进式披露：先提供技能名称、描述和位置，选用时再读取相应 `SKILL.md` 及所需资料。这可以减少不相关内容占用上下文，但仍要控制技能数量和描述长度。
 适合沉淀：
-
 - 代码审查流程。
 - 安全扫描流程。
 - 文档生成流程。
 - 前端设计检查。
 - 数据分析流程。
 
-## 上下文装配架构
+## 🗣️ 一个任务分别用到什么？
+
+例如用户要求检查订单接口：`AGENTS.md` 可以提供该仓库的测试命令与修改范围；代码审查 Skill 可以提供可复用的审查步骤；若需要查看外部工单，已配置的 MCP 工具可以提供按权限允许访问的数据。
+三者解决的是不同问题：规则文件本身不会执行测试，Skill 是否被采用取决于任务和配置，MCP 的可用性与访问范围也取决于连接和权限。
+
+## 🏗️ 上下文装配架构
+
+下图是学习时的逻辑示意，实际加载时机和顺序由入口、配置与任务决定。
 
 ```mermaid
 flowchart TD
@@ -67,7 +68,7 @@ flowchart TD
     G --> H[工具执行与验证]
 ```
 
-## 关键取舍
+## ⚖️ 关键取舍
 
 ### 1. 稳定规则进 AGENTS.md
 
@@ -81,22 +82,21 @@ flowchart TD
 
 例如浏览器、设计稿、文档库、工单系统、数据库只读查询。
 
-## 对我们知识库的启发
+## 💡 对我们知识库的启发
 
 我们已有：
-
 - [[../../05-Agent-MCP-Skills/16-AGENTS规范详解]]
 - [[../../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[../../05-Agent-MCP-Skills/13-Skills详解]]
 
 下一步可以把这些从“概念笔记”变成“实战项目”：为一个 Java 项目写 `AGENTS.md`、为代码审查写 Skill、为内部文档写 MCP Server。
 
-## 面试讲法
+## 🎯 面试讲法
 
-> Codex 的上下文工程分三层：AGENTS.md 解决项目规则，MCP 解决外部工具和上下文接入，Skills 解决可复用任务流程。它不是简单扩大上下文窗口，而是把不同生命周期的信息放到不同载体里。
+> [!question]- AGENTS.md、MCP 和 Skills 分别负责什么？
+> `AGENTS.md` 保存项目规则，MCP 连接外部工具和数据，Skills 保存可复用的流程与资料；实际加载与访问范围取决于环境和配置。
 
 ## 📚 参考资料
 
-- [OpenAI Codex Manual：Custom instructions with AGENTS.md](https://developers.openai.com/codex/codex-manual.md#customization-and-tooling)
-- [OpenAI Codex Manual：Model Context Protocol](https://developers.openai.com/codex/codex-manual.md#customization-and-tooling)
-- [OpenAI Codex Manual：Agent Skills](https://developers.openai.com/codex/codex-manual.md#customization-and-tooling)
+- [Codex：AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+- [OpenAI：MCP](https://developers.openai.com/learn/docs-mcp)；[Skills](https://learn.chatgpt.com/docs/build-skills)

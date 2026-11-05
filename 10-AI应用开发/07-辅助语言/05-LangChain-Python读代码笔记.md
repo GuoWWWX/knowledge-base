@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,15 +18,12 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 5 课，Python 子区收尾**：前置 [[04-FastAPI起服务]]，本篇解决“拿到 LangChain Python 项目怎么读”，对照已学的 Spring AI / LangChain4j（02 章）。
-- **延伸**：TypeScript 侧对应 [[11-LangChain.js简介]]。
+本篇在 [[04-FastAPI起服务]] 之后，介绍如何阅读 LangChain Python 项目，并与 Spring AI、LangChain4j 对照；TypeScript 侧可参考 [[11-LangChain.js简介]]。
 
 ## 📌 这是什么
 
 LangChain 是 Python AI 生态里常见的应用编排库，适合学习 RAG、工具调用、Agent 和多步骤 LLM 流程。
-
 读代码时优先找这些入口：
-
 - `ChatOpenAI` / 其他模型类：模型调用封装。
 - `PromptTemplate` / `ChatPromptTemplate`：提示词结构。
 - `retriever`：从向量库或搜索系统取上下文。
@@ -47,21 +44,24 @@ LangChain 是 Python AI 生态里常见的应用编排库，适合学习 RAG、�
 ## ⚙️ 环境命令
 
 ```bash
-uv init langchain-demo
+uv init --no-package langchain-demo # 示例使用项目根目录的 main.py
 cd langchain-demo
 uv add langchain langchain-openai python-dotenv
+# 保存下方示例为 main.py 并准备 .env 后运行
 uv run python main.py
 ```
 
 `.env` 常见内容：
 
 ```text
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=你的密钥
+OPENAI_MODEL=你有权使用的模型 ID
 ```
 
 ## 💻 最小示例
 
 ```python
+import os
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -73,14 +73,19 @@ prompt = ChatPromptTemplate.from_messages([
     ("user", "用 Java 开发者能懂的话解释：{topic}"),
 ])
 
-model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+model = ChatOpenAI(model=os.environ["OPENAI_MODEL"], temperature=0)
 chain = prompt | model
 
 result = chain.invoke({"topic": "RAG"})
 print(result.content)
 ```
 
-阅读这段代码时，`prompt | model` 表示 LCEL 链式组合：输入字典 -> 渲染 Prompt -> 调用模型 -> 返回消息。
+这是模型调用示例，运行需要有效模型与密钥，未经本机实际调用；`.env` 由 `load_dotenv()` 显式读取。阅读这段代码时，`prompt | model` 表示 LCEL 链式组合：输入字典 -> 渲染 Prompt -> 调用模型 -> 返回消息。
+
+## 🔍 沿着输入找输出
+
+以 `{"topic": "RAG"}` 为例，先检查 `prompt` 用它渲染出的消息，再看 `model` 返回的消息内容；如果最终结果不对，就能区分模板变量错误和模型回答问题。接入检索后，还要额外记录检索问题、候选文本与来源，确认相关片段是否真的进入了提示词。
+这份笔记中的链只有 Prompt 和模型，没有自动包含检索、权限过滤或引用溯源；这些环节需要应用另行实现。
 
 ## 🤖 AI 生态落点
 
@@ -99,13 +104,14 @@ print(result.content)
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: LangChain 主要解决什么？
->   - A: 它把模型调用、Prompt、检索、工具和输出解析组合成可复用流程，方便搭 RAG 和 Agent 原型。
-> - Q: LangChain 和直接调用模型 SDK 的区别？
->   - A: 直接 SDK 更轻；LangChain 适合多步骤编排、检索和工具调用，但要接受抽象层带来的调试成本。
-> - Q: 读一个 LangChain RAG 项目从哪里开始？
->   - A: 先找入口脚本，再顺着 `retriever`、`prompt`、`model`、`parser` 看数据流。
+> [!question]- LangChain 主要解决什么？
+> 它把模型调用、Prompt、检索、工具和输出解析组合成可复用流程，方便搭 RAG 和 Agent 原型。
+
+> [!question]- LangChain 和直接调用模型 SDK 的区别？
+> 直接 SDK 更轻；LangChain 适合多步骤编排、检索和工具调用，但要接受抽象层带来的调试成本。
+
+> [!question]- 读一个 LangChain RAG 项目从哪里开始？
+> 先找入口脚本，再顺着 `retriever`、`prompt`、`model`、`parser` 看数据流。
 
 项目里可以用它快速验证：知识库问答、工具调用 Agent、文档摘要流水线，再把稳定流程沉淀成服务。
 

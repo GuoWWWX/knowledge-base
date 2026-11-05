@@ -6,7 +6,7 @@ tags:
   - 主题/FunctionCalling
   - 阶段/02
 created: 2026-07-04
-updated: 2026-08-03
+updated: 2026-10-30
 status: 规划中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -19,8 +19,7 @@ repo: 未绑定
 
 ## 🎯 本节定位
 
-- **本章第 2 个项目，工具调用**。前置：01 智能问答机器人 + 阶段二 [[../02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用]]。
-- **延伸**：本项目目标之一是总结 Function Calling、MCP、Agent 的边界；MCP 与 Agent 的深入实现在阶段五（05 区）与 05、06 项目，本处只做概念对比。
+本项目在智能问答机器人的基础上加入工具调用，前置知识见 [[../02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用|Function Calling]]。本篇也会区分 Function Calling、MCP 和 Agent，后续项目再深入实现 MCP 与 Agent。
 
 ## 📌 项目背景
 
@@ -65,12 +64,26 @@ flowchart TD
 - [ ] 增加工具调用日志
 - [ ] 整理 10 条测试问题验证工具选择
 
+## 🗣️ 从提问到工具结果
+
+用户问“12 加 30 是多少？”模型可以选择 `add` 工具并提出参数；应用校验参数后执行 Java 方法，把结果 `42` 返回模型，模型再组织回复。是否调用工具由模型和配置共同决定，实际测试时应检查工具记录，而不是只看最终回答。
+先用无副作用的计算器验证流程，再接入订单或数据库查询；业务工具需要依据服务端确定的用户身份校验访问权限，不能把模型提供的用户 ID 当成授权依据。
+
+## 💻 Spring AI 工具片段
+
+下例是一个工具类中的方法，展示声明方式；工具注册、`chatClient` 和模型配置已省略，未连接模型运行。`Math.addExact` 在整数溢出时会抛出异常，调用方需处理错误。
+
+```java
+@Tool(description = "计算两个整数的和")
+int add(int a, int b) {
+    return Math.addExact(a, b);
+}
+```
+
+将工具实例传给 `chatClient.prompt().tools(工具实例)` 后，框架可根据模型的工具请求执行方法；工具调用流程与版本和模型能力有关，详见关联的 Spring AI 笔记。
+
 ## 🧠 难点与关键技术点
 
-- [[../02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用]]
-- [[../02-框架-SpringAI与LangChain4j/SpringAI/02-ChatClient与ChatModel]]
-- [[../05-Agent-MCP-Skills/09-MCP协议详解]]
-- [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]
 - 工具 schema 要清晰描述参数类型、约束和失败返回。
 - 模型可能选择错工具或缺参数，需要有追问和拒绝策略。
 - 业务工具不能直接暴露高风险操作，至少要有白名单和权限边界。
@@ -84,10 +97,14 @@ flowchart TD
 
 ## 🎯 面试讲法
 
-可以按“模型负责决策，代码负责执行”来讲：先定义工具 schema，再让模型根据用户问题选择工具，最后由服务端校验参数、执行工具并把结果交回模型生成答案。结合它与 MCP、Agent 的职责边界进行阐述，能够清晰体现工程化设计思维。
+> [!question]- 工具调用机器人如何工作？
+> 模型根据工具描述选择工具并生成参数；服务端校验参数、执行工具，再将结果反馈给模型。可以结合 Function Calling、MCP 和 Agent 的职责区别展开。
 
 ## 🔗 关联笔记
 
+- [[../02-框架-SpringAI与LangChain4j/SpringAI/06-Function-Calling工具调用]]
+- [[../02-框架-SpringAI与LangChain4j/SpringAI/02-ChatClient与ChatModel]]
+- [[../05-Agent-MCP-Skills/01-Agent设计模式详解]]
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]
 - [[05-项目-通用ReAct-Agent]]
 - [[_index|本区项目索引]]
@@ -97,4 +114,3 @@ flowchart TD
 - [Spring AI Tools Documentation](https://docs.spring.io/spring-ai/reference/api/tools.html)
 - [OpenAI Function Calling Guide](https://platform.openai.com/docs/guides/function-calling)
 - [Model Context Protocol Documentation](https://modelcontextprotocol.io/docs)
-

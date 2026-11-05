@@ -6,7 +6,7 @@ tags:
   - 主题/Python
   - 阶段/07
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,8 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 1 课，Python 子区起点**：建立 Java → Python 的语法与心智对照，后面 [[02-uv包管理与环境]]（环境）、[[04-FastAPI起服务]]（服务）都建立在本课基础上。
-- **前置**：Java 基础与阶段三 RAG 概念；**延伸**：[[05-LangChain-Python读代码笔记]]。
+本篇从 Java 视角介绍 Python 语法，建议先掌握 Java 基础和 RAG 基本概念。之后可学习 [[02-uv包管理与环境]]、[[04-FastAPI起服务]] 和 [[05-LangChain-Python读代码笔记]]。
 
 ## 🎯 学习目标
 
@@ -44,8 +43,10 @@ mastery: ⭐☆☆☆☆
 
 ## 📦 环境与包管理
 
+以下命令先创建项目并安装依赖；运行服务前，需要按后面的 FastAPI 示例创建项目根目录的 `main.py`。`uv run python main.py` 只是执行脚本；该示例的 HTTP 服务由下一条 `uvicorn` 命令启动。
+
 ```bash
-uv init ai-demo
+uv init --no-package ai-demo # 示例使用项目根目录的 main.py
 cd ai-demo
 uv add fastapi uvicorn pydantic openai httpx
 uv add --dev pytest ruff
@@ -73,6 +74,8 @@ metadata: dict[str, Any] = {"source": "doc.md"}
 def build_prompt(question: str, context: str) -> str:
     return f"基于资料回答：{context}\n问题：{question}"
 ```
+
+第二段沿用上一个片段中的 `top_k`，主要展示列表推导、循环和条件判断。
 
 ```python
 docs = ["a.md", "b.pdf", "c.md"]
@@ -104,7 +107,7 @@ class ChatResponse(BaseModel):
 
 > [!tip] FastAPI 会用 `BaseModel` 自动做 JSON 解析、参数校验和接口文档生成，很像 Spring Controller + DTO + Validation 的组合。
 
-Python 原生类型注解仅用于静态分析，运行时的数据解析、类型转换与校验由 Pydantic 完成。此外，定义普通函数时应避免使用 `items=[]` 这类可变默认参数（会在多次调用间共享状态），推荐使用 `None` 作为默认值并在函数体内初始化新列表。
+Python 类型注解默认不会自动检查参数类型；静态工具和运行时框架都可以读取注解。这里的运行时解析与校验由 Pydantic 完成。此外，定义普通函数时应避免使用 `items=[]` 这类可变默认参数（会在多次调用间共享状态），推荐使用 `None` 作为默认值并在函数体内初始化新列表。
 
 ## ⚡ async / await
 

@@ -14,22 +14,13 @@ mastery: ⭐☆☆☆☆
 
 > [!info] 本区说明
 > 本章拆解行业主流编程 Agent 产品，重点分析其上下文工程、工具调用、权限治理、工作流编排、扩展机制与交互体验设计。
+> 其中架构图是便于学习的抽象，不代表产品公开了内部全部实现；功能、入口和权限行为请以各产品当前文档及实际配置为准。
 
-## 为什么要拆 Codex 和 Claude Code
+## 📌 为什么要拆 Codex 和 Claude Code
 
-Codex 和 Claude Code 将大语言模型深度嵌入真实的软件工程工作流，核心能力包括：
+Codex 和 Claude Code 可以读取项目上下文、编辑文件、调用工具和运行命令，并通过规则文件、MCP 与权限配置支持持续的开发任务。本章重点看这些能力如何组合，以及哪些设计可以借鉴到企业 Agent。
 
-- 能读项目上下文。
-- 能调用工具。
-- 能编辑文件和运行命令。
-- 能接入 MCP。
-- 能沉淀项目规则。
-- 能做安全边界和人工确认。
-- 能把一次对话变成可持续的工程协作。
-
-这些工程机制代表了将大语言模型转化为生产级 Agent 产品的核心方法论。
-
-## 目录
+## 📚 目录
 
 ### Codex
 
@@ -53,7 +44,7 @@ Codex 和 Claude Code 将大语言模型深度嵌入真实的软件工程工作�
 - [ ] [[02-编程Agent通用架构图]]
 - [ ] [[03-从Codex和Claude-Code反推企业Agent设计]]
 
-## 学习顺序
+## 🧭 学习顺序
 
 1. 先读 [[01-标杆产品对比-Codex-vs-Claude-Code]]，建立整体差异。
 2. 再读 [[02-编程Agent通用架构图]]，记住六层架构。
@@ -67,7 +58,7 @@ Codex 和 Claude Code 将大语言模型深度嵌入真实的软件工程工作�
 - [ ] [[Codex/99-Codex总结与复习]]（Codex 部分回顾）
 - [ ] [[Claude-Code/99-Claude-Code总结与复习]]（Claude Code 部分回顾）
 
-## 拆解方法
+## 📌 拆解方法
 
 每个产品都按五层看：
 
@@ -81,7 +72,7 @@ Codex 和 Claude Code 将大语言模型深度嵌入真实的软件工程工作�
 
 ## 📚 参考资料
 
-- [OpenAI Codex Documentation](https://developers.openai.com/codex/)
+- [OpenAI Codex Documentation](https://learn.chatgpt.com/docs/glossary)
 - [Anthropic Claude Code Documentation](https://code.claude.com/docs/overview)
 - [[../05-Agent-MCP-Skills/16-AGENTS规范详解]]
 - [[../05-Agent-MCP-Skills/09-MCP协议详解]]

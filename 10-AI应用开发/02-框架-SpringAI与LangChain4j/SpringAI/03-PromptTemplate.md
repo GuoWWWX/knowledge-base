@@ -18,8 +18,7 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 3 课，输入组织**。前置：[[02-ChatClient与ChatModel]] 的调用方式；上一章 [[../../01-LLM基础与Prompt/07-Prompt工程基础|Prompt 工程基础]] 讲“怎么写提示词”，本节讲“怎么在代码里模板化”。
-- **延伸**：把 RAG 检索结果注入模板见 [[09-VectorStore向量存储]]。
+本节学习用 `PromptTemplate` 管理和渲染提示词，前置是 [[02-ChatClient与ChatModel]] 中的调用方式。提示词写法见 [[../../01-LLM基础与Prompt/07-Prompt工程基础|Prompt 工程基础]]，检索结果如何注入模板见 [[09-VectorStore向量存储]]。
 
 ## 📌 这是什么
 
@@ -40,28 +39,8 @@ Prompt 是给模型的输入，Template 是可填变量的 Prompt。Spring AI �
 | 难测试 | 可单独渲染检查 |
 | 容易把业务数据和提示词混在一起 | 结构更清楚 |
 
-> [!tip] 为什么推荐使用 `PromptTemplate` 而非 `String.format`？
-> 1. **具名占位符解耦顺序**：`String.format` 依赖位置参数（`%s`），占位符较多时容易传错顺序；`PromptTemplate` 使用 `{name}` 具名占位符，与参数顺序无关且可读性更好。
-> 2. **避免 `%` 符号转义冲突**：提示词文本中常包含百分比（如“提升 50%”），在 `String.format` 中未转义会抛出 `UnknownFormatConversionException`；`{var}` 语法不会产生此类冲突。
-> 3. **直接生成结构化 `Prompt` 对象**：`String.format` 仅拼接字符串，而 `PromptTemplate.create()` 返回标准的 **`Prompt` 消息对象**，可直接承载多角色消息并与 `ChatClient`、工具调用及结构化输出组件衔接。
-> 4. **支持外部化管理与静态校验**：模板可独立存放在 `resources/prompts/*.st` 或配置中心，实现提示词迭代与代码发布解耦，并在渲染阶段统一校验缺失变量。
-
-> [!info] 提示词模板的存储方式选型
-> | 存放方式 | 适用场景 | 工程特点 |
-> | ---- | ---- | ---- |
-> | 代码内字符串 / Text Block | 原型验证、简短固定指令 | 开发直接，修改需重新编译发版 |
-> | `resources/prompts/*.st` 资源文件 | 中小型项目、长提示词版本化管理 | 随 Git 仓库做 Code Review，随应用打包发布 |
-> | **数据库 / 配置中心（Nacos/Apollo）** | **多租户生产环境、高频运营调优** | 支持按租户定制、A/B 测试与热更新，无需重新发版 |
->
-> **工程提示**：`PromptTemplate` 本身是**模板渲染组件**（将模板文本与变量合成为 `Prompt` 对象），与模板的存储位置正交。从数据库或配置中心读取模板字符串后，同样通过 `PromptTemplate` 渲染：
->
-> ```java
-> String templateText = templateService.get("customer_service", tenantId, version); // 从配置中心或 DB 读取
-> Prompt prompt = new PromptTemplate(templateText)
->         .create(Map.of("company", c, "user", u, "question", q));
-> ```
->
-> 采用外部存储时，建议按 `场景标识 + 租户 + 版本号` 维度管理并配合本地缓存；同时在代码中保留内置默认模板作为降级兜底，防止因配置缺失导致调用失败。
+> [!tip] 为什么使用 PromptTemplate？
+> `{name}` 这样的具名占位符不用依赖参数顺序，模板也可以单独渲染和测试。`create()` 能生成 `Prompt`；需要多个角色的消息时，仍要分别创建并组装。相比之下，`String.format` 中的百分号需要按格式规则转义。
 
 ---
 
@@ -99,9 +78,19 @@ String summary = chatClient.prompt()
 
 | 放法 | 适合场景 | 注意 |
 | ---- | ---- | ---- |
-| Java 字符串 | 很短、变化少 | 不适合长提示词 |
-| `resources/prompts/*.st` | 长模板、可维护 | 便于版本管理 |
-| 数据库 / 配置中心 | 运营可调 Prompt | 需要审批和灰度 |
+| Java 字符串 | 很短、变化少 | 修改需要重新发布应用 |
+| `resources/prompts/*.st` | 长模板、随代码管理 | 便于代码审查和版本管理 |
+| 数据库 / 配置中心 | 多租户或需要频繁调整 | 需要权限、审批、灰度和版本管理 |
+
+`PromptTemplate` 负责渲染，模板可以从文件、数据库或配置中心读取。假设 `templateService` 返回包含 `{company}` 和 `{question}` 的模板，下面只展示读取后的渲染过程：
+
+```java
+String text = templateService.get("customer_service", tenantId, version);
+Prompt prompt = new PromptTemplate(text)
+        .create(Map.of("company", company, "question", question));
+```
+
+外部模板可按场景、租户和版本管理，并根据需要缓存；同时要考虑配置缺失时如何降级或报错。
 
 ## 🧠 Prompt 分层
 
@@ -133,21 +122,25 @@ String answer = chatClient.prompt()
 // 每条消息各自维护模板和参数，互不干扰
 ```
 
-### 2. 对象属性访问
+### 2. 从 Java 对象提供变量
+
+下面先取出 record 的字段，再传给模板；字段访问方式不依赖模板引擎对 Java record 的适配。
 
 ```java
 record User(String name, String city) {}
-
-Prompt prompt = new PromptTemplate("用户 {user.name} 来自 {user.city}")
-        .create(Map.of("user", new User("小明", "上海")));
-// 支持通过属性路径直接读取对象字段，无需手动拆平为 Map
+User user = new User("小明", "上海");
+Prompt prompt = new PromptTemplate("用户 {name} 来自 {city}")
+        .create(Map.of("name", user.name(), "city", user.city()));
 ```
 
-### 3. 多消息模板：渲染出消息序列
+### 3. 把不同角色组成 Prompt
+
+`Prompt` 能包含多条不同角色的消息，但一次 `PromptTemplate.create()` 不会把普通字符串自动识别成多角色对话；需要分别创建消息并组装。下面是片段，省略 imports。
 
 ```java
-Prompt prompt = new PromptTemplate(multiMessageTemplate).create(vars);
-prompt.getInstructions();   // List<Message>：包含带角色的消息列表
+Message system = new SystemMessage("你是订单助手。");
+Message user = new PromptTemplate("查询订单 {id}").createMessage(Map.of("id", "A123"));
+Prompt prompt = new Prompt(List.of(system, user));
 ```
 
 ### 4. 动态选择模板（结合配置中心做灰度）
@@ -179,17 +172,18 @@ Prompt prompt = new PromptTemplate(template).create(vars);
 
 ## ⚠️ 常见坑
 
-- [ ] **变量名不一致**：模板里 `{question}`，代码里传 `query`，运行时才暴露。
-- [ ] **模板过长**：越长越难测，优先拆成角色、任务、上下文、输出格式。
-- [ ] **把 Prompt 当代码常量乱放**：长提示词建议独立文件，方便 review。
-- [ ] **缺少输出约束**：只告诉模型做什么，不告诉它怎么输出，后处理会很痛苦。
+- 模板变量名要和传入的键一致，例如 `{question}` 对应 `question`。
+- 过长的模板难以维护，可以按角色、任务、上下文和输出要求组织。
+- 长提示词可以放入独立文件，便于审查和版本管理。
+- 需要程序处理结果时，应说明输出格式并验证返回值。
 
 ## 🎯 面试速记
 
-> - **Q: PromptTemplate 解决什么问题？**
->   - A: 解决提示词参数化、复用、测试和维护问题，避免业务代码里到处拼字符串。
-> - **Q: RAG 中 PromptTemplate 常放什么？**
->   - A: 用户问题、检索文档、引用约束、输出格式。
+> [!question]- PromptTemplate 解决什么问题？
+> 解决提示词参数化、复用、测试和维护问题，避免业务代码里到处拼字符串。
+
+> [!question]- RAG 中 PromptTemplate 常放什么？
+> 用户问题、检索文档、引用约束、输出格式。
 
 ## 🔗 关联阅读
 
@@ -201,5 +195,3 @@ Prompt prompt = new PromptTemplate(template).create(vars);
 ## 📚 参考资料
 
 - [Spring AI Prompts](https://docs.spring.io/spring-ai/reference/api/prompt.html)
-
-

@@ -6,7 +6,7 @@ tags:
   - 主题/TypeScript
   - 阶段/08
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 已完成
 mastery: ⭐☆☆☆☆
 ---
@@ -18,13 +18,11 @@ mastery: ⭐☆☆☆☆
 
 ## 🎯 本节定位
 
-- **本章第 8 课**：前置 [[07-Node-pnpm-环境配置]]，本篇讲 Next.js App Router 的页面与接口结构。
-- **延伸**：[[09-Vercel-AI-SDK核心]]、[[10-Vercel-AI-SDK-useChat流式UI]]。
+本篇在 [[07-Node-pnpm-环境配置]] 之后，介绍 Next.js App Router 的页面与接口结构；后续可学习 [[09-Vercel-AI-SDK核心]] 和 [[10-Vercel-AI-SDK-useChat流式UI]]。
 
 ## 📌 这是什么
 
 App Router 的阅读入口很固定：
-
 - `app/page.tsx`：当前路由页面。
 - `app/layout.tsx`：全局布局。
 - `app/api/*/route.ts`：服务端 API。
@@ -54,7 +52,7 @@ pnpm dev
 
 ```bash
 pnpm lint
-pnpm typecheck
+pnpm typecheck # 仅当 package.json 定义了该脚本
 pnpm build
 ```
 
@@ -90,6 +88,11 @@ export default function Page() {
 }
 ```
 
+## 🔍 页面和接口怎么配合？
+
+浏览器访问 `/` 时对应 `app/page.tsx`；发送 `POST /api/chat` 时对应 `app/api/chat/route.ts` 的 `POST` 函数。上面的两个片段只分别展示页面和接口，页面并没有自动调用接口；要完成对话，还需要客户端组件发请求并显示响应。
+示例直接读取 `body.message` 是为了展示路由，实际接口应先验证请求体；如果字段缺失、类型错误或用户无权限，应返回明确错误，而不是把这些值直接送给模型。
+
 ## 🤖 AI 生态落点
 
 - `/api/chat/route.ts`：放模型调用、流式输出和工具调用。
@@ -101,21 +104,25 @@ export default function Page() {
 
 ## ⚠️ 踩坑与注意事项
 
-- 使用 `useState`、事件监听和浏览器 API 的组件需归属在 `"use client"` 边界内（父组件声明后，其导入的子组件会自动纳入客户端模块）。访问 `window` 等浏览器专属 API 时应放在事件回调或 `useEffect` 中，避免服务端预渲染阶段报错。
+- 使用 `useState`、事件监听和浏览器 API 的组件需处于 `"use client"` 边界内；该模块导入的子组件也会进入客户端模块。
+- `window` 等浏览器 API 应放在事件回调或 `useEffect` 中访问，避免服务端预渲染时报错。
 - API Route 默认运行在服务端，但如果指定 Edge Runtime，要确认 SDK 和依赖兼容。
 - `req.json()` 只能读一次，请求体读完后不能重复解析。
-- 带有 `NEXT_PUBLIC_` 前缀的环境变量会被打包进浏览器端代码，因此 API Key 等服务端敏感配置不得使用该前缀，也不应通过组件 props 或接口响应下发。同时，Route Handler 与 Server Action 作为独立的服务端入口，需要各自实现完整的权限校验与入参验证。
+- `NEXT_PUBLIC_` 环境变量会被打包进浏览器代码，API Key 等敏感配置不能使用该前缀。
+- 服务端密钥也不能通过客户端组件的 props 或接口响应下发。
+- Route Handler 和 Server Action 都是服务端入口，需要各自校验权限和输入。
 - 流式接口应直接返回流式响应对象（如 `toUIMessageStreamResponse()`），避免使用 `Response.json` 一次性包装。
 
 ## 🎯 面试 / 项目用途
 
-> [!question] 高频问题
-> - Q: App Router 里 API 接口写在哪里？
->   - A: 写在 `app/api/<name>/route.ts`，导出 `GET`、`POST` 等函数。
-> - Q: `"use client"` 是什么？
->   - A: 用于标记服务端到客户端的模块边界，使组件可以使用状态 Hook 与交互事件；客户端组件在首屏仍会参与服务端预渲染，敏感逻辑与鉴权则应保留在服务端接口中。
-> - Q: AI Chat 为什么常用 Next.js？
->   - A: 页面、服务端 API、流式响应和部署链路放在一个项目里，原型开发快。
+> [!question]- App Router 里 API 接口写在哪里？
+> 写在 `app/api/<name>/route.ts`，导出 `GET`、`POST` 等函数。
+
+> [!question]- `"use client"` 是什么？
+> 用于标记服务端到客户端的模块边界，使组件可以使用状态 Hook 与交互事件；客户端组件在首屏仍会参与服务端预渲染，敏感逻辑与鉴权则应保留在服务端接口中。
+
+> [!question]- AI Chat 为什么常用 Next.js？
+> 页面、服务端 API、流式响应和部署链路放在一个项目里，原型开发快。
 
 项目里可以用它做：AI Chat UI、知识库问答前端、后台管理台里的模型调试页面。
 

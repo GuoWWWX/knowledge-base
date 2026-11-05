@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.knowledge</groupId>
+        <artifactId>knowledge-code-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <groupId>com.knowledge</groupId>
+    <artifactId>lab03-juc-concurrency</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>Lab 03 - JUC Concurrency Lab</name>
+    <description>并发编程硬核实战：AQS手写可重入锁、线程池拒绝策略、CompletableFuture异步编排、ThreadLocal内存泄漏与脏数据治理</description>
+
+    <dependencies>
+        <!-- 原生 JUC 无需第三方核心依赖，按需提供测试依赖 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
+

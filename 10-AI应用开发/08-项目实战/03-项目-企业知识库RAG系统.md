@@ -6,7 +6,7 @@ tags:
   - 主题/RAG
   - 阶段/03
 created: 2026-07-04
-updated: 2026-09-28
+updated: 2026-10-30
 status: 强化中
 mastery: ⭐☆☆☆☆
 repo: 未绑定
@@ -19,8 +19,7 @@ repo: 未绑定
 
 ## 🎯 本节定位
 
-- **本章第 3 个项目，RAG 完整链路**。前置：阶段三 [[../03-知识库技术-RAG/_index]] 全章（解析、切分、Embedding、检索、Rerank、评估）。
-- **延伸**：04 客服项目把 RAG 作为知识来源接入；09 CAG 对比实验复用本项目的同一知识库与评估集。
+本项目串起文档解析、切分、检索、生成与评估，建议先学习 [[../03-知识库技术-RAG/_index|RAG 相关知识]]。客服项目可以复用知识检索能力，CAG 对比实验可以复用知识库与评估集。
 
 ## 📌 项目背景
 
@@ -58,6 +57,7 @@ flowchart TD
     D --> E[Embedding Model]
     E --> F[(Vector Store)]
     D --> G[(Metadata DB)]
+    D --> L
     H[用户问题] --> I[权限上下文]
     I --> J[Query Rewrite]
     J --> K[Hybrid Retriever]
@@ -73,63 +73,22 @@ flowchart TD
     R --> S[评估与 Badcase]
 ```
 
+## 📋 分阶段实现
+
+- [ ] **第一阶段：跑通基本链路**。准备一份带版本的差旅制度，解析并切分后写入向量库；输入“普通员工北京住宿上限”时，先检查召回片段，再生成带来源的回答。
+- [ ] **第二阶段：补齐权限和更新**。在检索时注入服务端确认的租户、空间权限；修改或删除文档后同步索引，验证旧内容不会继续被召回。
+- [ ] **第三阶段：按需优化**。构造包含同义问法、编号、无答案和越权请求的评估集；比较向量检索、混合检索和可选重排，记录效果、延迟与成本。
+- [ ] **第四阶段：接入观测**。记录请求 ID、文档与索引版本、召回结果摘要和失败原因；敏感内容按业务要求脱敏。
+
 ## 🗂️ 数据模型
 
-以下以 MySQL 语法为例展示核心元数据表结构（若使用 PostgreSQL / pgvector，可将对应字段类型调整为 `BIGSERIAL`、`TIMESTAMPTZ` 与 `JSONB`），其中权限与版本等关键字段需同步写入向量库的检索 metadata。
+| 数据 | 建议记录 | 用途 |
+| :--- | :--- | :--- |
+| 文档 | 文档 ID、租户、空间、来源、版本、解析状态 | 判断来源、更新和删除范围 |
+| 片段 | 文档 ID、片段 ID、正文、页码或标题、向量 ID、权限信息 | 检索过滤、引用与索引同步 |
+| 评估样例 | 问题、参考答案、期望来源、适用用户与版本 | 对照召回、回答和权限结果 |
 
-### 文档表
-
-```sql
-CREATE TABLE kb_document (
-  id BIGINT PRIMARY KEY,
-  tenant_id BIGINT NOT NULL,
-  space_id BIGINT NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  source_type VARCHAR(32) NOT NULL,
-  source_uri VARCHAR(512),
-  file_hash VARCHAR(128) NOT NULL,
-  parse_status VARCHAR(32) NOT NULL,
-  embedding_version VARCHAR(64) NOT NULL,
-  created_by BIGINT NOT NULL,
-  created_at DATETIME NOT NULL,
-  updated_at DATETIME NOT NULL,
-  UNIQUE KEY uk_tenant_space_hash(tenant_id, space_id, file_hash)
-);
-```
-
-### Chunk 表
-
-```sql
-CREATE TABLE kb_chunk (
-  id BIGINT PRIMARY KEY,
-  tenant_id BIGINT NOT NULL,
-  document_id BIGINT NOT NULL,
-  chunk_no INT NOT NULL,
-  title_path VARCHAR(1024),
-  page_no INT NULL,
-  content TEXT NOT NULL,
-  token_count INT NOT NULL,
-  embedding_id VARCHAR(128) NOT NULL,
-  embedding_version VARCHAR(64) NOT NULL,
-  acl_tags JSON NULL,
-  created_at DATETIME NOT NULL,
-  UNIQUE KEY uk_doc_chunk(document_id, chunk_no)
-);
-```
-
-### 评估集表
-
-```sql
-CREATE TABLE rag_eval_case (
-  id BIGINT PRIMARY KEY,
-  question TEXT NOT NULL,
-  expected_answer TEXT,
-  expected_doc_ids JSON,
-  difficulty VARCHAR(32),
-  category VARCHAR(64),
-  created_at DATETIME NOT NULL
-);
-```
+向量库和关键词索引中的过滤字段要与可信权限数据同步。表结构、唯一键和文档版本策略根据存储选型设计；示意字段不是可直接执行的建表脚本。
 
 ## 🔍 检索链路设计
 
@@ -154,16 +113,15 @@ G --> H[TopN 上下文]
 ```
 
 为什么不用纯向量：
-
 - 编号、错误码、接口名、专有名词更适合关键词检索。
 - 语义相近但业务含义不同的文档，纯向量可能误召回。
-- Hybrid Search 可以提高召回稳定性。
+- Hybrid Search 可能改善召回，是否有效要用同一评估集比较。
 
 ### 3. Rerank
 
-- 初召回 TopK 可以设为 20~50。
-- Rerank 后保留 TopN，如 5~8 个 chunk。
-- Rerank 增加延迟和成本，只在候选多、文档相似度高、问答质量要求高时启用。
+- 初召回 TopK 可从一个实验值开始，例如 20~50。
+- Rerank 后保留 TopN，如 5~8 个 chunk；这些数字仅供实验，需按数据和评测调整。
+- Rerank 会增加延迟和成本；候选较多或质量要求较高时可以评估是否启用，决定前要与不重排的基线比较。
 
 ## ✂️ Chunk 策略
 
@@ -175,16 +133,16 @@ G --> H[TopN 上下文]
 | 表格结构化 | 价格表/配置表 | 保留行列语义 | 解析难度高 |
 | 多模态切分 | 图片/PDF 扫描件 | 覆盖图表/截图 | OCR 错误会传递到检索 |
 
-推荐实践：
+片段需要保存来源、标题路径等元数据，例如 `source_uri`、`title_path` 和 `section`；页码能可靠对应时再保存 `page_no`。切分边界可以按文档内容选择：
+- 制度类文档优先利用标题和条款结构。
+- FAQ 可以按问答对切分。
+- 表格应尽量保留表头与数据的对应关系。
 
-- 保留 `title_path`、`page_no`、`section`、`source_uri`。
-- chunk 不只存正文，还要存元数据。
-- 对制度类文档按标题切分，对 FAQ 可按问答对切分，对表格单独结构化。
+标题识别、人工分隔标记及验证方法见 [[../03-知识库技术-RAG/01-RAG核心原理与全链路实战|文本切分与边界]]。
 
 ## 🔐 权限隔离
 
 权限过滤必须发生在检索阶段或检索前，确保未授权文档不会进入模型上下文。
-
 过滤条件示例：
 
 ```java
@@ -204,7 +162,6 @@ SearchRequest request = SearchRequest.builder()
 > 过滤表达式应通过 Builder API 参数化构造，避免直接拼接用户输入或模型生成的字符串。上述示例展示了空间级（`space_id`）过滤；若需实现细粒度文档级 ACL（如多角色数组交集匹配），需结合具体向量库与关键词检索引擎的数组过滤语法，在向量与关键词两路召回中同步执行权限过滤。
 
 关键原则：
-
 - `tenant_id` 必须强过滤。
 - 部门、角色、文档空间用 metadata filter。
 - Prompt 中不要放入用户无权访问的 chunk。
@@ -231,10 +188,10 @@ SearchRequest request = SearchRequest.builder()
 
 | 指标 | 含义 | 目标 |
 | ---- | ---- | ---- |
-| Recall@K | 正确资料是否出现在 TopK | 评估召回能力 |
+| Recall@K | 标注相关资料中有多少进入 Top-K | 评估召回覆盖；与命中率不同 |
 | MRR | 正确资料排序是否靠前 | 评估排序质量 |
 | Context Precision | 召回上下文是否少噪声 | 评估上下文质量 |
-| Faithfulness | 答案是否忠于资料 | 评估幻觉 |
+| Faithfulness | 答案是否得到给定资料支持 | 检查证据一致性；不能证明原文真实 |
 | Answer Relevancy | 答案是否回答问题 | 评估可用性 |
 | Refusal Accuracy | 资料不足时是否拒答 | 评估安全边界 |
 | P95 Latency | 端到端延迟 | 评估体验 |
@@ -268,7 +225,6 @@ H -->|是| J[答案格式或引用问题]
 ## 👀 Langfuse Trace 字段
 
 在满足敏感信息脱敏与访问控制要求的前提下，记录以下关键链路字段：
-
 - `userId / tenantId / sessionId`
 - 原始问题、改写后问题
 - 检索参数：TopK、filter、embedding version
@@ -301,39 +257,42 @@ H -->|是| J[答案格式或引用问题]
 
 ### 30 秒版
 
-该 RAG 系统覆盖了文档解析、结构化切分、Hybrid Search、Rerank、引用溯源、权限过滤、离线评估与全链路可观测。当回答出现偏差时，可以逐层定位到解析、召回、排序、Prompt 组装或模型生成阶段。
+> [!question]- 如何用 30 秒介绍这个知识库项目？
+> 这个项目计划覆盖文档解析、切分、检索、引用、权限过滤和评估。完成后可结合实际实现与测试结果，说明回答出错时如何逐层定位。
 
 ### 2 分钟版
 
-离线侧我会把文档解析成带标题、页码、权限和版本的 chunk，做 embedding 后写入向量库，同时保存元数据。在线侧先做问题改写和权限过滤，再用向量 + 关键词混合检索召回候选，Rerank 后拼 Prompt，让模型只基于资料回答并附引用。上线后用评估集和 Langfuse 追踪 Recall@K、Faithfulness、P95 延迟和 token 成本，通过 badcase 反推切分、检索和 Prompt 策略。
+> [!question]- 这个知识库的离线和在线链路如何设计？
+> 离线侧会解析文档并保留来源、权限和版本等元数据；标题、页码等信息可靠时也一并保存，再切分并写入向量库。在线侧先做问题改写和权限过滤，通过向量与关键词混合检索召回候选，重排后交给模型作答并提供引用。上线后结合评估集与链路追踪，检查召回、答案忠实度、延迟和成本，再根据失败案例调整。
 
 ### 项目版
 
-我会重点讲三个难点：第一，文档解析和 chunk 策略决定召回上限；第二，Hybrid Search 和 Rerank 提高召回稳定性但会增加延迟和成本；第三，生产环境必须做权限过滤、引用溯源和评估回归，否则无法证明答案可靠。
+> [!question]- 这个知识库项目有哪些关键难点？
+> 我会重点讲三个难点：第一，文档解析和 chunk 策略决定召回上限；第二，Hybrid Search 可能改善召回，Rerank 可能改善排序，但两者都会增加延迟和成本，需要实测；第三，生产环境必须做权限过滤、引用溯源和评估回归，否则无法证明答案可靠。
 
 ## 🎯 高频追问
 
-> [!question] 高频问题
-> - Q: RAG 答案错了怎么排查？
->   - A: 先看正确资料有没有被召回，再看排序是否靠前，再看 Prompt 是否包含该资料，最后看模型是否忠实生成。
-> - Q: 为什么要 Hybrid Search？
->   - A: 向量适合语义相似，关键词适合编号、错误码、专有名词。企业文档两类问题都有，所以混合检索更稳定。
-> - Q: Rerank 一定要加吗？
->   - A: 不一定。文档少、初召回准时可以不加；候选多、相似文档多、质量要求高时值得加，但要评估延迟和成本。
-> - Q: 如何避免越权召回？
->   - A: 检索前或检索阶段用 tenant、space、role、acl metadata 做强过滤，不能把无权资料放进 Prompt 后再让模型判断。
-> - Q: 如何证明 RAG 有效果？
->   - A: 构建评估集，看 Recall@K、MRR、Faithfulness、Answer Relevancy、拒答准确率、P95 延迟和成本，并跟版本迭代做对比。
+> [!question]- RAG 答案错了怎么排查？
+> 先看正确资料有没有被召回，再看排序是否靠前，再看 Prompt 是否包含该资料，最后看模型是否忠实生成。
+
+> [!question]- 为什么要 Hybrid Search？
+> 向量适合语义相似，关键词适合编号、错误码、专有名词。企业文档可能同时存在两类问题；是否提高效果需要用同一问题集比较。
+
+> [!question]- Rerank 一定要加吗？
+> 不一定。文档少、初召回准时可以不加；候选多、相似文档多、质量要求高时值得加，但要评估延迟和成本。
+
+> [!question]- 如何避免越权召回？
+> 检索前或检索阶段用 tenant、space、role、acl metadata 做强过滤，不能把无权资料放进 Prompt 后再让模型判断。
+
+> [!question]- 如何证明 RAG 有效果？
+> 构建评估集，看 Recall@K、MRR、Faithfulness、Answer Relevancy、拒答准确率、P95 延迟和成本，并跟版本迭代做对比。
 
 ## 🔗 关联笔记
 
 - [[../03-知识库技术-RAG/_index]]
-- [[../03-知识库技术-RAG/01-RAG基础与全链路]]
-- [[../03-知识库技术-RAG/04-文本切分策略]]
-- [[../03-知识库技术-RAG/05-Embedding模型选型]]
-- [[../03-知识库技术-RAG/06-向量检索与TopK]]
-- [[../03-知识库技术-RAG/07-Rerank重排序]]
-- [[../03-知识库技术-RAG/12-RAG评估-Ragas]]
+- [[../03-知识库技术-RAG/01-RAG核心原理与全链路实战]]
+- [[../03-知识库技术-RAG/02-RAG工业级进阶与检索调优]]
+- [[../03-知识库技术-RAG/03-前沿演进与质量评估]]
 - [[09-项目-CAG-vs-RAG对比实验]]
 - [[10-项目-Obsidian-LLM-Wiki]]
 - [[_index|本区项目索引]]

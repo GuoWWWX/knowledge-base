@@ -29,6 +29,7 @@ mastery: ⭐⭐⭐☆☆
 | **HashSet**   | HashMap       | 无序         | 允许 1 个  | contains O(1) 平均 | 默认去重、快速判断存在   |
 | LinkedHashSet | LinkedHashMap | **插入序**    | 允许 1 个  | O(1) 平均          | 去重 + 要保插入顺序   |
 | TreeSet       | TreeMap（红黑树）  | **按比较器排序** | 不允许     | O(log n)         | 去重 + 要排序/范围查询 |
+
 ## 💻 怎么用（常用 API 速览）
 
 ```java
@@ -180,6 +181,7 @@ Comparator<User> cmp = Comparator.comparing(User::name).thenComparing(User::id);
 
 > [!question]- 去重保序怎么做？
 > `new LinkedHashSet<>(list)` 或 `new ArrayList<>(new LinkedHashSet<>(list))`——去重且保持原顺序；TreeSet 是排序序不是插入序，别混。
+
 ## 🛠️ 排查 / 实践要点
 
 - "contains 慢"：`List.contains` O(n) → `HashSet` O(1)（本课的核心价值场景）。
